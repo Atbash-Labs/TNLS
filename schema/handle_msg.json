@@ -1,0 +1,175 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HandleMsg",
+  "anyOf": [
+    {
+      "type": "object",
+      "required": [
+        "input"
+      ],
+      "properties": {
+        "input": {
+          "type": "object",
+          "required": [
+            "interchain_message"
+          ],
+          "properties": {
+            "interchain_message": {
+              "$ref": "#/definitions/InterchainMessage"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "output"
+      ],
+      "properties": {
+        "output": {
+          "type": "object",
+          "required": [
+            "interchain_message"
+          ],
+          "properties": {
+            "interchain_message": {
+              "$ref": "#/definitions/InterchainMessage"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>",
+      "type": "string"
+    },
+    "Contract": {
+      "type": "object",
+      "required": [
+        "address",
+        "hash"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/HumanAddr"
+        },
+        "hash": {
+          "type": "string"
+        }
+      }
+    },
+    "HumanAddr": {
+      "type": "string"
+    },
+    "InputValues": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "Scenario1"
+          ],
+          "properties": {
+            "Scenario1": {
+              "type": "object",
+              "required": [
+                "integer"
+              ],
+              "properties": {
+                "integer": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "Scenario2"
+          ],
+          "properties": {
+            "Scenario2": {
+              "type": "object",
+              "required": [
+                "string"
+              ],
+              "properties": {
+                "string": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "InterchainMessage": {
+      "type": "object",
+      "required": [
+        "payload",
+        "payload_signature",
+        "routing_info",
+        "routing_info_signature",
+        "signature_of_entire_packet",
+        "source_network",
+        "task_id",
+        "task_id_signature"
+      ],
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/Payload"
+        },
+        "payload_signature": {
+          "$ref": "#/definitions/Binary"
+        },
+        "routing_info": {
+          "$ref": "#/definitions/RoutingInfo"
+        },
+        "routing_info_signature": {
+          "$ref": "#/definitions/Binary"
+        },
+        "signature_of_entire_packet": {
+          "$ref": "#/definitions/Binary"
+        },
+        "source_network": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "integer",
+          "format": "uint128",
+          "minimum": 0.0
+        },
+        "task_id_signature": {
+          "$ref": "#/definitions/Binary"
+        }
+      }
+    },
+    "Payload": {
+      "type": "object",
+      "required": [
+        "contract",
+        "handle",
+        "input_values"
+      ],
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "handle": {
+          "type": "string"
+        },
+        "input_values": {
+          "$ref": "#/definitions/InputValues"
+        }
+      }
+    },
+    "RoutingInfo": {
+      "type": "object"
+    }
+  }
+}
