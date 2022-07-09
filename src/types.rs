@@ -1,19 +1,29 @@
-use cosmwasm_std::{Binary, HumanAddr};
+use cosmwasm_std::{Binary, Empty, HumanAddr};
+use secret_toolkit::utils::types::Contract;
+
 use schemars::JsonSchema;
-use secret_toolkit::{crypto::secp256k1, utils::types::Contract};
 use serde::{Deserialize, Serialize};
 
-pub type Base64 = Binary;
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Inputs {
+    pub task_id: u128,               // exact size TBD
+    pub input_values: Empty,         // TBD
+    pub handle: Empty,               // TBD
+    pub contract_address: HumanAddr, // destination contract address
+    pub contract_hash: String,       // destination contract code hash
+    pub signature: Binary,           // signature of hash of unencrypted input value
+    pub creating_address: Sender, // unsure if this is a person or a contract. is it the calling contract?
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PublicPrivate {
     pub message_creator: Sender,
     pub source_network: String,
     pub routing_info: RoutingInfo,
-    pub routing_info_signature: Base64,
+    pub routing_info_signature: Binary,
     pub payload: Payload,
-    pub payload_signature: Base64,
-    pub signature_of_entire_packet: Base64,
+    pub payload_signature: Binary,
+    pub signature_of_entire_packet: Binary,
     pub task_id: u128,
 }
 
@@ -21,17 +31,17 @@ pub struct PublicPrivate {
 pub struct PrivatePublic {
     pub source_network: String,
     pub routing_info: RoutingInfo,
-    pub routing_info_signature: Base64,
+    pub routing_info_signature: Binary,
     pub payload: Payload,
-    pub payload_signature: Base64,
-    pub signature_of_entire_packet: Base64,
+    pub payload_signature: Binary,
+    pub signature_of_entire_packet: Binary,
     pub task_id: u128,
-    pub task_id_signature: Base64,
+    pub task_id_signature: Binary,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Sender {
-    pub verifying_key: Base64,
+    pub verifying_key: Binary,
     pub address: String,
 }
 
@@ -39,6 +49,7 @@ pub struct Sender {
 pub struct RoutingInfo {
     pub sender: HumanAddr,
     pub destination: Contract,
+    // consider using more primitive types because incoming messages may not be written in Rust
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

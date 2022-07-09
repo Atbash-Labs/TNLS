@@ -62,7 +62,7 @@ const initializeContract = async (
     {
       sender: client.address,
       codeId,
-      initMsg: { count: 4 }, // Initialize our counter to start from 4. This message will trigger our Init function
+      initMsg: {},
       codeHash: contractCodeHash,
       label: "My contract" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
     },
@@ -137,121 +137,6 @@ async function initializeAndUploadContract() {
   return clientInfo;
 }
 
-async function queryCount(
-  client: SecretNetworkClient,
-  contractHash: string,
-  contractAddress: string
-): Promise<number> {
-  type CountResponse = { count: number };
-
-  const countResponse = (await client.query.compute.queryContract({
-    contractAddress: contractAddress,
-    codeHash: contractHash,
-    query: { get_count: {} },
-  })) as CountResponse;
-
-  if ('err"' in countResponse) {
-    throw new Error(
-      `Query failed with the following err: ${JSON.stringify(countResponse)}`
-    );
-  }
-
-  return countResponse.count;
-}
-
-async function incrementTx(
-  client: SecretNetworkClient,
-  contractHash: string,
-  contractAddess: string
-) {
-  const tx = await client.tx.compute.executeContract(
-    {
-      sender: client.address,
-      contractAddress: contractAddess,
-      codeHash: contractHash,
-      msg: {
-        increment: {},
-      },
-      sentFunds: [],
-    },
-    {
-      gasLimit: 200000,
-    }
-  );
-
-  //let parsedTransactionData = JSON.parse(fromUtf8(tx.data[0])); // In our case we don't really need to access transaction data
-  console.log(`Increment TX used ${tx.gasUsed} gas`);
-}
-
-async function resetTx(
-  client: SecretNetworkClient,
-  contractHash: string,
-  contractAddess: string
-) {
-  const tx = await client.tx.compute.executeContract(
-    {
-      sender: client.address,
-      contractAddress: contractAddess,
-      codeHash: contractHash,
-      msg: {
-        reser: { count: 0 },
-      },
-      sentFunds: [],
-    },
-    {
-      gasLimit: 200000,
-    }
-  );
-
-  console.log(`Reset TX used ${tx.gasUsed} gas`);
-}
-
-// The following functions are only some examples of how to write integration tests, there are many tests that we might want to write here.
-async function test_count_on_intialization(
-  client: SecretNetworkClient,
-  contractHash: string,
-  contractAddress: string
-) {
-  const onInitializationCounter: number = await queryCount(
-    client,
-    contractHash,
-    contractAddress
-  );
-  assert(
-    onInitializationCounter === 4,
-    `The counter on initialization expected to be 4 instead of ${onInitializationCounter}`
-  );
-}
-
-async function test_increment_stress(
-  client: SecretNetworkClient,
-  contractHash: string,
-  contractAddress: string
-) {
-  const onStartCounter: number = await queryCount(
-    client,
-    contractHash,
-    contractAddress
-  );
-
-  let stressLoad: number = 10;
-  for (let i = 0; i < stressLoad; ++i) {
-    await incrementTx(client, contractHash, contractAddress);
-  }
-
-  const afterStressCounter: number = await queryCount(
-    client,
-    contractHash,
-    contractAddress
-  );
-  assert(
-    afterStressCounter - onStartCounter === stressLoad,
-    `After running stress test the counter expected to be ${
-      onStartCounter + 10
-    } instead of ${afterStressCounter}`
-  );
-}
-
 async function test_gas_limits() {
   // There is no accurate way to measue gas limits but it is actually very recommended to make sure that the gas that is used by a specific tx makes sense
 }
@@ -275,17 +160,5 @@ async function runTestFunction(
   const [client, contractHash, contractAddress] =
     await initializeAndUploadContract();
 
-  await runTestFunction(
-    test_count_on_intialization,
-    client,
-    contractHash,
-    contractAddress
-  );
-  await runTestFunction(
-    test_increment_stress,
-    client,
-    contractHash,
-    contractAddress
-  );
-  await runTestFunction(test_gas_limits, client, contractHash, contractAddress);
+    await runTestFunction(test_gas_limits, client, contractHash, contractAddress);
 })();

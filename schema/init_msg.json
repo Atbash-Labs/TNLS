@@ -6,7 +6,24 @@
     "entropy"
   ],
   "properties": {
+    "admin": {
+      "description": "optional admin address, env.message.sender if missing",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/HumanAddr"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "entropy": {
+      "description": "entropy used for prng seed",
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "HumanAddr": {
       "type": "string"
     }
   }

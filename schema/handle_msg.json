@@ -11,11 +11,11 @@
         "input": {
           "type": "object",
           "required": [
-            "interchain_message"
+            "inputs"
           ],
           "properties": {
-            "interchain_message": {
-              "$ref": "#/definitions/InterchainMessage"
+            "inputs": {
+              "$ref": "#/definitions/Inputs"
             }
           }
         }
@@ -30,11 +30,11 @@
         "output": {
           "type": "object",
           "required": [
-            "interchain_message"
+            "outputs"
           ],
           "properties": {
-            "interchain_message": {
-              "$ref": "#/definitions/InterchainMessage"
+            "outputs": {
+              "$ref": "#/definitions/Empty"
             }
           }
         }
@@ -46,130 +46,64 @@
       "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>",
       "type": "string"
     },
-    "Contract": {
-      "type": "object",
-      "required": [
-        "address",
-        "hash"
-      ],
-      "properties": {
-        "address": {
-          "$ref": "#/definitions/HumanAddr"
-        },
-        "hash": {
-          "type": "string"
-        }
-      }
+    "Empty": {
+      "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
+      "type": "object"
     },
     "HumanAddr": {
       "type": "string"
     },
-    "InputValues": {
-      "anyOf": [
-        {
-          "type": "object",
-          "required": [
-            "Scenario1"
-          ],
-          "properties": {
-            "Scenario1": {
-              "type": "object",
-              "required": [
-                "integer"
-              ],
-              "properties": {
-                "integer": {
-                  "type": "integer",
-                  "format": "uint8",
-                  "minimum": 0.0
-                }
-              }
-            }
-          }
-        },
-        {
-          "type": "object",
-          "required": [
-            "Scenario2"
-          ],
-          "properties": {
-            "Scenario2": {
-              "type": "object",
-              "required": [
-                "string"
-              ],
-              "properties": {
-                "string": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      ]
-    },
-    "InterchainMessage": {
+    "Inputs": {
       "type": "object",
       "required": [
-        "payload",
-        "payload_signature",
-        "routing_info",
-        "routing_info_signature",
-        "signature_of_entire_packet",
-        "source_network",
-        "task_id",
-        "task_id_signature"
+        "contract_address",
+        "contract_hash",
+        "creating_address",
+        "handle",
+        "input_values",
+        "signature",
+        "task_id"
       ],
       "properties": {
-        "payload": {
-          "$ref": "#/definitions/Payload"
+        "contract_address": {
+          "$ref": "#/definitions/HumanAddr"
         },
-        "payload_signature": {
-          "$ref": "#/definitions/Binary"
-        },
-        "routing_info": {
-          "$ref": "#/definitions/RoutingInfo"
-        },
-        "routing_info_signature": {
-          "$ref": "#/definitions/Binary"
-        },
-        "signature_of_entire_packet": {
-          "$ref": "#/definitions/Binary"
-        },
-        "source_network": {
+        "contract_hash": {
           "type": "string"
+        },
+        "creating_address": {
+          "$ref": "#/definitions/Sender"
+        },
+        "handle": {
+          "$ref": "#/definitions/Empty"
+        },
+        "input_values": {
+          "$ref": "#/definitions/Empty"
+        },
+        "signature": {
+          "$ref": "#/definitions/Binary"
         },
         "task_id": {
           "type": "integer",
           "format": "uint128",
           "minimum": 0.0
+        }
+      }
+    },
+    "Sender": {
+      "type": "object",
+      "required": [
+        "address",
+        "verifying_key"
+      ],
+      "properties": {
+        "address": {
+          "type": "string"
         },
-        "task_id_signature": {
+        "verifying_key": {
           "$ref": "#/definitions/Binary"
         }
       }
-    },
-    "Payload": {
-      "type": "object",
-      "required": [
-        "contract",
-        "handle",
-        "input_values"
-      ],
-      "properties": {
-        "contract": {
-          "$ref": "#/definitions/Contract"
-        },
-        "handle": {
-          "type": "string"
-        },
-        "input_values": {
-          "$ref": "#/definitions/InputValues"
-        }
-      }
-    },
-    "RoutingInfo": {
-      "type": "object"
     }
   }
 }

@@ -1,75 +1,111 @@
-use crate::{
-    msg::{
-        CounterHandleMsg, HandleAnswer, HandleMsg, InitMsg, QueryAnswer, QueryMsg,
-        ResponseStatus::Success,
-    },
-    state::{config_read, config_write, State},
-    types::*,
-};
-use chacha20poly1305::aead::{Aead, NewAead};
-use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+//! Master Private Gateway
+//! description...
+
 use cosmwasm_std::{
-    debug_print, log, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult,
+    debug_print, log, to_binary, Api, Binary, Empty, Env, Extern, HandleResponse, HandleResult,
     InitResponse, InitResult, Querier, QueryResult, StdResult, Storage,
 };
-use ed25519_compact::*;
-use secp256k1::{rand::thread_rng, Secp256k1};
+use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 use secret_toolkit::{
-    crypto::secp256k1::*,
-    crypto::sha_256,
-    serialization::Base64,
+    crypto::secp256k1::{PrivateKey, PublicKey, Signature},
+    crypto::{sha_256, Prng},
+    incubator::{CashMap, ReadOnlyCashMap},
     utils::{pad_handle_result, pad_query_result, HandleCallback},
 };
+
+use crate::{
+    msg::{
+        ContractStatus, CounterHandleMsg, HandleAnswer, HandleMsg, InitMsg, QueryAnswer, QueryMsg,
+        ResponseStatus::Success,
+    },
+    state::{
+        config_read, config_write, load, load_signing_key, may_load, save, State, CONFIG_KEY,
+        CREATOR_KEY, MY_ADDRESS_KEY, PRNG_SEED_KEY, TASK_KEY,
+    },
+    types::*,
+};
+
+use chacha20poly1305::aead::{Aead, NewAead};
+use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+use ed25519_compact::*;
 
 /// pad handle responses and log attributes to blocks of 256 bytes to prevent leaking info based on
 /// response size
 pub const BLOCK_SIZE: usize = 256;
 
+#[cfg(not(feature = "library"))]
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: InitMsg,
 ) -> InitResult {
-    // Should we include a supplied entropy seed?
-    let encryption_key_pair =
-        ed25519_compact::KeyPair::from_seed(ed25519_compact::Seed::generate()); // should use a different method for seed to reduce dependencies
+    // Save the address of the contract's creator
+    let creator_raw = deps.api.canonical_address(&env.message.sender)?;
+    save(&mut deps.storage, CREATOR_KEY, &creator_raw)?;
 
-    let secp = Secp256k1::new();
-    let (secret_key, public_key) = secp.generate_keypair(&mut thread_rng());
+    // Save this contract's address
+    save(
+        &mut deps.storage,
+        MY_ADDRESS_KEY,
+        &deps.api.canonical_address(&env.contract.address)?,
+    )?;
 
+    // Set admin address if provided, or else use creator address
+    let admin_raw = msg
+        .admin
+        .map(|a| deps.api.canonical_address(&a))
+        .transpose()?
+        .unwrap_or(creator_raw);
+
+    // Create and save pseudo-random-number-generator seed from user provided entropy string
+    let prng_seed: Vec<u8> = sha_256(base64::encode(msg.entropy.clone()).as_bytes()).to_vec();
+
+    // Generate ed25519 key pair for encryption
+    let encryption_key_pair = ed25519_compact::KeyPair::from_slice(&prng_seed).unwrap();
+
+    // Generate secp256k1 key pair for signing messages
+    let mut rng = Prng::new(&prng_seed, msg.entropy.as_bytes()); // is this the best way to generate randomness?
+    let secret_key = PrivateKey::parse(&rng.rand_bytes())?;
+    let public_key = secret_key.pubkey();
+
+    // Save both key pairs
     let state = State {
+        admin: admin_raw.clone(),
+        tx_cnt: 0,
+        status: ContractStatus::Normal.to_u8(),
         encryption_key: crate::state::KeyPair {
-            pk: base64::encode(encryption_key_pair.pk.as_ref()),
-            sk: base64::encode(encryption_key_pair.sk.as_ref()),
+            pk: encryption_key_pair.pk.to_vec(),
+            sk: encryption_key_pair.sk.to_vec(),
         },
         signing_key: crate::state::KeyPair {
-            pk: base64::encode(&public_key.serialize()),
-            sk: base64::encode(&secret_key.serialize_secret()),
+            pk: public_key.serialize().to_vec(),
+            sk: secret_key.serialize().to_vec(),
         },
-        owner: deps.api.canonical_address(&env.message.sender)?,
     };
 
-    config_write(&mut deps.storage).save(&state)?;
+    save(&mut deps.storage, CONFIG_KEY, &state)?;
+    save(&mut deps.storage, PRNG_SEED_KEY, &prng_seed)?;
 
     debug_print!("Contract was initialized by {}", env.message.sender);
 
     Ok(InitResponse {
         messages: vec![],
         log: vec![
-            log("encryption_public_key", &state.encryption_key.pk),
-            log("signing_public_key", &state.signing_key.pk),
+            log("encryption_public_key", "pubkey1"), // need to implement display formatting
+            log("signing_public_key", "pubkey2"),    // need to implement display formatting
         ],
     })
 }
 
+#[cfg(not(feature = "library"))]
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: HandleMsg,
 ) -> HandleResult {
     let response = match msg {
-        HandleMsg::Input { interchain_message } => pre_execution(deps, env, interchain_message),
-        HandleMsg::Output { interchain_message } => post_execution(deps, env, interchain_message),
+        HandleMsg::Input { inputs } => pre_execution(deps, env, inputs),
+        HandleMsg::Output { outputs } => post_execution(deps, env, outputs),
     };
     pad_handle_result(response, BLOCK_SIZE)
 }
@@ -77,20 +113,21 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 fn pre_execution<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    msg: PublicPrivate,
+    msg: Inputs,
 ) -> HandleResult {
-    // I think this message is supposed to be the "packet" or a hash of the packet
-    let message = &[1u8; 32];
-    let signature = msg.signature_of_entire_packet;
-    let public_key = msg.message_creator.verifying_key;
-    // verify that signature is correct
+    let message = &[1u8; 32]; // hash of the unencrypted input values
+    let signature = msg.signature;
+    let public_key = msg.creating_address.verifying_key; // TODO how to get verifying key?
+                                                         // verify that signature is correct
+
+    // The signature and public key are in "Cosmos" format:
+    // signature: Serialized "compact" signature (64 bytes).
+    // public key: Serialized according to SEC 2
     deps.api
         .secp256k1_verify(message, signature.as_slice(), public_key.as_slice());
 
-    let destination_contract = msg.routing_info.destination;
-
     // load key and sign
-    let private_key = &base64::decode(&config_read(&deps.storage).load()?.signing_key.sk).unwrap();
+    let private_key = load_signing_key(&deps.storage)?;
     let task_id_signature = SecretKey::from_slice(private_key.as_slice())
         .unwrap()
         .sign(msg.task_id.to_le_bytes(), None); // write the error case, make some noise
@@ -98,11 +135,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     // example message construction (consider having a secondary contract that can upgrade to add new message types)
     let reset_msg = CounterHandleMsg::Reset { count: 200 };
 
-    let cosmos_msg = reset_msg.to_cosmos_msg(
-        destination_contract.hash,
-        destination_contract.address,
-        None,
-    )?;
+    let cosmos_msg = reset_msg.to_cosmos_msg(msg.contract_hash, msg.contract_address, None)?;
 
     Ok(HandleResponse {
         messages: vec![cosmos_msg],
@@ -114,13 +147,13 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
 fn post_execution<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    msg: PrivatePublic,
+    msg: Empty,
 ) -> HandleResult {
-    // verify that calling contract (which contract exactly) is correct one for Task ID
+    // verify that calling contract is correct one for Task ID (check map)
     // sign and broadcast pair(?) of outputs + Task ID + inputs
     let output = "output";
-    let task_id = msg.task_id;
-    let private_key = &base64::decode(&config_read(&deps.storage).load()?.signing_key.sk).unwrap();
+    let task_id: u64 = 1;
+    let private_key = load_signing_key(&deps.storage)?;
     let signature = SecretKey::from_slice(private_key.as_slice()) //I believe this is a simple transformation of types
         .unwrap()
         .sign(b"message", None); // write the error case, make some noise
@@ -136,6 +169,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+#[cfg(not(feature = "library"))]
 pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: QueryMsg,
@@ -164,6 +198,7 @@ mod tests {
         let mut deps = mock_dependencies(20, &[]);
 
         let msg = InitMsg {
+            admin: None,
             entropy: "secret".to_string(),
         };
         let env = mock_env("creator", &coins(1000, "earth"));
