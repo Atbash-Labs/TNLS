@@ -49,9 +49,18 @@ impl ContractStatus {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum HandleAnswer {
-    Input { status: ResponseStatus },
-    Output { status: ResponseStatus },
+pub struct InputResponse {
+    pub status: ResponseStatus,
+    pub task_id: u128,
+    pub creating_address: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct OutputResponse {
+    pub status: ResponseStatus,
+    pub task_id: u128,
+    pub creating_address: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -62,10 +71,10 @@ pub enum QueryMsg {
 }
 
 // We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum QueryAnswer {
-    GetPublicKey { key: Vec<u8> }, // TODO decide what type return
+pub struct PublicKeyResponse {
+    pub key: Vec<u8>,
 }
 
 // Here we need to know the message structures for the specific HandleMsgs we want to call

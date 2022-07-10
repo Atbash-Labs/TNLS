@@ -1,26 +1,22 @@
-//! Master Private Gateway
-//! description...
-
+#![allow(unused_imports)]
 use cosmwasm_std::{
-    debug_print, log, to_binary, Api, Binary, Empty, Env, Extern, HandleResponse, HandleResult,
-    InitResponse, InitResult, Querier, QueryResult, StdResult, Storage,
+    debug_print, log, to_binary, Api, Empty, Env, Extern, HandleResponse, HandleResult,
+    InitResponse, InitResult, Querier, QueryResult, Storage,
 };
-use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 use secret_toolkit::{
     crypto::secp256k1::{PrivateKey, PublicKey, Signature},
     crypto::{sha_256, Prng},
-    incubator::{CashMap, ReadOnlyCashMap},
     utils::{pad_handle_result, pad_query_result, HandleCallback},
 };
 
 use crate::{
     msg::{
-        ContractStatus, CounterHandleMsg, HandleAnswer, HandleMsg, InitMsg, QueryAnswer, QueryMsg,
-        ResponseStatus::Success,
+        ContractStatus, CounterHandleMsg, HandleMsg, InitMsg, InputResponse, OutputResponse,
+        PublicKeyResponse, QueryMsg, ResponseStatus::Success,
     },
     state::{
-        config_read, config_write, load, load_signing_key, may_load, save, State, CONFIG_KEY,
-        CREATOR_KEY, MY_ADDRESS_KEY, PRNG_SEED_KEY, TASK_KEY,
+        config, config_read, creator_address, creator_address_read, load_signing_key, map2caller,
+        my_address, my_address_read, prng, prng_read, State,
     },
     types::*,
 };
@@ -34,21 +30,28 @@ use ed25519_compact::*;
 pub const BLOCK_SIZE: usize = 256;
 
 #[cfg(not(feature = "library"))]
+////////////////////////////////////// Init ///////////////////////////////////////
+/// Returns InitResult
+///
+/// Initializes the contract
+///
+/// # Arguments
+///
+/// * `deps` - mutable reference to Extern containing all the contract's external dependencies
+/// * `env` - Env of contract's environment
+/// * `msg` - InitMsg passed in with the instantiation message
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: InitMsg,
 ) -> InitResult {
+    // Save this contract's address
+    let my_address_raw = &deps.api.canonical_address(&env.contract.address)?;
+    my_address(&mut deps.storage).save(my_address_raw)?;
+
     // Save the address of the contract's creator
     let creator_raw = deps.api.canonical_address(&env.message.sender)?;
-    save(&mut deps.storage, CREATOR_KEY, &creator_raw)?;
-
-    // Save this contract's address
-    save(
-        &mut deps.storage,
-        MY_ADDRESS_KEY,
-        &deps.api.canonical_address(&env.contract.address)?,
-    )?;
+    creator_address(&mut deps.storage).save(&creator_raw)?;
 
     // Set admin address if provided, or else use creator address
     let admin_raw = msg
@@ -61,7 +64,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     let prng_seed: Vec<u8> = sha_256(base64::encode(msg.entropy.clone()).as_bytes()).to_vec();
 
     // Generate ed25519 key pair for encryption
-    let encryption_key_pair = ed25519_compact::KeyPair::from_slice(&prng_seed).unwrap();
+    let encryption_key_pair = ed25519_compact::KeyPair::from_slice(&[0; 64]).unwrap();
 
     // Generate secp256k1 key pair for signing messages
     let mut rng = Prng::new(&prng_seed, msg.entropy.as_bytes()); // is this the best way to generate randomness?
@@ -78,15 +81,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             sk: encryption_key_pair.sk.to_vec(),
         },
         signing_key: crate::state::KeyPair {
-            pk: public_key.serialize().to_vec(),
+            pk: public_key.serialize_compressed().to_vec(),
             sk: secret_key.serialize().to_vec(),
         },
     };
 
-    save(&mut deps.storage, CONFIG_KEY, &state)?;
-    save(&mut deps.storage, PRNG_SEED_KEY, &prng_seed)?;
-
-    debug_print!("Contract was initialized by {}", env.message.sender);
+    config(&mut deps.storage).save(&state)?;
+    prng(&mut deps.storage).save(&prng_seed)?;
 
     Ok(InitResponse {
         messages: vec![],
@@ -98,6 +99,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 }
 
 #[cfg(not(feature = "library"))]
+///////////////////////////////////// Handle //////////////////////////////////////
+/// Returns HandleResult
+///
+/// # Arguments
+///
+/// * `deps` - mutable reference to Extern containing all the contract's external dependencies
+/// * `env` - Env of contract's environment
+/// * `msg` - HandleMsg passed in with the execute message
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -115,10 +124,15 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: Inputs,
 ) -> HandleResult {
+    // map task ID to calling contract
+    let task_id = msg.task_id;
+    let caller = msg.creator.address.to_string();
+    map2caller(&mut deps.storage).insert(&task_id.to_le_bytes(), caller)?;
+
+    // verify that signature is correct
     let message = &[1u8; 32]; // hash of the unencrypted input values
     let signature = msg.signature;
-    let public_key = msg.creating_address.verifying_key; // TODO how to get verifying key?
-                                                         // verify that signature is correct
+    let public_key = msg.creator.verifying_key; // TODO how to get verifying key?
 
     // The signature and public key are in "Cosmos" format:
     // signature: Serialized "compact" signature (64 bytes).
@@ -126,7 +140,9 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     deps.api
         .secp256k1_verify(message, signature.as_slice(), public_key.as_slice());
 
-    // load key and sign
+    // decrypt input values
+
+    // load key and sign(task ID + input values)
     let private_key = load_signing_key(&deps.storage)?;
     let task_id_signature = SecretKey::from_slice(private_key.as_slice())
         .unwrap()
@@ -135,12 +151,16 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     // example message construction (consider having a secondary contract that can upgrade to add new message types)
     let reset_msg = CounterHandleMsg::Reset { count: 200 };
 
-    let cosmos_msg = reset_msg.to_cosmos_msg(msg.contract_hash, msg.contract_address, None)?;
+    let cosmos_msg = reset_msg.to_cosmos_msg(msg.contract.hash, msg.contract.address, None)?;
 
     Ok(HandleResponse {
         messages: vec![cosmos_msg],
         log: vec![log("task_ID", &msg.task_id)],
-        data: Some(to_binary(&HandleAnswer::Input { status: Success })?),
+        data: Some(to_binary(&InputResponse {
+            status: Success,
+            task_id: task_id,
+            creating_address: msg.creator.address,
+        })?),
     })
 }
 
@@ -152,7 +172,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     // verify that calling contract is correct one for Task ID (check map)
     // sign and broadcast pair(?) of outputs + Task ID + inputs
     let output = "output";
-    let task_id: u64 = 1;
+    let task_id: u128 = 1;
     let private_key = load_signing_key(&deps.storage)?;
     let signature = SecretKey::from_slice(private_key.as_slice()) //I believe this is a simple transformation of types
         .unwrap()
@@ -165,15 +185,23 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
             log("outputs", output),
             log("signature", &base64::encode(&signature)),
         ],
-        data: Some(to_binary(&HandleAnswer::Output { status: Success })?), // could look into returning outputs here instead of in logs
+        data: Some(to_binary(&OutputResponse {
+            status: Success,
+            task_id: task_id,
+            creating_address: String::new(),
+        })?), // could look into returning outputs here instead of in logs
     })
 }
 
 #[cfg(not(feature = "library"))]
-pub fn query<S: Storage, A: Api, Q: Querier>(
-    deps: &Extern<S, A, Q>,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+/////////////////////////////////////// Query /////////////////////////////////////
+/// Returns QueryResult
+///
+/// # Arguments
+///
+/// * `deps` - reference to Extern containing all the contract's external dependencies
+/// * `msg` - QueryMsg passed in with the query call
+pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> QueryResult {
     let response = match msg {
         QueryMsg::GetPublicKey {} => query_public_key(&deps),
     };
@@ -181,8 +209,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
 }
 
 fn query_public_key<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> QueryResult {
-    let state = config_read(&deps.storage).load()?;
-    to_binary(&QueryAnswer::GetPublicKey {
+    let state: State = config_read(&deps.storage).load()?;
+    to_binary(&PublicKeyResponse {
         key: state.signing_key.pk,
     })
 }
@@ -191,27 +219,97 @@ fn query_public_key<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> Q
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
-    use cosmwasm_std::{coins, from_binary, StdError};
+    use cosmwasm_std::{coins, from_binary, Binary, HumanAddr};
+
+    use chacha20poly1305::aead::{Aead, NewAead};
+    use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+    use secret_toolkit::utils::types::Contract;
+
+    #[test]
+    fn chacha20poly1305() {
+        let key = Key::from_slice(b"an example very very secret key."); // 32-bytes
+        let cipher = ChaCha20Poly1305::new(key);
+
+        let nonce = Nonce::from_slice(b"unique nonce"); // 12-bytes; unique per message
+
+        let ciphertext = cipher
+            .encrypt(nonce, b"plaintext message".as_ref())
+            .expect("encryption failure!"); // NOTE: handle this error to avoid panics!
+        let plaintext = cipher
+            .decrypt(nonce, ciphertext.as_ref())
+            .expect("decryption failure!"); // NOTE: handle this error to avoid panics!
+
+        assert_eq!(&plaintext, b"plaintext message");
+    }
 
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies(20, &[]);
-
+        let env = mock_env("creator", &coins(1000, "earth"));
         let msg = InitMsg {
             admin: None,
             entropy: "secret".to_string(),
         };
-        let env = mock_env("creator", &coins(1000, "earth"));
-
-        // TODO assert that keys were generated
 
         // we can just call .unwrap() to assert this was a success
         let res = init(&mut deps, env, msg).unwrap();
         assert_eq!(0, res.messages.len());
+
+        // it worked, let's query the state
+        let msg = QueryMsg::GetPublicKey {};
+        let res = query(&deps, msg);
+        assert!(res.is_ok(), "query failed: {}", res.err().unwrap());
+        let value: PublicKeyResponse = from_binary(&res.unwrap()).unwrap();
+        assert!(value.key.len() == 33 as usize);
     }
 
+    #[ignore]
     #[test]
-    fn increment() {
+    fn pre_execution() {
+        // initialize
+        let mut deps = mock_dependencies(20, &[]);
+        let env = mock_env("creator", &coins(1000, "earth"));
+        let msg = InitMsg {
+            admin: None,
+            entropy: "secret".to_string(),
+        };
+
+        // mock inputs
+        let unencrypted_inputs: Binary;
+        let verifying_key = secret_toolkit::crypto::secp256k1::PublicKey::parse(b"seed").unwrap();
+
+        let task_id = 1;
+        let input_values = Binary(vec![]);
+        let handle = Binary(vec![]);
+        let contract = Contract {
+            address: HumanAddr("human address".to_string()),
+            hash: "contract hash".to_string(),
+        };
+        let signature = Binary([0u8; 32].to_vec());
+        let creator = Sender {
+            address: "sender address".to_string(),
+            verifying_key: Binary(verifying_key.serialize_compressed().to_vec()),
+        };
+
+        let inputs = Inputs {
+            task_id,
+            input_values,
+            handle,
+            contract,
+            signature,
+            creator,
+        };
+
+        let msg = HandleMsg::Input { inputs: inputs };
+        let res = super::handle(&mut deps, env, msg);
+        assert!(res.is_ok(), "query failed: {}", res.err().unwrap());
+        let value: InputResponse = from_binary(&res.unwrap().data.unwrap()).unwrap();
+        assert!(value.task_id == 1)
+    }
+
+    #[ignore]
+    #[test]
+    fn post_execution() {
         todo!()
     }
 }
