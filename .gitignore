@@ -10,3 +10,6 @@ Cargo.lock
 
 # node modules
 /tests/node_modules
+
+# IDEs
+.vscode

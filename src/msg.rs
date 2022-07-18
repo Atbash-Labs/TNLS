@@ -1,7 +1,7 @@
-use cosmwasm_std::{Empty, HumanAddr};
+use cosmwasm_std::{Binary, HumanAddr};
 use secret_toolkit::utils::HandleCallback;
 
-use crate::types::Inputs;
+use crate::types::{PostExecutionMsg, PreExecutionMsg};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -17,15 +17,8 @@ pub struct InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    Input { inputs: Inputs },
-    Output { outputs: Empty }, // TODO
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum ResponseStatus {
-    Success,
-    Failure,
+    Input { inputs: PreExecutionMsg },
+    Output { outputs: PostExecutionMsg },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -50,17 +43,17 @@ impl ContractStatus {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InputResponse {
-    pub status: ResponseStatus,
-    pub task_id: u128,
-    pub creating_address: String,
+    pub task_id: u64,
+    pub creating_address: HumanAddr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct OutputResponse {
-    pub status: ResponseStatus,
-    pub task_id: u128,
-    pub creating_address: String,
+    pub task_id: u64,
+    pub calling_contract: HumanAddr,
+    pub output: Binary,
+    pub signature: Binary,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -71,10 +64,10 @@ pub enum QueryMsg {
 }
 
 // We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct PublicKeyResponse {
-    pub key: Vec<u8>,
+    pub key: Binary,
 }
 
 // Here we need to know the message structures for the specific HandleMsgs we want to call
@@ -84,5 +77,16 @@ pub enum CounterHandleMsg {
 }
 
 impl HandleCallback for CounterHandleMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct PrivContractHandleMsg {
+    pub input_values: String,
+    pub handle: String,
+    pub signature: Binary,
+}
+
+impl HandleCallback for PrivContractHandleMsg {
     const BLOCK_SIZE: usize = 256;
 }

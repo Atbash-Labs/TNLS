@@ -15,7 +15,7 @@
           ],
           "properties": {
             "inputs": {
-              "$ref": "#/definitions/Inputs"
+              "$ref": "#/definitions/PreExecutionMsg"
             }
           }
         }
@@ -34,7 +34,7 @@
           ],
           "properties": {
             "outputs": {
-              "$ref": "#/definitions/Empty"
+              "$ref": "#/definitions/PostExecutionMsg"
             }
           }
         }
@@ -46,46 +46,105 @@
       "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>",
       "type": "string"
     },
-    "Empty": {
-      "description": "An empty struct that serves as a placeholder in different places, such as contracts that don't set a custom message.\n\nIt is designed to be expressable in correct JSON and JSON Schema but contains no meaningful data. Previously we used enums without cases, but those cannot represented as valid JSON Schema (https://github.com/CosmWasm/cosmwasm/issues/451)",
-      "type": "object"
+    "Contract": {
+      "type": "object",
+      "required": [
+        "address",
+        "hash"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/HumanAddr"
+        },
+        "hash": {
+          "type": "string"
+        }
+      }
     },
     "HumanAddr": {
       "type": "string"
     },
-    "Inputs": {
+    "PostExecutionMsg": {
       "type": "object",
       "required": [
-        "contract_address",
-        "contract_hash",
-        "creating_address",
-        "handle",
-        "input_values",
-        "signature",
+        "parameters",
+        "result",
         "task_id"
       ],
       "properties": {
-        "contract_address": {
-          "$ref": "#/definitions/HumanAddr"
-        },
-        "contract_hash": {
+        "parameters": {
           "type": "string"
         },
-        "creating_address": {
-          "$ref": "#/definitions/Sender"
-        },
-        "handle": {
-          "$ref": "#/definitions/Empty"
-        },
-        "input_values": {
-          "$ref": "#/definitions/Empty"
-        },
-        "signature": {
+        "result": {
           "$ref": "#/definitions/Binary"
         },
         "task_id": {
           "type": "integer",
-          "format": "uint128",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    },
+    "PreExecutionMsg": {
+      "type": "object",
+      "required": [
+        "handle",
+        "payload",
+        "payload_hash",
+        "payload_signature",
+        "routing_info",
+        "sender",
+        "task_id"
+      ],
+      "properties": {
+        "handle": {
+          "description": "Handle to be called at destination contract.",
+          "type": "string"
+        },
+        "payload": {
+          "description": "Encryption of (data, routing info, and user address/verifying key). Includes additional data (AD).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            }
+          ]
+        },
+        "payload_hash": {
+          "description": "Hash of unencrypted input values.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            }
+          ]
+        },
+        "payload_signature": {
+          "description": "Signature of hash of unencrypted input values.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            }
+          ]
+        },
+        "routing_info": {
+          "description": "Destination contract address and code hash.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Contract"
+            }
+          ]
+        },
+        "sender": {
+          "description": "User verification key / public chain address.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Sender"
+            }
+          ]
+        },
+        "task_id": {
+          "description": "Task ID coming from the relayer.",
+          "type": "integer",
+          "format": "uint64",
           "minimum": 0.0
         }
       }
@@ -94,13 +153,13 @@
       "type": "object",
       "required": [
         "address",
-        "verifying_key"
+        "public_key"
       ],
       "properties": {
         "address": {
-          "type": "string"
+          "$ref": "#/definitions/HumanAddr"
         },
-        "verifying_key": {
+        "public_key": {
           "$ref": "#/definitions/Binary"
         }
       }

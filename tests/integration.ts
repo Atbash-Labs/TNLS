@@ -62,7 +62,7 @@ const initializeContract = async (
     {
       sender: client.address,
       codeId,
-      initMsg: {},
+      initMsg: { entropy: "string"},
       codeHash: contractCodeHash,
       label: "My contract" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
     },
