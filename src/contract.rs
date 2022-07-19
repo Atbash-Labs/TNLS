@@ -14,7 +14,7 @@ use crate::{
         PublicKeyResponse, QueryMsg,
     },
     state::{
-        config, config_read, creator_address, map2caller, map2caller_read, my_address, prng,
+        config, config_read, creator_address, map2inputs, map2inputs_read, my_address, prng,
         KeyPair, State,
     },
     types::*,
@@ -119,10 +119,6 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     _env: Env,
     msg: PreExecutionMsg,
 ) -> HandleResult {
-    // map task ID to sender
-    map2caller(&mut deps.storage)
-        .insert(&msg.task_id.to_le_bytes(), msg.routing_info.address.clone())?;
-
     // verify that signature is correct
     msg.verify(deps)?;
 
@@ -141,6 +137,10 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     if msg.routing_info != payload.routing_info {
         return Err(StdError::generic_err("routing info mismatch"));
     }
+
+    // map task ID to inputs hash
+    map2inputs(&mut deps.storage)
+        .insert(&msg.task_id.to_le_bytes(), sha_256(input_values.as_bytes()))?;
 
     // TODO find a way to construct the handle message
     let handle = msg.handle;
@@ -182,12 +182,11 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: PostExecutionMsg,
 ) -> HandleResult {
-    // verify that calling contract is correct one for Task ID (check map)
-    let calling_contract = env.message.sender;
-    if calling_contract
-        != map2caller_read(&deps.storage)
+    // verify that input hash is correct one for Task ID (check map)
+    // TODO should the "parameters" be sent hashed in the message? consider renaming
+    if sha_256(msg.parameters.as_bytes())
+        != map2inputs_read(&deps.storage)
             .load(&msg.task_id.to_le_bytes())?
-            .address
     {
         return Err(StdError::generic_err(
             "calling contract does not match task ID",
@@ -218,7 +217,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
         log: vec![log("task_ID", task_id), log("status", "success")],
         data: Some(to_binary(&OutputResponse {
             task_id,
-            calling_contract,
+            calling_contract: env.message.sender,
             output,
             signature,
         })?),

@@ -157,10 +157,20 @@
       ],
       "properties": {
         "address": {
-          "$ref": "#/definitions/HumanAddr"
+          "description": "User public chain address.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/HumanAddr"
+            }
+          ]
         },
         "public_key": {
-          "$ref": "#/definitions/Binary"
+          "description": "User verification key.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            }
+          ]
         }
       }
     }

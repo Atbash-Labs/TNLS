@@ -78,12 +78,12 @@ pub fn creator_address_read<S: Storage>(storage: &mut S) -> Singleton<S, Canonic
 }
 
 // Cashmap is convenient, but may not be the best solution if we need to maintain an ordered list
-pub fn map2caller<S: Storage>(storage: &mut S) -> CashMap<HumanAddr, S> {
-    let hashmap: CashMap<HumanAddr, S> = CashMap::init(TASK_KEY, storage);
+pub fn map2inputs<S: Storage>(storage: &mut S) -> CashMap<[u8; 32], S> {
+    let hashmap: CashMap<[u8; 32], S> = CashMap::init(TASK_KEY, storage);
     hashmap
 }
 
-pub fn map2caller_read<S: Storage>(storage: &S) -> ReadOnlyCashMap<Sender, S> {
-    let hashmap: ReadOnlyCashMap<Sender, S> = ReadOnlyCashMap::init(TASK_KEY, storage);
+pub fn map2inputs_read<S: Storage>(storage: &S) -> ReadOnlyCashMap<[u8; 32], S> {
+    let hashmap: ReadOnlyCashMap<[u8; 32], S> = ReadOnlyCashMap::init(TASK_KEY, storage);
     hashmap
 }

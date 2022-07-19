@@ -12,9 +12,9 @@ use secp256k1::{ecdh::SharedSecret, PublicKey, SecretKey};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Sender {
-    // user public chain address
+    /// User public chain address.
     pub address: HumanAddr,
-    // user verification key
+    /// User verification key.
     pub public_key: Binary,
 }
 
@@ -22,11 +22,11 @@ pub struct Sender {
 /// It is encrypted with a shared secret of the user's private key and the Private Gateway's public key.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Payload {
-    // input values, json formatted string
+    /// Input values as JSON formatted string
     pub data: String,
-    // destination address on private network
+    /// Destination contract on private network
     pub routing_info: Contract,
-    // user verification key / public chain address
+    /// User verification key / public chain address.
     pub sender: Sender,
 }
 

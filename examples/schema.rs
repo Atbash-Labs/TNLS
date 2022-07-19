@@ -4,6 +4,7 @@ use std::fs::create_dir_all;
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
 use secret_gateway::msg::{HandleMsg, InitMsg, QueryMsg};
+use secret_gateway::types::*;
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
@@ -14,4 +15,9 @@ fn main() {
     export_schema(&schema_for!(InitMsg), &out_dir);
     export_schema(&schema_for!(HandleMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
+    // export_schema(&schema_for!(PreExecutionMsg), &out_dir);
+    // export_schema(&schema_for!(PostExecutionMsg), &out_dir);
+    // export_schema(&schema_for!(Payload), &out_dir);
+    // export_schema(&schema_for!(Sender), &out_dir);
+    // export_schema(&schema_for!(BroadcastMsg), &out_dir);
 }

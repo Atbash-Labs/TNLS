@@ -2,6 +2,7 @@ import axios from "axios";
 import { Wallet, SecretNetworkClient, fromUtf8 } from "secretjs";
 import fs from "fs";
 import assert from "assert";
+import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender } from "./GatewayContract";
 
 // Returns a client with which we can interact with secret network
 const initializeClient = async (endpoint: string, chainId: string) => {
@@ -52,6 +53,8 @@ const initializeContract = async (
     }
   );
 
+  console.log(`Upload used \x1b[33m${uploadReceipt.gasUsed}\x1b[0m gas\n`);
+
   const codeId = Number(codeIdKv!.value);
   console.log("Contract codeId: ", codeId);
 
@@ -62,12 +65,12 @@ const initializeContract = async (
     {
       sender: client.address,
       codeId,
-      initMsg: { entropy: "string"},
+      initMsg: { entropy: "secret"},
       codeHash: contractCodeHash,
       label: "My contract" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
     },
     {
-      gasLimit: 1000000,
+      gasLimit: 5000000,
     }
   );
 
@@ -81,7 +84,21 @@ const initializeContract = async (
     (log) => log.type === "message" && log.key === "contract_address"
   )!.value;
 
-  console.log(`Contract address: ${contractAddress}`);
+  const encryption_pubkey = contract.arrayLog!.find(
+    (log) => log.type === "wasm" && log.key === "encryption_pubkey"
+  )!.value;
+
+  const signing_pubkey = contract.arrayLog!.find(
+    (log) => log.type === "wasm" && log.key === "signing_pubkey"
+  )!.value;
+
+  console.log(`Contract address: ${contractAddress}\n`);
+
+  console.log(`\x1b[32mEncryption key: ${encryption_pubkey}`);
+  console.log(`Verification key: ${signing_pubkey}\x1b[0m\n`);
+
+  console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas`);
+
 
   var contractInfo: [string, string] = [contractCodeHash, contractAddress];
   return contractInfo;
@@ -108,7 +125,7 @@ async function fillUpFromFaucet(
     try {
       await getFromFaucet(client.address);
     } catch (e) {
-      console.error(`failed to get tokens from faucet: ${e}`);
+      console.error(`\x1b[2mfailed to get tokens from faucet: ${e}\x1b[0m`);
     }
     balance = await getScrtBalance(client);
   }
@@ -151,9 +168,9 @@ async function runTestFunction(
   contractHash: string,
   contractAddress: string
 ) {
-  console.log(`Testing ${tester.name}`);
+  console.log(`\n\x1b[36;1m[TESTING] ${tester.name}\x1b[0m`);
   await tester(client, contractHash, contractAddress);
-  console.log(`[SUCCESS] ${tester.name}`);
+  console.log(`\x1b[92;1m[SUCCESS] ${tester.name}\x1b[0m`);
 }
 
 (async () => {
