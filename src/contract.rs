@@ -2,10 +2,11 @@ use cosmwasm_std::{
     log, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult, InitResponse,
     InitResult, Querier, QueryResult, StdError, Storage,
 };
+use secp256k1::Secp256k1;
 use secret_toolkit::{
     crypto::secp256k1::{PrivateKey, PublicKey},
     crypto::{sha_256, Prng},
-    utils::{pad_handle_result, pad_query_result, HandleCallback},
+    utils::{pad_handle_result, pad_query_result, types::Contract, HandleCallback},
 };
 
 use crate::{
@@ -128,6 +129,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     // decrypt payload
     let payload = msg.decrypt_payload(config.encryption_keys.sk)?;
     let input_values = payload.data;
+    let input_values_hash = sha_256(input_values.as_bytes());
 
     // verify the internal verification key (inside the packet?) matches the user address
     if payload.sender != msg.sender {
@@ -140,7 +142,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
 
     // map task ID to inputs hash
     map2inputs(&mut deps.storage)
-        .insert(&msg.task_id.to_le_bytes(), sha_256(input_values.as_bytes()))?;
+        .insert(&msg.task_id.to_le_bytes(), input_values_hash.clone())?;
 
     // TODO find a way to construct the handle message
     let handle = msg.handle;
@@ -149,10 +151,26 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     let mut signing_key_bytes = [0u8; 32];
     signing_key_bytes.copy_from_slice(config.signing_keys.sk.as_slice());
 
-    let signature = PrivateKey::parse(&signing_key_bytes)?
-        .sign(&msg.task_id.to_le_bytes(), deps.api)
-        .serialize();
-    let signature = to_binary(&signature.to_vec())?;
+    let secp = Secp256k1::new();
+    let sk = secp256k1::SecretKey::from_slice(config.signing_keys.sk.as_slice()).unwrap();
+    let message = secp256k1::Message::from_slice(&input_values_hash)
+        .map_err(|err| StdError::generic_err(err.to_string()))?;
+    let signature = Binary(secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec());
+
+    // This code block relies on deps.api.secp256k1_sign which doesn't work in unit tests
+
+    // let signature = PrivateKey::parse(&signing_key_bytes)?
+    //     .sign(&input_values_hash, deps.api)
+    //     .serialize();
+    // let signature = to_binary(&signature.to_vec())?;
+    // let signature = Binary(vec![1,2,3]);
+
+    // using less gas efficient method for now to sign
+    let secp = Secp256k1::new();
+    let sk = secp256k1::SecretKey::from_slice(config.signing_keys.sk.as_slice()).unwrap();
+    let message = secp256k1::Message::from_slice(&input_values_hash)
+        .map_err(|err| StdError::generic_err(err.to_string()))?;
+    let signature = Binary(secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec());
 
     // in it's current form, every message sent from this private gateway has the same message structure
     let contract_msg = PrivContractHandleMsg {
@@ -185,8 +203,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     // verify that input hash is correct one for Task ID (check map)
     // TODO should the "parameters" be sent hashed in the message? consider renaming
     if sha_256(msg.parameters.as_bytes())
-        != map2inputs_read(&deps.storage)
-            .load(&msg.task_id.to_le_bytes())?
+        != map2inputs_read(&deps.storage).load(&msg.task_id.to_le_bytes())?
     {
         return Err(StdError::generic_err(
             "calling contract does not match task ID",
@@ -242,7 +259,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
 fn query_public_key<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> QueryResult {
     let state: State = config_read(&deps.storage).load()?;
     to_binary(&PublicKeyResponse {
-        key: state.signing_keys.pk,
+        key: state.encryption_keys.pk,
     })
 }
 
@@ -303,10 +320,11 @@ pub fn new_entropy(env: &Env, seed: &[u8], entropy: &[u8]) -> [u8; 32] {
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
-    use cosmwasm_std::{coins, from_binary, Binary};
+    use cosmwasm_std::{coins, from_binary, Binary, HumanAddr};
 
     use chacha20poly1305::aead::{Aead, NewAead};
     use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+    use secp256k1::{ecdh::SharedSecret, Message, Secp256k1, SecretKey};
 
     #[test]
     fn chacha20poly1305() {
@@ -351,31 +369,98 @@ mod tests {
         // initialize
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env("creator", &coins(1000, "earth"));
-        let msg = InitMsg {
+        let init_msg = InitMsg {
             admin: None,
             entropy: "secret".to_string(),
         };
-        let res = init(&mut deps, env.clone(), msg).unwrap();
-        let pubkey = Binary::from_base64(&res.log[0].value).unwrap();
+        let init_result = init(&mut deps, env.clone(), init_msg);
+        assert!(
+            init_result.is_ok(),
+            "Init failed: {}",
+            init_result.err().unwrap()
+        );
+        let pubkey = Binary::from_base64(&init_result.unwrap().log[0].value).unwrap();
         assert_eq!(pubkey.len(), 33);
 
-        // todo!();
+        // test query / get key to use for encryption
+        let query_msg = QueryMsg::GetPublicKey {};
+        let query_result = query(&deps, query_msg);
+        assert!(
+            query_result.is_ok(),
+            "query failed: {}",
+            query_result.err().unwrap()
+        );
+        let query_answer: PublicKeyResponse = from_binary(&query_result.unwrap()).unwrap();
+        let gateway_pubkey = query_answer.key;
+        assert_eq!(gateway_pubkey.len(), 33);
 
-        // mock inputs
-        // let inputs = PreExecutionMsg {
-        //     task_id,
-        //     handle,
-        //     routing_info,
-        //     payload,
-        //     payload_hash,
-        //     payload_signature,
-        //     sender,
-        // };
-        // let msg = HandleMsg::Input { inputs: inputs };
-        // let res = super::handle(&mut deps, env.clone(), msg);
-        // assert!(res.is_ok(), "query failed: {}", res.err().unwrap());
-        // let value: InputResponse = from_binary(&res.unwrap().data.unwrap()).unwrap();
-        // assert!(value.task_id == 1)
+        // mock key pair
+        let secp = Secp256k1::new();
+        let secret_key = Key::from_slice(b"an example very very secret key."); // 32-bytes
+        let secret_key = secp256k1::SecretKey::from_slice(secret_key).unwrap();
+        let public_key = secp256k1::PublicKey::from_secret_key(&secp, &secret_key);
+
+        // create shared key from user private + gateway public
+        let gateway_pubkey = secp256k1::PublicKey::from_slice(gateway_pubkey.as_slice()).unwrap();
+        let shared_key = secp256k1::ecdh::SharedSecret::new(&gateway_pubkey, &secret_key);
+
+        // mock Payload
+        let data = "{\"fingerprint\": \"0xF9BA143B95FF6D82\", \"location\": \"Menlo Park, CA\"}"
+            .to_string();
+        let routing_info = Contract {
+            address: HumanAddr::from("secret19zpyd046u4swqpksr3n44cej4j8pg6ahw95y85".to_string()),
+            hash: "2a2fbe493ef25b536bbe0baa3917b51e5ba092e14bd76abf50a59526e2789be3".to_string(),
+        };
+        let sender = Sender {
+            address: HumanAddr::from("some eth address".to_string()),
+            public_key: Binary(public_key.serialize().to_vec()),
+        };
+        let payload = Payload {
+            data,
+            routing_info: routing_info.clone(),
+            sender: sender.clone(),
+        };
+        let serialized_payload = to_binary(&payload).unwrap();
+
+        // encrypt the payload
+        let cipher = ChaCha20Poly1305::new_from_slice(shared_key.as_ref())
+            .map_err(|_err| StdError::generic_err("could not create cipher".to_string()))
+            .unwrap();
+        let nonce = Nonce::from_slice(b"unique nonce"); // 12-bytes; unique per message
+        let encrypted_payload = cipher
+            .encrypt(nonce, serialized_payload.as_slice())
+            .expect("encryption failure!"); // NOTE: handle this error to avoid panics!
+
+        // sign the payload
+        let payload_hash = sha_256(serialized_payload.as_slice());
+        let message = Message::from_slice(&payload_hash).unwrap();
+        let payload_signature = secp.sign_ecdsa(&message, &secret_key);
+
+        // test input handle
+        let pre_execution_msg = PreExecutionMsg {
+            task_id: 1,
+            handle: "test".to_string(),
+            routing_info,
+            payload: Binary(encrypted_payload),
+            payload_hash: Binary(payload_hash.to_vec()),
+            payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
+            sender,
+        };
+        let handle_msg = HandleMsg::Input {
+            inputs: pre_execution_msg,
+        };
+        let handle_result = handle(&mut deps, env, handle_msg);
+        assert!(
+            handle_result.is_ok(),
+            "handle failed: {}",
+            handle_result.err().unwrap()
+        );
+        // assert that the list of messages is not empty
+        assert!(!handle_result.as_ref().unwrap().messages.is_empty());
+
+        let handle_answer: InputResponse = from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
+        assert_eq!(handle_answer.task_id, 1);
+        assert_eq!(handle_answer.creating_address, HumanAddr::from("some eth address".to_string()));
     }
 
     #[ignore]

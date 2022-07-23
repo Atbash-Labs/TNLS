@@ -2,7 +2,13 @@ import axios from "axios";
 import { Wallet, SecretNetworkClient, fromUtf8 } from "secretjs";
 import fs from "fs";
 import assert from "assert";
-import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender } from "./GatewayContract";
+import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender, Binary } from "./GatewayContract";
+import { ecdh, ecdsaSign, privateKeyVerify } from "secp256k1";
+import { Wallet as EthWallet } from "ethers";
+import { sha256, arrayify, SigningKey } from "ethers/lib/utils";
+import { randomBytes, createCipheriv, createHash } from 'crypto';
+// import { uuid } from 'uuid';
+
 
 // Returns a client with which we can interact with secret network
 const initializeClient = async (endpoint: string, chainId: string) => {
@@ -16,7 +22,7 @@ const initializeClient = async (endpoint: string, chainId: string) => {
     walletAddress: accAddress,
   });
 
-  console.log(`Initialized client with wallet address: ${accAddress}`);
+  console.log(`\nInitialized client with wallet address: ${accAddress}`);
   return client;
 };
 
@@ -99,8 +105,7 @@ const initializeContract = async (
 
   console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas`);
 
-
-  var contractInfo: [string, string] = [contractCodeHash, contractAddress];
+  var contractInfo: [string, string, string] = [contractCodeHash, contractAddress, encryption_pubkey];
   return contractInfo;
 };
 
@@ -141,21 +146,146 @@ async function initializeAndUploadContract() {
 
   await fillUpFromFaucet(client, 100_000_000);
 
-  const [contractHash, contractAddress] = await initializeContract(
+  const [contractHash, contractAddress, gatewayPublicKey] = await initializeContract(
     client,
     "contract.wasm"
   );
 
-  var clientInfo: [SecretNetworkClient, string, string] = [
+  var clientInfo: [SecretNetworkClient, string, string, string] = [
     client,
     contractHash,
     contractAddress,
+    gatewayPublicKey
   ];
   return clientInfo;
 }
 
-async function test_gas_limits() {
-  // There is no accurate way to measue gas limits but it is actually very recommended to make sure that the gas that is used by a specific tx makes sense
+async function inputTx(
+  client: SecretNetworkClient,
+  contractHash: string,
+  contractAddress: string,
+  gatewayPublicKey: string, // base64
+) {
+  const wallet = EthWallet.createRandom(); 
+  const user_public_address: string = wallet.address;
+  const user_public_key: string = new SigningKey(wallet.privateKey).compressedPublicKey;
+  console.log('\x1b[34m%s\x1b[0m', `\nEthereum Address: ${wallet.address}\nPublic Key: ${user_public_key}\nPrivate Key: ${wallet.privateKey}`);
+
+  const userPrivateKeyBytes = arrayify(wallet.privateKey)
+  const gatewayPublicKeyBuffer = Buffer.from(gatewayPublicKey, 'base64')
+  const gatewayPublicKeyBytes = arrayify(gatewayPublicKeyBuffer)
+  const sharedKey = ecdh(gatewayPublicKeyBytes, userPrivateKeyBytes)
+
+  const userPublicKeyBytes = arrayify(user_public_key)
+
+  const routing_info: Contract = {
+    // these are fake
+    address: "secret19zpyd046u4swqpksr3n44cej4j8pg6ahw95y85",
+    hash: "2a2fbe493ef25b536bbe0baa3917b51e5ba092e14bd76abf50a59526e2789be3"
+  };
+  
+  const sender: Sender = {
+    address: user_public_address,
+    public_key: Buffer.from(userPublicKeyBytes).toString('base64'),
+  };
+
+  const inputs = {"input1": "some string", "input2": 1, "input3": true};
+  
+  const payload: Payload = {
+    data: JSON.stringify(inputs),
+    routing_info: routing_info,
+    sender: sender,
+  };
+  console.log(`payload: ${payload}`)
+
+  const nonce = Uint8Array.from([117, 110, 105, 113, 117, 101, 32, 110, 111, 110, 99, 101]);
+
+  // const aad = Buffer.from('0123456789', 'hex');
+  const cipher = createCipheriv('chacha20-poly1305', sharedKey, nonce, {
+      authTagLength: 16
+  });
+  const plaintext = Buffer.from(JSON.stringify(payload));
+  // cipher.setAAD(aad, {
+  //   plaintextLength: plaintext.byteLength
+  // });
+  const ciphertext = cipher.update(plaintext, undefined, 'base64');
+  cipher.final();
+  const tag = cipher.getAuthTag();
+
+  const payload_hash = createHash('sha256').update(plaintext).digest();
+  console.log(`payload hash: ${payload_hash.byteLength} bytes.`)
+  // hash.update(plaintext);
+  // const payload_hash = hash.digest();
+  // const payload_hash = sha256(plaintext);
+  // const payload_hash_64 = Buffer.from(payload_hash).toString('base64')
+  const payload_hash_64 = payload_hash.toString('base64');
+
+  // const payload_signature = await wallet.signMessage(payload_hash);
+  const payload_signature = ecdsaSign(payload_hash,arrayify(wallet.privateKey)).signature;
+  console.log(`payload signature: ${payload_signature.byteLength} bytes.`)
+  const payload_signature_64 = Buffer.from(payload_signature).toString('base64');
+
+  const handle_msg: PreExecutionMsg = {
+    handle: "test",
+    payload: ciphertext,
+    payload_hash: payload_hash_64,
+    payload_signature: payload_signature_64,
+    routing_info: routing_info,
+    sender: sender,
+    task_id: 1,
+  };
+
+  const tx = await client.tx.compute.executeContract(
+    {
+      sender: client.address,
+      contractAddress: contractAddress,
+      codeHash: contractHash,
+      msg: {
+        input: { inputs: handle_msg },
+      },
+      sentFunds: [],
+    },
+    {
+      gasLimit: 200000,
+    }
+  );
+
+  if (tx.code !== 0) {
+    throw new Error(
+      `Failed with the following error:\n ${tx.rawLog}`
+    );
+  }
+  assert(tx.code === 0,
+    `\x1b[31;1m[FAIL]\x1b[0m`)
+  console.log(tx.arrayLog!)
+  console.log(`inputTx used ${tx.gasUsed} gas`);
+}
+
+async function queryPubKey(
+  client: SecretNetworkClient,
+  contractHash: string,
+  contractAddress: string,
+): Promise<string> {
+  type PublicKeyResponse = { key: Binary };
+
+  const response = (await client.query.compute.queryContract({
+    contractAddress: contractAddress,
+    codeHash: contractHash,
+    query: { get_public_key: {} },
+  })) as PublicKeyResponse;
+
+  console.log(`Gateway Public Key: ${response.key}`)
+  return response.key
+}
+
+async function test_input_tx(
+  client: SecretNetworkClient,
+  contractHash: string,
+  contractAddress: string,
+) {
+  console.log(`Sending query "("get_public_key": {} }".`)
+  const gatewayPublicKey = await queryPubKey(client, contractHash, contractAddress);
+  inputTx(client, contractHash, contractAddress, gatewayPublicKey)
 }
 
 async function runTestFunction(
@@ -168,14 +298,13 @@ async function runTestFunction(
   contractHash: string,
   contractAddress: string
 ) {
-  console.log(`\n\x1b[36;1m[TESTING] ${tester.name}\x1b[0m`);
+  console.log(`\n\x1b[1m[TESTING] ${tester.name}\x1b[0m`);
   await tester(client, contractHash, contractAddress);
-  console.log(`\x1b[92;1m[SUCCESS] ${tester.name}\x1b[0m`);
+  console.log(`\x1b[92;1m[SUCCESS] ${tester.name}\x1b[0m\n`);
 }
 
 (async () => {
-  const [client, contractHash, contractAddress] =
+  const [client, contractHash, contractAddress, gatewayPublicKey] =
     await initializeAndUploadContract();
-
-    await runTestFunction(test_gas_limits, client, contractHash, contractAddress);
+    // await runTestFunction(test_input_tx, client, contractHash, contractAddress);
 })();

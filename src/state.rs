@@ -7,6 +7,7 @@ use crate::types::Sender;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub const NONCE: &[u8] = b"unique nonce";
 /// Storage key for this contract's configuration.
 pub const CONFIG_KEY: &[u8] = b"config";
 /// Storage key for this contract's address.

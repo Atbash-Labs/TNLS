@@ -66,12 +66,12 @@ impl PreExecutionMsg {
             .map_err(|err| StdError::generic_err(err.to_string()))?;
         let shared_key = SharedSecret::new(&their_public, &my_secret);
         let cipher = ChaCha20Poly1305::new_from_slice(shared_key.as_ref())
-            .map_err(|err| StdError::generic_err(err.to_string()))?;
-        let nonce = Nonce::from_slice(b"unique nonce"); // can we get the nonce from the ETH transaction?
+            .map_err(|_err| StdError::generic_err("could not create cipher".to_string()))?;  // TODO change msg back to err.to_string()
+        let nonce = Nonce::from_slice(b"unique nonce"); // TODO get nonce as part of the input message
         let plaintext = cipher
             .decrypt(nonce, self.payload.as_slice())
             .map(Binary)
-            .map_err(|err| StdError::generic_err(err.to_string()))?;
+            .map_err(|_err| StdError::generic_err("could not decrypt".to_string()))?;
         let payload: Payload = from_binary(&plaintext)?;
         Ok(payload)
     }
