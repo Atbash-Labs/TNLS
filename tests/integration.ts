@@ -233,7 +233,7 @@ async function inputTx(
       sentFunds: [],
     },
     {
-      gasLimit: 200000,
+      gasLimit: 5000000,
     }
   );
 
