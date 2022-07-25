@@ -8,12 +8,26 @@ import { Wallet as EthWallet } from "ethers";
 import { arrayify, SigningKey } from "ethers/lib/utils";
 import { createHash } from 'crypto';
 import { encrypt_payload } from './encrypt-payload/pkg'
+import 'dotenv/config'
 // import { uuid } from 'uuid';
 
+var mnemonic: string;
+var endpoint: string = "http://localhost:9091";
+var chainId: string = "secretdev-1";
+
+// uncomment if using .env file
+// mnemonic = process.env.MNEMONIC!;
+// endpoint = process.env.GRPC_WEB_URL!;
+// chainId = process.env.CHAIN_ID!;
 
 // Returns a client with which we can interact with secret network
 const initializeClient = async (endpoint: string, chainId: string) => {
-  const wallet = new Wallet(); // Use default constructor of wallet to generate random mnemonic.
+  let wallet: Wallet;
+  if (mnemonic) {
+    wallet = new Wallet(mnemonic);
+  } else {
+    wallet = new Wallet();
+  }
   const accAddress = wallet.address;
   const client = await SecretNetworkClient.create({
     // Create a client to interact with the network
@@ -140,16 +154,14 @@ async function fillUpFromFaucet(
 
 // Initialization procedure
 async function initializeAndUploadContract() {
-  let endpoint = "http://localhost:9091";
-  let chainId = "secretdev-1";
 
   const client = await initializeClient(endpoint, chainId);
 
-  await fillUpFromFaucet(client, 100_000_000);
+  if (chainId == "secretdev-1") {await fillUpFromFaucet(client, 100_000_000)};
 
   const [contractHash, contractAddress, gatewayPublicKey] = await initializeContract(
     client,
-    "contract.wasm"
+    "contract.wasm.gz"
   );
 
   var clientInfo: [SecretNetworkClient, string, string, string] = [
@@ -170,7 +182,7 @@ async function inputTx(
   const wallet = EthWallet.createRandom(); 
   const user_public_address: string = wallet.address;
   const user_public_key: string = new SigningKey(wallet.privateKey).compressedPublicKey;
-  console.log('\x1b[34m%s\x1b[0m', `\nEthereum Address: ${wallet.address}\nPublic Key: ${user_public_key}\nPrivate Key: ${wallet.privateKey}\n`);
+  console.log(`\n\x1b[34mEthereum Address: ${wallet.address}\n\x1b[34mPublic Key: ${user_public_key}\n\x1b[34mPrivate Key: ${wallet.privateKey}\n`);
 
   const userPrivateKeyBytes = arrayify(wallet.privateKey)
   const gatewayPublicKeyBuffer = Buffer.from(gatewayPublicKey, 'base64')
@@ -244,7 +256,7 @@ async function inputTx(
       `Failed with the following error:\n ${tx.rawLog}`
     );
   };
-  assert(tx.code === 0, `\x1b[31;1m[FAIL]\x1b[0m`)
+  assert(tx.code === 0, `\x1b[31;1m[FAIL]\x1b[0m`);
 
   const status = tx.arrayLog!.find(
     (log) => log.type === "wasm" && log.key === "status"
@@ -265,7 +277,7 @@ async function queryPubKey(
     query: { get_public_key: {} },
   })) as PublicKeyResponse;
 
-  console.log(`Gateway Public Key: ${response.key}`)
+  console.log(`Gateway Public Key: ${response.key}`);
   return response.key
 }
 
@@ -274,9 +286,9 @@ async function test_input_tx(
   contractHash: string,
   contractAddress: string,
 ) {
-  console.log(`Sending query: {"get_public_key": {} }`)
+  console.log(`Sending query: {"get_public_key": {} }`);
   const gatewayPublicKey = await queryPubKey(client, contractHash, contractAddress);
-  inputTx(client, contractHash, contractAddress, gatewayPublicKey)
+  inputTx(client, contractHash, contractAddress, gatewayPublicKey);
 }
 
 async function runTestFunction(
@@ -295,7 +307,7 @@ async function runTestFunction(
 }
 
 (async () => {
-  const [client, contractHash, contractAddress, gatewayPublicKey] =
+  const [client, contractHash, contractAddress] =
     await initializeAndUploadContract();
-    await runTestFunction(test_input_tx, client, contractHash, contractAddress);
+  await runTestFunction(test_input_tx, client, contractHash, contractAddress);
 })();

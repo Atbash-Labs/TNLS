@@ -1,8 +1,6 @@
-use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr, Storage};
+use cosmwasm_std::{Binary, CanonicalAddr, Storage};
 use cosmwasm_storage::{singleton, singleton_read, ReadonlySingleton, Singleton};
 use secret_toolkit::incubator::{CashMap, ReadOnlyCashMap};
-
-use crate::types::Sender;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

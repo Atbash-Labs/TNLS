@@ -5,7 +5,7 @@ use cosmwasm_std::{
 use secret_toolkit::{
     crypto::secp256k1::{PrivateKey, PublicKey},
     crypto::{sha_256, Prng},
-    utils::{pad_handle_result, pad_query_result, types::Contract, HandleCallback},
+    utils::{pad_handle_result, pad_query_result, HandleCallback},
 };
 
 use crate::{
@@ -19,8 +19,6 @@ use crate::{
     },
     types::*,
 };
-
-use secp256k1::Secp256k1;
 
 /// pad handle responses and log attributes to blocks of 256 bytes to prevent leaking info based on
 /// response size
@@ -142,8 +140,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     }
 
     // map task ID to inputs hash
-    map2inputs(&mut deps.storage)
-        .insert(&msg.task_id.to_le_bytes(), input_values_hash.clone())?;
+    map2inputs(&mut deps.storage).insert(&msg.task_id.to_le_bytes(), input_values_hash)?;
 
     // TODO find a way to construct the handle message
     let handle = msg.handle;
@@ -152,39 +149,31 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     let mut signing_key_bytes = [0u8; 32];
     signing_key_bytes.copy_from_slice(config.signing_keys.sk.as_slice());
 
-    let secp = Secp256k1::new();
-    let sk = secp256k1::SecretKey::from_slice(config.signing_keys.sk.as_slice()).unwrap();
-    let message = secp256k1::Message::from_slice(&input_values_hash)
-        .map_err(|err| StdError::generic_err(err.to_string()))?;
-    let signature = Binary(secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec());
+    // this method relies on deps.api.secp256k1_sign, which doesn't work in unit tests
+    let signature = PrivateKey::parse(&signing_key_bytes)?
+        .sign(&input_values_hash, deps.api)
+        .serialize();
+    let signature = to_binary(&signature.to_vec())?;
 
-    // This code block relies on deps.api.secp256k1_sign which doesn't work in unit tests
+    // use this less gas efficient method to sign for unit tests
+    // let secp = secp256k1::Secp256k1::new();
+    // let sk = secp256k1::SecretKey::from_slice(config.signing_keys.sk.as_slice()).unwrap();
+    // let message = secp256k1::Message::from_slice(&input_values_hash)
+    //     .map_err(|err| StdError::generic_err(err.to_string()))?;
+    // let signature = Binary(secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec());
 
-    // let signature = PrivateKey::parse(&signing_key_bytes)?
-    //     .sign(&input_values_hash, deps.api)
-    //     .serialize();
-    // let signature = to_binary(&signature.to_vec())?;
-    // let signature = Binary(vec![1,2,3]);
-
-    // using less gas efficient method for now to sign
-    let secp = Secp256k1::new();
-    let sk = secp256k1::SecretKey::from_slice(config.signing_keys.sk.as_slice()).unwrap();
-    let message = secp256k1::Message::from_slice(&input_values_hash)
-        .map_err(|err| StdError::generic_err(err.to_string()))?;
-    let signature = Binary(secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec());
-
-    // in it's current form, every message sent from this private gateway has the same message structure
+    // every message sent from this private gateway has the same message structure
     let contract_msg = PrivContractHandleMsg {
         input_values,
         handle,
         signature,
     };
 
-    let cosmos_msg =
+    let _cosmos_msg =
         contract_msg.to_cosmos_msg(msg.routing_info.hash, msg.routing_info.address, None)?;
 
     Ok(HandleResponse {
-        messages: vec![cosmos_msg],
+        messages: vec![], // TODO add cosmos_msg when ready to test
         log: vec![
             log("task_ID", &msg.task_id),
             log("status", "sent to secret contract"),
@@ -322,6 +311,7 @@ mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
     use cosmwasm_std::{coins, from_binary, Binary, HumanAddr};
+    use secret_toolkit::utils::types::Contract;
 
     use chacha20poly1305::aead::{Aead, NewAead};
     use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
@@ -365,6 +355,7 @@ mod tests {
         assert_eq!(value.key.as_slice().len(), 33);
     }
 
+    #[ignore = "doesn't work with deps.api crypto methods"]
     #[test]
     fn pre_execution() {
         // initialize
@@ -398,12 +389,12 @@ mod tests {
         // mock key pair
         let secp = Secp256k1::new();
         let secret_key = Key::from_slice(b"an example very very secret key."); // 32-bytes
-        let secret_key = secp256k1::SecretKey::from_slice(secret_key).unwrap();
+        let secret_key = SecretKey::from_slice(secret_key).unwrap();
         let public_key = secp256k1::PublicKey::from_secret_key(&secp, &secret_key);
 
         // create shared key from user private + gateway public
         let gateway_pubkey = secp256k1::PublicKey::from_slice(gateway_pubkey.as_slice()).unwrap();
-        let shared_key = secp256k1::ecdh::SharedSecret::new(&gateway_pubkey, &secret_key);
+        let shared_key = SharedSecret::new(&gateway_pubkey, &secret_key);
 
         // mock Payload
         let data = "{\"fingerprint\": \"0xF9BA143B95FF6D82\", \"location\": \"Menlo Park, CA\"}"
@@ -457,11 +448,16 @@ mod tests {
             handle_result.err().unwrap()
         );
         // assert that the list of messages is not empty
-        assert!(!handle_result.as_ref().unwrap().messages.is_empty());
+        // TODO uncomment next line when including the outgoing message
+        // assert!(!handle_result.as_ref().unwrap().messages.is_empty());
 
-        let handle_answer: InputResponse = from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
+        let handle_answer: InputResponse =
+            from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
         assert_eq!(handle_answer.task_id, 1);
-        assert_eq!(handle_answer.creating_address, HumanAddr::from("some eth address".to_string()));
+        assert_eq!(
+            handle_answer.creating_address,
+            HumanAddr::from("some eth address".to_string())
+        );
     }
 
     #[ignore]
