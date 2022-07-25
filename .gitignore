@@ -13,3 +13,6 @@ Cargo.lock
 
 # IDEs
 .vscode
+
+# misc
+/.notes

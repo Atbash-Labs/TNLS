@@ -2,7 +2,6 @@ use cosmwasm_std::{
     log, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult, InitResponse,
     InitResult, Querier, QueryResult, StdError, Storage,
 };
-use secp256k1::Secp256k1;
 use secret_toolkit::{
     crypto::secp256k1::{PrivateKey, PublicKey},
     crypto::{sha_256, Prng},
@@ -20,6 +19,8 @@ use crate::{
     },
     types::*,
 };
+
+use secp256k1::Secp256k1;
 
 /// pad handle responses and log attributes to blocks of 256 bytes to prevent leaking info based on
 /// response size

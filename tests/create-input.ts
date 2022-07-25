@@ -3,6 +3,7 @@ import { publicKeyCreate, privateKeyVerify, ecdh } from "secp256k1";
 import { Wallet as EthWallet, utils } from "ethers";
 import { randomBytes, createCipheriv, createDecipheriv }from 'crypto'
 import { sha256, SigningKey } from "ethers/lib/utils";
+import { encrypt_payload } from "./encrypt-payload/pkg/encrypt_payload";
 
 async function inputTx() {
   
@@ -46,7 +47,9 @@ async function inputTx() {
     sender: sender,
   };
   console.log(payload)
-
+  const plaintext = Buffer.from(JSON.stringify(payload));
+  const ciphertext = Buffer.from(encrypt_payload(gatewayPubKey, privateKey, plaintext)).toString('base64');
+/*
   // const nonce = randomBytes(12);
   const nonce = Uint8Array.from([117, 110, 105, 113, 117, 101, 32, 110, 111, 110, 99, 101]);
   // const nonce = Buffer.from(uint8array);
@@ -55,7 +58,6 @@ async function inputTx() {
   const cipher = createCipheriv('chacha20-poly1305', sharedKey, nonce, {
       authTagLength: 16
   });
-  const plaintext = Buffer.from(JSON.stringify(payload));
   console.log(JSON.stringify(payload))
   // cipher.setAAD(aad, {
   //   plaintextLength: plaintext.byteLength
@@ -63,7 +65,7 @@ async function inputTx() {
   const ciphertext = cipher.update(plaintext, undefined, 'base64');
   cipher.final();
   const tag = cipher.getAuthTag();
-
+*/
   const payload_hash = sha256(plaintext);
   const payload_hash_64 = Buffer.from(payload_hash).toString('base64')
 
@@ -82,16 +84,20 @@ async function inputTx() {
   console.log('\x1b[31m%s\x1b[0m', handle_msg)
 
   const sharedKey2 = ecdh(publicKey, gatewayPrivKey)
+  const nonce = Uint8Array.from([117, 110, 105, 113, 117, 101, 32, 110, 111, 110, 99, 101]);
   const decipher = createDecipheriv('chacha20-poly1305', sharedKey2, nonce, {
     authTagLength: 16
   });
   // decipher.setAAD(aad, {
   //   plaintextLength: plaintext.byteLength
   // });
+  
   const decrypted_payload = decipher.update(ciphertext, 'base64', 'utf-8');
   decipher.final();
 
   console.log(decrypted_payload)
+
+
 }
 
 inputTx()

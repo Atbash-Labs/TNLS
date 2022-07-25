@@ -5,8 +5,9 @@ import assert from "assert";
 import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender, Binary } from "./GatewayContract";
 import { ecdh, ecdsaSign, privateKeyVerify } from "secp256k1";
 import { Wallet as EthWallet } from "ethers";
-import { sha256, arrayify, SigningKey } from "ethers/lib/utils";
-import { randomBytes, createCipheriv, createHash } from 'crypto';
+import { arrayify, SigningKey } from "ethers/lib/utils";
+import { createHash } from 'crypto';
+import { encrypt_payload } from './encrypt-payload/pkg'
 // import { uuid } from 'uuid';
 
 
@@ -100,8 +101,8 @@ const initializeContract = async (
 
   console.log(`Contract address: ${contractAddress}\n`);
 
-  console.log(`\x1b[32mEncryption key: ${encryption_pubkey}`);
-  console.log(`Verification key: ${signing_pubkey}\x1b[0m\n`);
+  console.log(`\x1b[32mEncryption key: ${encryption_pubkey}\x1b[0m`);
+  console.log(`\x1b[32mVerification key: ${signing_pubkey}\x1b[0m\n`);
 
   console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas`);
 
@@ -169,7 +170,7 @@ async function inputTx(
   const wallet = EthWallet.createRandom(); 
   const user_public_address: string = wallet.address;
   const user_public_key: string = new SigningKey(wallet.privateKey).compressedPublicKey;
-  console.log('\x1b[34m%s\x1b[0m', `\nEthereum Address: ${wallet.address}\nPublic Key: ${user_public_key}\nPrivate Key: ${wallet.privateKey}`);
+  console.log('\x1b[34m%s\x1b[0m', `\nEthereum Address: ${wallet.address}\nPublic Key: ${user_public_key}\nPrivate Key: ${wallet.privateKey}\n`);
 
   const userPrivateKeyBytes = arrayify(wallet.privateKey)
   const gatewayPublicKeyBuffer = Buffer.from(gatewayPublicKey, 'base64')
@@ -179,51 +180,35 @@ async function inputTx(
   const userPublicKeyBytes = arrayify(user_public_key)
 
   const routing_info: Contract = {
-    // these are fake
     address: "secret19zpyd046u4swqpksr3n44cej4j8pg6ahw95y85",
     hash: "2a2fbe493ef25b536bbe0baa3917b51e5ba092e14bd76abf50a59526e2789be3"
   };
-  
   const sender: Sender = {
     address: user_public_address,
     public_key: Buffer.from(userPublicKeyBytes).toString('base64'),
   };
-
-  const inputs = {"input1": "some string", "input2": 1, "input3": true};
-  
+  const inputs = JSON.stringify({"input1": "some string", "input2": 1, "input3": true});
   const payload: Payload = {
-    data: JSON.stringify(inputs),
+    data: inputs,
     routing_info: routing_info,
     sender: sender,
   };
-  console.log(`payload: ${payload}`)
+  console.log("Unencrypted Payload:");
+  console.log(payload);
 
-  const nonce = Uint8Array.from([117, 110, 105, 113, 117, 101, 32, 110, 111, 110, 99, 101]);
-
-  // const aad = Buffer.from('0123456789', 'hex');
-  const cipher = createCipheriv('chacha20-poly1305', sharedKey, nonce, {
-      authTagLength: 16
-  });
-  const plaintext = Buffer.from(JSON.stringify(payload));
-  // cipher.setAAD(aad, {
-  //   plaintextLength: plaintext.byteLength
-  // });
-  const ciphertext = cipher.update(plaintext, undefined, 'base64');
-  cipher.final();
-  const tag = cipher.getAuthTag();
+  const plaintext = Buffer
+    .from(JSON.stringify(payload));
+  const ciphertext = Buffer
+    .from(encrypt_payload(gatewayPublicKeyBytes, userPrivateKeyBytes, plaintext))
+    .toString('base64');
 
   const payload_hash = createHash('sha256').update(plaintext).digest();
-  console.log(`payload hash: ${payload_hash.byteLength} bytes.`)
-  // hash.update(plaintext);
-  // const payload_hash = hash.digest();
-  // const payload_hash = sha256(plaintext);
-  // const payload_hash_64 = Buffer.from(payload_hash).toString('base64')
   const payload_hash_64 = payload_hash.toString('base64');
+  console.log(`Payload Hash is ${payload_hash.byteLength} bytes`);
 
-  // const payload_signature = await wallet.signMessage(payload_hash);
   const payload_signature = ecdsaSign(payload_hash,arrayify(wallet.privateKey)).signature;
-  console.log(`payload signature: ${payload_signature.byteLength} bytes.`)
   const payload_signature_64 = Buffer.from(payload_signature).toString('base64');
+  console.log(`payload Signature is ${payload_signature.byteLength} bytes`);
 
   const handle_msg: PreExecutionMsg = {
     handle: "test",
@@ -234,6 +219,8 @@ async function inputTx(
     sender: sender,
     task_id: 1,
   };
+  console.log("handle_msg:");
+  console.log(handle_msg);
 
   const tx = await client.tx.compute.executeContract(
     {
@@ -250,15 +237,19 @@ async function inputTx(
     }
   );
 
+  console.log(`inputTx used \x1b[33m${tx.gasUsed}\x1b[0m gas`);
+
   if (tx.code !== 0) {
     throw new Error(
       `Failed with the following error:\n ${tx.rawLog}`
     );
-  }
-  assert(tx.code === 0,
-    `\x1b[31;1m[FAIL]\x1b[0m`)
-  console.log(tx.arrayLog!)
-  console.log(`inputTx used ${tx.gasUsed} gas`);
+  };
+  assert(tx.code === 0, `\x1b[31;1m[FAIL]\x1b[0m`)
+
+  const status = tx.arrayLog!.find(
+    (log) => log.type === "wasm" && log.key === "status"
+  )!.value;
+  assert(status == "sent to secret contract");
 }
 
 async function queryPubKey(
@@ -283,7 +274,7 @@ async function test_input_tx(
   contractHash: string,
   contractAddress: string,
 ) {
-  console.log(`Sending query "("get_public_key": {} }".`)
+  console.log(`Sending query: {"get_public_key": {} }`)
   const gatewayPublicKey = await queryPubKey(client, contractHash, contractAddress);
   inputTx(client, contractHash, contractAddress, gatewayPublicKey)
 }
@@ -298,7 +289,7 @@ async function runTestFunction(
   contractHash: string,
   contractAddress: string
 ) {
-  console.log(`\n\x1b[1m[TESTING] ${tester.name}\x1b[0m`);
+  console.log(`\n\x1b[1m[TESTING] ${tester.name}\x1b[0m\n`);
   await tester(client, contractHash, contractAddress);
   console.log(`\x1b[92;1m[SUCCESS] ${tester.name}\x1b[0m\n`);
 }
@@ -306,5 +297,5 @@ async function runTestFunction(
 (async () => {
   const [client, contractHash, contractAddress, gatewayPublicKey] =
     await initializeAndUploadContract();
-    // await runTestFunction(test_input_tx, client, contractHash, contractAddress);
+    await runTestFunction(test_input_tx, client, contractHash, contractAddress);
 })();
