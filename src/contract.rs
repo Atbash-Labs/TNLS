@@ -369,7 +369,7 @@ mod tests {
         assert_eq!(value.key.as_slice().len(), 33);
     }
 
-    // #[ignore = "doesn't work with deps.api crypto methods"]
+    #[ignore = "doesn't work with deps.api crypto methods"]
     #[test]
     fn pre_execution() {
         // initialize
@@ -472,7 +472,7 @@ mod tests {
     }
 
     // TODO reduce code duplication among tests
-    // #[ignore = "doesn't work with deps.api crypto methods"]
+    #[ignore = "doesn't work with deps.api crypto methods"]
     #[test]
     fn post_execution() {
         // initialize
