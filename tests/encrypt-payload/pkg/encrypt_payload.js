@@ -33,9 +33,10 @@ function getArrayU8FromWasm0(ptr, len) {
 * @param {Uint8Array} gateway_public_key
 * @param {Uint8Array} user_private_key
 * @param {Uint8Array} plaintext
+* @param {Uint8Array} nonce
 * @returns {Uint8Array}
 */
-module.exports.encrypt_payload = function(gateway_public_key, user_private_key, plaintext) {
+module.exports.encrypt_payload = function(gateway_public_key, user_private_key, plaintext, nonce) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passArray8ToWasm0(gateway_public_key, wasm.__wbindgen_malloc);
@@ -44,12 +45,14 @@ module.exports.encrypt_payload = function(gateway_public_key, user_private_key, 
         const len1 = WASM_VECTOR_LEN;
         const ptr2 = passArray8ToWasm0(plaintext, wasm.__wbindgen_malloc);
         const len2 = WASM_VECTOR_LEN;
-        wasm.encrypt_payload(retptr, ptr0, len0, ptr1, len1, ptr2, len2);
+        const ptr3 = passArray8ToWasm0(nonce, wasm.__wbindgen_malloc);
+        const len3 = WASM_VECTOR_LEN;
+        wasm.encrypt_payload(retptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
-        var v3 = getArrayU8FromWasm0(r0, r1).slice();
+        var v4 = getArrayU8FromWasm0(r0, r1).slice();
         wasm.__wbindgen_free(r0, r1 * 1);
-        return v3;
+        return v4;
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }

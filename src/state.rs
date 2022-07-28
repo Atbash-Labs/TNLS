@@ -5,7 +5,6 @@ use secret_toolkit::incubator::{CashMap, ReadOnlyCashMap};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-pub const NONCE: &[u8] = b"unique nonce";
 /// Storage key for this contract's configuration.
 pub const CONFIG_KEY: &[u8] = b"config";
 /// Storage key for this contract's address.
@@ -32,6 +31,7 @@ pub struct State {
 }
 
 /// A key pair using the [Binary] type
+// TODO change the secret key to [u8;32] possibly?
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct KeyPair {
     /// Secret key part of the key pair.
@@ -76,13 +76,21 @@ pub fn creator_address_read<S: Storage>(storage: &mut S) -> Singleton<S, Canonic
     singleton(storage, MY_ADDRESS_KEY)
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct TaskInfo {
+    /// Encryption of (data, routing info, and user address/verifying key).
+    pub payload: Binary,
+    /// sha256(decrypted input_values)
+    pub input_hash: [u8;32],
+}
+
 // Cashmap is convenient, but may not be the best solution if we need to maintain an ordered list
-pub fn map2inputs<S: Storage>(storage: &mut S) -> CashMap<[u8; 32], S> {
-    let hashmap: CashMap<[u8; 32], S> = CashMap::init(TASK_KEY, storage);
+pub fn map2inputs<S: Storage>(storage: &mut S) -> CashMap<TaskInfo, S> {
+    let hashmap: CashMap<TaskInfo, S> = CashMap::init(TASK_KEY, storage);
     hashmap
 }
 
-pub fn map2inputs_read<S: Storage>(storage: &S) -> ReadOnlyCashMap<[u8; 32], S> {
-    let hashmap: ReadOnlyCashMap<[u8; 32], S> = ReadOnlyCashMap::init(TASK_KEY, storage);
+pub fn map2inputs_read<S: Storage>(storage: &S) -> ReadOnlyCashMap<TaskInfo, S> {
+    let hashmap: ReadOnlyCashMap<TaskInfo, S> = ReadOnlyCashMap::init(TASK_KEY, storage);
     hashmap
 }

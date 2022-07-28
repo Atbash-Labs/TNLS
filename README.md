@@ -25,14 +25,16 @@ pub struct PreExecutionMsg {
     pub handle: String,
     /// Destination contract address and code hash.
     pub routing_info: Contract,
-    /// Encryption of (data, routing info, and user address/verifying key). Includes additional data (AD).
+    /// Encryption of (data, routing info, and sender info).
     pub payload: Binary,
-    /// Hash of unencrypted input values.
+    /// Unique random bytes used to encrypt payload.
+    pub nonce: Binary,
+    /// Hash of encrypted input values.
     pub payload_hash: Binary,
     /// Signature of hash of unencrypted input values.
     pub payload_signature: Binary,
     /// User verification key / public chain address.
-    pub sender: Sender,
+    pub sender_info: Sender,
 }
 
 pub struct Contract {

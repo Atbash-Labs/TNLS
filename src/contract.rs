@@ -10,14 +10,13 @@ use secret_toolkit::{
 
 use crate::{
     msg::{
-        ContractStatus, HandleMsg, InitMsg, InputResponse, OutputResponse, PrivContractHandleMsg,
-        PublicKeyResponse, QueryMsg,
+        BroadcastMsg, ContractStatus, HandleMsg, InitMsg, InputResponse,
+        PostExecutionMsg, PreExecutionMsg, PrivContractHandleMsg, PublicKeyResponse, QueryMsg, ResponseStatus::Success
     },
     state::{
         config, config_read, creator_address, map2inputs, map2inputs_read, my_address, prng,
-        KeyPair, State,
+        KeyPair, State, TaskInfo
     },
-    types::*,
 };
 
 /// pad handle responses and log attributes to blocks of 256 bytes to prevent leaking info based on
@@ -128,10 +127,10 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     // decrypt payload
     let payload = msg.decrypt_payload(config.encryption_keys.sk)?;
     let input_values = payload.data;
-    let input_values_hash = sha_256(input_values.as_bytes());
+    let input_hash = sha_256(input_values.as_bytes());
 
     // verify the internal verification key (inside the packet?) matches the user address
-    if payload.sender != msg.sender {
+    if payload.sender != msg.sender_info {
         return Err(StdError::generic_err("verification key mismatch"));
     }
     // verify the routing info matches the internally stored routing info
@@ -139,11 +138,14 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("routing info mismatch"));
     }
 
-    // map task ID to inputs hash
-    map2inputs(&mut deps.storage).insert(&msg.task_id.to_le_bytes(), input_values_hash)?;
+    // create a task information store
+    let task_info = TaskInfo {
+        payload: msg.payload, // storing the ENCRYPTED payload
+        input_hash, // storing the DECRYPTED inputs, hashed
+    };
 
-    // TODO find a way to construct the handle message
-    let handle = msg.handle;
+    // map task ID to inputs hash
+    map2inputs(&mut deps.storage).insert(&msg.task_id.to_le_bytes(), task_info)?;
 
     // load key and sign(task ID + input values)
     let mut signing_key_bytes = [0u8; 32];
@@ -151,83 +153,94 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
 
     // this method relies on deps.api.secp256k1_sign, which doesn't work in unit tests
     let signature = PrivateKey::parse(&signing_key_bytes)?
-        .sign(&input_values_hash, deps.api)
+        .sign(&input_hash, deps.api)
         .serialize();
-    let signature = to_binary(&signature.to_vec())?;
 
     // use this less gas efficient method to sign for unit tests
     // let secp = secp256k1::Secp256k1::new();
-    // let sk = secp256k1::SecretKey::from_slice(config.signing_keys.sk.as_slice()).unwrap();
-    // let message = secp256k1::Message::from_slice(&input_values_hash)
+    // let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
+    // let message = secp256k1::Message::from_slice(&input_hash)
     //     .map_err(|err| StdError::generic_err(err.to_string()))?;
-    // let signature = Binary(secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec());
+    // let signature = secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec();
 
-    // every message sent from this private gateway has the same message structure
-    let contract_msg = PrivContractHandleMsg {
+    // construct the message to send to the destination contract
+    let private_contract_msg = PrivContractHandleMsg {
         input_values,
-        handle,
-        signature,
+        handle: msg.handle,
+        input_hash,
+        signature: Binary(signature.to_vec()),
     };
-
-    let _cosmos_msg =
-        contract_msg.to_cosmos_msg(msg.routing_info.hash, msg.routing_info.address, None)?;
+    let _cosmos_msg = private_contract_msg.to_cosmos_msg(
+        msg.routing_info.hash,
+        msg.routing_info.address,
+        None,
+    )?;
 
     Ok(HandleResponse {
         messages: vec![], // TODO add cosmos_msg when ready to test
+        // TODO decide what logs and data to return
         log: vec![
             log("task_ID", &msg.task_id),
-            log("status", "sent to secret contract"),
+            log("status", "sent to private contract"),
         ],
         data: Some(to_binary(&InputResponse {
-            task_id: msg.task_id,
-            creating_address: msg.sender.address,
+            status: Success,
         })?),
     })
 }
 
 fn post_execution<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _env: Env,
     msg: PostExecutionMsg,
 ) -> HandleResult {
-    // verify that input hash is correct one for Task ID (check map)
-    // TODO should the "parameters" be sent hashed in the message? consider renaming
-    if sha_256(msg.parameters.as_bytes())
-        != map2inputs_read(&deps.storage).load(&msg.task_id.to_le_bytes())?
-    {
-        return Err(StdError::generic_err(
-            "calling contract does not match task ID",
-        ));
+    // load task ID information
+    let task_info = map2inputs_read(&deps.storage).load(&msg.task_id.to_le_bytes())?;
+    let input_hash = task_info.input_hash;
+
+    // verify that input hash is correct one for Task ID
+    if msg.input_hash.as_slice() != input_hash.to_vec() {
+        return Err(StdError::generic_err("input hash does not match task ID"));
     }
 
-    // sign and broadcast pair of outputs + Task ID + inputs
-    let output = msg.result;
-    let task_id = msg.task_id;
-
-    // load config
-    let config = config_read(&deps.storage).load()?;
+    // create hash of (result + payload + inputs)
+    let data = [msg.result.as_bytes(), task_info.payload.as_slice(), &input_hash].concat();
+    let output_hash = sha_256(&data);
 
     // load this gateway's signing key
-    let private_key = config.signing_keys.sk;
+    let private_key = config_read(&deps.storage).load()?.signing_keys.sk;
 
+    // TODO consider storing signing key as [u8;32] to eliminate this step
     let mut signing_key_bytes = [0u8; 32];
     signing_key_bytes.copy_from_slice(private_key.as_slice());
 
+
+    // this method relies on deps.api.secp256k1_sign, which doesn't work in unit tests
     let signature = PrivateKey::parse(&signing_key_bytes)?
-        .sign(output.as_slice(), deps.api)
+        .sign(output_hash.as_slice(), deps.api)
         .serialize();
 
-    let signature = to_binary(&signature.to_vec())?;
+    // use this less gas efficient method to sign for unit tests
+    // let secp = secp256k1::Secp256k1::new();
+    // let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
+    // let message = secp256k1::Message::from_slice(&output_hash)
+    //     .map_err(|err| StdError::generic_err(err.to_string()))?;
+    // let signature = secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec();
+
+    let broadcast_msg = BroadcastMsg {
+        result: msg.result,
+        payload: task_info.payload,
+        task_id: msg.task_id,
+        output_hash: Binary(output_hash.to_vec()),
+        signature: Binary(signature.to_vec()),
+    };
 
     Ok(HandleResponse {
         messages: vec![],
-        log: vec![log("task_ID", task_id), log("status", "success")],
-        data: Some(to_binary(&OutputResponse {
-            task_id,
-            calling_contract: env.message.sender,
-            output,
-            signature,
-        })?),
+        log: vec![
+            log("task_ID", msg.task_id), 
+            log("status", "sent to relayer")],
+        data: Some(to_binary(&broadcast_msg)?),
     })
 }
 
@@ -309,6 +322,7 @@ pub fn new_entropy(env: &Env, seed: &[u8], entropy: &[u8]) -> [u8; 32] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
     use cosmwasm_std::{coins, from_binary, Binary, HumanAddr};
     use secret_toolkit::utils::types::Contract;
@@ -355,7 +369,7 @@ mod tests {
         assert_eq!(value.key.as_slice().len(), 33);
     }
 
-    #[ignore = "doesn't work with deps.api crypto methods"]
+    // #[ignore = "doesn't work with deps.api crypto methods"]
     #[test]
     fn pre_execution() {
         // initialize
@@ -403,14 +417,14 @@ mod tests {
             address: HumanAddr::from("secret19zpyd046u4swqpksr3n44cej4j8pg6ahw95y85".to_string()),
             hash: "2a2fbe493ef25b536bbe0baa3917b51e5ba092e14bd76abf50a59526e2789be3".to_string(),
         };
-        let sender = Sender {
+        let sender_info = Sender {
             address: HumanAddr::from("some eth address".to_string()),
             public_key: Binary(public_key.serialize().to_vec()),
         };
         let payload = Payload {
             data,
             routing_info: routing_info.clone(),
-            sender: sender.clone(),
+            sender: sender_info.clone(),
         };
         let serialized_payload = to_binary(&payload).unwrap();
 
@@ -433,10 +447,11 @@ mod tests {
             task_id: 1,
             handle: "test".to_string(),
             routing_info,
+            sender_info,
             payload: Binary(encrypted_payload),
+            nonce: Binary(b"unique nonce".to_vec()),
             payload_hash: Binary(payload_hash.to_vec()),
             payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
-            sender,
         };
         let handle_msg = HandleMsg::Input {
             inputs: pre_execution_msg,
@@ -453,16 +468,128 @@ mod tests {
 
         let handle_answer: InputResponse =
             from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
-        assert_eq!(handle_answer.task_id, 1);
-        assert_eq!(
-            handle_answer.creating_address,
-            HumanAddr::from("some eth address".to_string())
-        );
+        assert_eq!(handle_answer.status, Success);
     }
 
-    #[ignore]
+    // TODO reduce code duplication among tests
+    // #[ignore = "doesn't work with deps.api crypto methods"]
     #[test]
     fn post_execution() {
-        todo!()
+        // initialize
+        let mut deps = mock_dependencies(20, &[]);
+        let env = mock_env("creator", &coins(1000, "earth"));
+        let init_msg = InitMsg {
+            admin: None,
+            entropy: "secret".to_string(),
+        };
+        let init_result = init(&mut deps, env.clone(), init_msg);
+        assert!(
+            init_result.is_ok(),
+            "Init failed: {}",
+            init_result.err().unwrap()
+        );
+        let pubkey = Binary::from_base64(&init_result.unwrap().log[0].value).unwrap();
+        assert_eq!(pubkey.len(), 33);
+
+        // test query / get key to use for encryption
+        let query_msg = QueryMsg::GetPublicKey {};
+        let query_result = query(&deps, query_msg);
+        assert!(
+            query_result.is_ok(),
+            "query failed: {}",
+            query_result.err().unwrap()
+        );
+        let query_answer: PublicKeyResponse = from_binary(&query_result.unwrap()).unwrap();
+        let gateway_pubkey = query_answer.key;
+        assert_eq!(gateway_pubkey.len(), 33);
+
+        // mock key pair
+        let secp = Secp256k1::new();
+        let secret_key = Key::from_slice(b"an example very very secret key."); // 32-bytes
+        let secret_key = SecretKey::from_slice(secret_key).unwrap();
+        let public_key = secp256k1::PublicKey::from_secret_key(&secp, &secret_key);
+
+        // create shared key from user private + gateway public
+        let gateway_pubkey = secp256k1::PublicKey::from_slice(gateway_pubkey.as_slice()).unwrap();
+        let shared_key = SharedSecret::new(&gateway_pubkey, &secret_key);
+
+        // mock Payload
+        let data = "{\"fingerprint\": \"0xF9BA143B95FF6D82\", \"location\": \"Menlo Park, CA\"}"
+            .to_string();
+        let routing_info = Contract {
+            address: HumanAddr::from("secret19zpyd046u4swqpksr3n44cej4j8pg6ahw95y85".to_string()),
+            hash: "2a2fbe493ef25b536bbe0baa3917b51e5ba092e14bd76abf50a59526e2789be3".to_string(),
+        };
+        let sender_info = Sender {
+            address: HumanAddr::from("some eth address".to_string()),
+            public_key: Binary(public_key.serialize().to_vec()),
+        };
+        let payload = Payload {
+            data: data.clone(),
+            routing_info: routing_info.clone(),
+            sender: sender_info.clone(),
+        };
+        let serialized_payload = to_binary(&payload).unwrap();
+
+        // encrypt the payload
+        let cipher = ChaCha20Poly1305::new_from_slice(shared_key.as_ref())
+            .map_err(|_err| StdError::generic_err("could not create cipher".to_string()))
+            .unwrap();
+        let nonce = Nonce::from_slice(b"unique nonce"); // 12-bytes; unique per message
+        let encrypted_payload = cipher
+            .encrypt(nonce, serialized_payload.as_slice())
+            .expect("encryption failure!"); // NOTE: handle this error to avoid panics!
+
+        // sign the payload
+        let payload_hash = sha_256(serialized_payload.as_slice());
+        let message = Message::from_slice(&payload_hash).unwrap();
+        let payload_signature = secp.sign_ecdsa(&message, &secret_key);
+
+        // test input handle
+        let pre_execution_msg = PreExecutionMsg {
+            task_id: 1,
+            handle: "test".to_string(),
+            routing_info,
+            sender_info,
+            payload: Binary(encrypted_payload),
+            nonce: Binary(b"unique nonce".to_vec()),
+            payload_hash: Binary(payload_hash.to_vec()),
+            payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
+        };
+        let handle_msg = HandleMsg::Input {
+            inputs: pre_execution_msg,
+        };
+        let handle_result = handle(&mut deps, env.clone(), handle_msg);
+        assert!(
+            handle_result.is_ok(),
+            "handle failed: {}",
+            handle_result.err().unwrap()
+        );
+        // assert that the list of messages is not empty
+        // TODO uncomment next line when including the outgoing message
+        // assert!(!handle_result.as_ref().unwrap().messages.is_empty());
+
+        let handle_answer: InputResponse =
+            from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
+        assert_eq!(handle_answer.status, Success);
+
+        // test output handle
+        let post_execution_msg = PostExecutionMsg {
+            result: "{\"answer\": 42}".to_string(),
+            task_id: 1,
+            input_hash: Binary(sha_256(&data.as_bytes()).to_vec()),
+        };
+        
+        let handle_msg = HandleMsg::Output {
+            outputs: post_execution_msg,
+        };
+        let handle_result = handle(&mut deps, env.clone(), handle_msg);
+        assert!(
+            handle_result.is_ok(),
+            "handle failed: {}",
+            handle_result.err().unwrap()
+        );
+        let handle_answer: BroadcastMsg = from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
+        assert_eq!(handle_answer.result, "{\"answer\": 42}")
     }
 }

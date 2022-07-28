@@ -2,14 +2,13 @@ import axios from "axios";
 import { Wallet, SecretNetworkClient, fromUtf8 } from "secretjs";
 import fs from "fs";
 import assert from "assert";
-import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender, Binary } from "./GatewayContract";
-import { ecdh, ecdsaSign, privateKeyVerify } from "secp256k1";
+import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender, Binary, BroadcastMsg } from "./GatewayContract";
+import { ecdsaSign } from "secp256k1";
 import { Wallet as EthWallet } from "ethers";
 import { arrayify, SigningKey } from "ethers/lib/utils";
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { encrypt_payload } from './encrypt-payload/pkg'
 import 'dotenv/config'
-// import { uuid } from 'uuid';
 
 var mnemonic: string;
 var endpoint: string = "http://localhost:9091";
@@ -120,7 +119,7 @@ const initializeContract = async (
 
   console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas`);
 
-  var contractInfo: [string, string, string] = [contractCodeHash, contractAddress, encryption_pubkey];
+  var contractInfo: [string, string] = [contractCodeHash, contractAddress];
   return contractInfo;
 };
 
@@ -159,16 +158,15 @@ async function initializeAndUploadContract() {
 
   if (chainId == "secretdev-1") {await fillUpFromFaucet(client, 100_000_000)};
 
-  const [contractHash, contractAddress, gatewayPublicKey] = await initializeContract(
+  const [contractHash, contractAddress] = await initializeContract(
     client,
     "contract.wasm.gz"
   );
 
-  var clientInfo: [SecretNetworkClient, string, string, string] = [
+  var clientInfo: [SecretNetworkClient, string, string] = [
     client,
     contractHash,
-    contractAddress,
-    gatewayPublicKey
+    contractAddress
   ];
   return clientInfo;
 }
@@ -180,23 +178,21 @@ async function inputTx(
   gatewayPublicKey: string, // base64
 ) {
   const wallet = EthWallet.createRandom(); 
-  const user_public_address: string = wallet.address;
-  const user_public_key: string = new SigningKey(wallet.privateKey).compressedPublicKey;
-  console.log(`\n\x1b[34mEthereum Address: ${wallet.address}\n\x1b[34mPublic Key: ${user_public_key}\n\x1b[34mPrivate Key: ${wallet.privateKey}\n`);
+  const userPublicAddress: string = wallet.address;
+  const userPublicKey: string = new SigningKey(wallet.privateKey).compressedPublicKey;
+  console.log(`\n\x1b[34mEthereum Address: ${wallet.address}\n\x1b[34mPublic Key: ${userPublicKey}\n\x1b[34mPrivate Key: ${wallet.privateKey}\x1b[0m\n`);
 
   const userPrivateKeyBytes = arrayify(wallet.privateKey)
+  const userPublicKeyBytes = arrayify(userPublicKey)
   const gatewayPublicKeyBuffer = Buffer.from(gatewayPublicKey, 'base64')
   const gatewayPublicKeyBytes = arrayify(gatewayPublicKeyBuffer)
-  const sharedKey = ecdh(gatewayPublicKeyBytes, userPrivateKeyBytes)
-
-  const userPublicKeyBytes = arrayify(user_public_key)
 
   const routing_info: Contract = {
     address: "secret19zpyd046u4swqpksr3n44cej4j8pg6ahw95y85",
     hash: "2a2fbe493ef25b536bbe0baa3917b51e5ba092e14bd76abf50a59526e2789be3"
   };
   const sender: Sender = {
-    address: user_public_address,
+    address: userPublicAddress,
     public_key: Buffer.from(userPublicKeyBytes).toString('base64'),
   };
   const inputs = JSON.stringify({"input1": "some string", "input2": 1, "input3": true});
@@ -210,26 +206,28 @@ async function inputTx(
 
   const plaintext = Buffer
     .from(JSON.stringify(payload));
-  const ciphertext = Buffer
-    .from(encrypt_payload(gatewayPublicKeyBytes, userPrivateKeyBytes, plaintext))
+  const nonce = arrayify(randomBytes(12));
+  let ciphertext = Buffer
+    .from(encrypt_payload(gatewayPublicKeyBytes, userPrivateKeyBytes, plaintext, nonce))
     .toString('base64');
 
-  const payload_hash = createHash('sha256').update(plaintext).digest();
-  const payload_hash_64 = payload_hash.toString('base64');
-  console.log(`Payload Hash is ${payload_hash.byteLength} bytes`);
+  const payloadHash = createHash('sha256').update(ciphertext,'base64').digest();
+  const payloadHash64 = payloadHash.toString('base64');
+  console.log(`Payload Hash is ${payloadHash.byteLength} bytes`);
 
-  const payload_signature = ecdsaSign(payload_hash,arrayify(wallet.privateKey)).signature;
-  const payload_signature_64 = Buffer.from(payload_signature).toString('base64');
-  console.log(`payload Signature is ${payload_signature.byteLength} bytes`);
+  const payloadSignature = ecdsaSign(payloadHash, userPrivateKeyBytes).signature;
+  const payloadSignature64 = Buffer.from(payloadSignature).toString('base64');
+  console.log(`payload Signature is ${payloadSignature.byteLength} bytes`);
 
   const handle_msg: PreExecutionMsg = {
-    handle: "test",
-    payload: ciphertext,
-    payload_hash: payload_hash_64,
-    payload_signature: payload_signature_64,
-    routing_info: routing_info,
-    sender: sender,
     task_id: 1,
+    handle: "test",
+    routing_info: routing_info,
+    sender_info: sender,
+    payload: ciphertext,
+    nonce: Buffer.from(nonce).toString('base64'),
+    payload_hash: payloadHash64,
+    payload_signature: payloadSignature64,
   };
   console.log("handle_msg:");
   console.log(handle_msg);
@@ -245,7 +243,7 @@ async function inputTx(
       sentFunds: [],
     },
     {
-      gasLimit: 5000000,
+      gasLimit: 200000,
     }
   );
 
@@ -256,12 +254,61 @@ async function inputTx(
       `Failed with the following error:\n ${tx.rawLog}`
     );
   };
-  assert(tx.code === 0, `\x1b[31;1m[FAIL]\x1b[0m`);
+  // assert(tx.code === 0, `\x1b[31;1m[FAIL]\x1b[0m`);
 
   const status = tx.arrayLog!.find(
     (log) => log.type === "wasm" && log.key === "status"
   )!.value;
-  assert(status == "sent to secret contract");
+  assert(status == "sent to private contract");
+}
+
+async function outputTx(
+  client: SecretNetworkClient,
+  contractHash: string,
+  contractAddress: string,
+) {
+  const inputs = JSON.stringify({"input1": "some string", "input2": 1, "input3": true});
+  const input_hash = createHash('sha256').update(inputs).digest(); // hash needs to match the one inside the contract
+  const handle_msg: PostExecutionMsg = {
+    result: "{\"answer\": 42}",
+    task_id: 1,
+    input_hash: Buffer.from(input_hash).toString('base64'),
+  };
+  console.log("handle_msg:");
+  console.log(handle_msg);
+
+  const tx = await client.tx.compute.executeContract(
+    {
+      sender: client.address,
+      contractAddress: contractAddress,
+      codeHash: contractHash,
+      msg: {
+        output: { outputs: handle_msg },
+      },
+      sentFunds: [],
+    },
+    {
+      gasLimit: 200000,
+    }
+  );
+  
+  if (tx.code !== 0) {
+    throw new Error(
+      `Failed with the following error:\n ${tx.rawLog}`
+      );
+    };
+  assert(tx.code === 0, `\x1b[31;1m[FAIL]\x1b[0m`);
+  
+  const status = tx.arrayLog!.find(
+    (log) => log.type === "wasm" && log.key === "status"
+    )!.value;
+  assert(status == "sent to relayer");
+
+  const jsonString = Buffer.from(tx.data[0]).toString('utf8');
+  const broadcastMsg = JSON.parse(jsonString) as BroadcastMsg;
+
+  console.log(broadcastMsg)
+  console.log(`outputTx used \x1b[33m${tx.gasUsed}\x1b[0m gas`);
 }
 
 async function queryPubKey(
@@ -288,7 +335,15 @@ async function test_input_tx(
 ) {
   console.log(`Sending query: {"get_public_key": {} }`);
   const gatewayPublicKey = await queryPubKey(client, contractHash, contractAddress);
-  inputTx(client, contractHash, contractAddress, gatewayPublicKey);
+  await inputTx(client, contractHash, contractAddress, gatewayPublicKey);
+}
+
+async function test_output_tx(
+  client: SecretNetworkClient,
+  contractHash: string,
+  contractAddress: string,
+) {
+  await outputTx(client, contractHash, contractAddress);
 }
 
 async function runTestFunction(
@@ -310,4 +365,5 @@ async function runTestFunction(
   const [client, contractHash, contractAddress] =
     await initializeAndUploadContract();
   await runTestFunction(test_input_tx, client, contractHash, contractAddress);
+  await runTestFunction(test_output_tx, client, contractHash, contractAddress);
 })();

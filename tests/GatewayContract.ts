@@ -2,13 +2,14 @@ export type Binary = string;
 export type HumanAddr = string;
 
 export interface PreExecutionMsg {
+  task_id: number;
   handle: string;
+  routing_info: Contract;
+  sender_info: Sender;
   payload: Binary;
+  nonce: Binary;
   payload_hash: Binary;
   payload_signature: Binary;
-  routing_info: Contract;
-  sender: Sender;
-  task_id: number;
   [k: string]: unknown;
 }
 export interface Contract {
@@ -22,9 +23,17 @@ export interface Sender {
   [k: string]: unknown;
 }
 export interface PostExecutionMsg {
-  parameters: string;
-  result: Binary;
+  result: string;
   task_id: number;
+  input_hash: Binary;
+  [k: string]: unknown;
+}
+export interface BroadcastMsg {
+  result: string;
+  payload: Binary;
+  task_id: number;
+  output_hash: Binary;
+  signature: Binary;
   [k: string]: unknown;
 }
 export interface InitMsg {
