@@ -167,7 +167,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     let private_contract_msg = PrivContractHandleMsg {
         input_values,
         handle: msg.handle,
-        input_hash,
+        input_hash: Binary(input_hash.to_vec()),
         signature: Binary(signature.to_vec()),
     };
     let _cosmos_msg = private_contract_msg.to_cosmos_msg(

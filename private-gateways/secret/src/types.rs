@@ -16,9 +16,9 @@ pub struct Sender {
 /// It is encrypted with a shared secret of the user's private key and the Private Gateway's public key.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Payload {
-    /// Input values as JSON formatted string
+    /// Input values as JSON string.
     pub data: String,
-    /// Destination contract on private network
+    /// Destination contract on private network.
     pub routing_info: Contract,
     /// User verification key / public chain address.
     pub sender: Sender,
