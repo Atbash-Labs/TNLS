@@ -135,6 +135,8 @@ pub struct PrivContractHandleMsg {
     pub input_values: String,
     /// Handle function to be called in the destination contract.
     pub handle: String,
+    /// Task ID passed along for later verification.
+    pub task_id: u64,
     /// SHA256 hash of `input_values`.
     pub input_hash: Binary,
     /// Signature of `input_hash`, signed by the private gateway.
