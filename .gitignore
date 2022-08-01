@@ -1,2 +1,6 @@
-/TNLS-Relayers/infura_api_endpoint.txt
-/config.txt
+.idea
+TNLS-Relayers/etherscan_api_key.txt
+TNLS-Relayers/infura_api_endpoint.txt
+config.txt
+*/.*
+*/venv
