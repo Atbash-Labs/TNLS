@@ -415,7 +415,7 @@ mod tests {
     }
 
     #[test]
-    fn pre_execution() {
+    fn test_pre_execution() {
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env(OWNER, &[]);
 
@@ -460,14 +460,60 @@ mod tests {
         let nonce = Nonce::from_slice(b"unique nonce"); // 12-bytes; unique per message
         let encrypted_payload = cipher
             .encrypt(nonce, serialized_payload.as_slice())
-            .expect("encryption failure!"); // NOTE: handle this error to avoid panics!
+            .unwrap();
 
         // sign the payload
         let payload_hash = sha_256(serialized_payload.as_slice());
         let message = Message::from_slice(&payload_hash).unwrap();
         let payload_signature = secp.sign_ecdsa(&message, &secret_key);
 
-        // test input handle
+        // wrong sender info
+        let wrong_sender_info = Sender {
+            address: HumanAddr::from("wrong eth address".to_string()),
+            public_key: Binary(public_key.serialize().to_vec()),
+        };
+
+        // test internal user address does not match
+        let pre_execution_msg = PreExecutionMsg {
+            task_id: 1,
+            handle: "test".to_string(),
+            routing_info: routing_info.clone(),
+            sender_info: wrong_sender_info,
+            payload: Binary(encrypted_payload.clone()),
+            nonce: Binary(b"unique nonce".to_vec()),
+            payload_hash: Binary(payload_hash.to_vec()),
+            payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
+        };
+        let handle_msg = HandleMsg::Input {
+            inputs: pre_execution_msg,
+        };
+        let err = handle(&mut deps, env.clone(), handle_msg).unwrap_err();
+        assert_eq!(err, StdError::generic_err("verification key mismatch"));
+
+        // wrong routing info
+        let wrong_routing_info = Contract {
+            address: HumanAddr::from("secret13rcx3p8pxf0ttuvxk6czwu73sdccfz4w6e27fd".to_string()),
+            hash: "19438bf0cdf555c6472fb092eae52379c499681b36e47a2ef1c70f5269c8f02f".to_string(),
+        };
+
+        // test internal routing info does not match
+        let pre_execution_msg = PreExecutionMsg {
+            task_id: 1,
+            handle: "test".to_string(),
+            routing_info: wrong_routing_info.clone(),
+            sender_info: sender_info.clone(),
+            payload: Binary(encrypted_payload.clone()),
+            nonce: Binary(b"unique nonce".to_vec()),
+            payload_hash: Binary(payload_hash.to_vec()),
+            payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
+        };
+        let handle_msg = HandleMsg::Input {
+            inputs: pre_execution_msg,
+        };
+        let err = handle(&mut deps, env.clone(), handle_msg).unwrap_err();
+        assert_eq!(err, StdError::generic_err("routing info mismatch"));
+
+        // test proper input handle
         let pre_execution_msg = PreExecutionMsg {
             task_id: 1,
             handle: "test".to_string(),
@@ -481,16 +527,12 @@ mod tests {
         let handle_msg = HandleMsg::Input {
             inputs: pre_execution_msg,
         };
-        let handle_result = handle(&mut deps, env, handle_msg);
+        let handle_result = handle(&mut deps, env.clone(), handle_msg);
         assert!(
             handle_result.is_ok(),
             "handle failed: {}",
             handle_result.err().unwrap()
         );
-        // assert that the list of messages is not empty
-        // TODO uncomment next line when including the outgoing message
-        // assert!(!handle_result.as_ref().unwrap().messages.is_empty());
-
         let handle_answer: InputResponse =
             from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
         assert_eq!(handle_answer.status, Success);
@@ -498,7 +540,7 @@ mod tests {
 
     // TODO reduce code duplication among tests
     #[test]
-    fn post_execution() {
+    fn test_post_execution() {
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env(OWNER, &[]);
 
@@ -550,7 +592,7 @@ mod tests {
         let message = Message::from_slice(&payload_hash).unwrap();
         let payload_signature = secp.sign_ecdsa(&message, &secret_key);
 
-        // test input handle
+        // execute input handle
         let pre_execution_msg = PreExecutionMsg {
             task_id: 1,
             handle: "test".to_string(),
@@ -564,19 +606,22 @@ mod tests {
         let handle_msg = HandleMsg::Input {
             inputs: pre_execution_msg,
         };
-        let handle_result = handle(&mut deps, env.clone(), handle_msg);
-        assert!(
-            handle_result.is_ok(),
-            "handle failed: {}",
-            handle_result.err().unwrap()
-        );
-        // assert that the list of messages is not empty
-        // TODO uncomment next line when including the outgoing message
-        // assert!(!handle_result.as_ref().unwrap().messages.is_empty());
+        handle(&mut deps, env.clone(), handle_msg).unwrap();
 
-        let handle_answer: InputResponse =
-            from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
-        assert_eq!(handle_answer.status, Success);
+        // test incorrect input_hash
+        let wrong_post_execution_msg = PostExecutionMsg {
+            result: "{\"answer\": 42}".to_string(),
+            task_id: 1,
+            input_hash: Binary(sha_256("wrong data".as_bytes()).to_vec()),
+        };
+        let handle_msg = HandleMsg::Output {
+            outputs: wrong_post_execution_msg,
+        };
+        let err = handle(&mut deps, env.clone(), handle_msg).unwrap_err();
+        assert_eq!(
+            err,
+            StdError::generic_err("input hash does not match task ID")
+        );
 
         // test output handle
         let post_execution_msg = PostExecutionMsg {
