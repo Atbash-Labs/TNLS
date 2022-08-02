@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   tests:
-    name: Run Integration Tests
+    name: Integration Tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -42,7 +42,7 @@ jobs:
           chmod +x $HOME/.local/bin/sccache
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Install dependencies
-        run: npm --prefix private-gateway/secret/tests/ install
+        run: npm --prefix private-gateways/secret/tests/ install
       - uses: ./.github/actions/install-rust
         with:
           toolchain: stable
@@ -72,7 +72,7 @@ jobs:
         run: sccache --start-server
       - name: Compile code
         run: make build
-      - name: run integration tests
+      - name: Run integration tests
         run: "npx ts-node private-gateways/secret/tests/integration.ts"
       - name: Print sccache stats
         run: sccache --show-stats

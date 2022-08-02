@@ -1,42 +1,32 @@
-on: [push, pull_request]
-
 name: Static Checks
+
+on: [push, pull_request]
 
 jobs:
   tests:
-    name: ${{ matrix.make.name }} (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.make.name }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        rust: [stable]
         make:
           - name: Clippy
             task: "cargo clippy"
-          - name: Unit tests # Run unit tests
+          - name: Unit tests
             task: "make unit-test"
         include:
-          - os: ubuntu-latest
             sccache-path: /home/runner/.cache/sccache
-          - os: macos-latest
-            sccache-path: /Users/runner/Library/Caches/Mozilla.sccache
-        exclude:
-          - os: macos-latest
-            rust: stable
-            make:
-              name: Clippy
     env:
       RUST_BACKTRACE: full
       RUSTC_WRAPPER: sccache
-      RUSTV: ${{ matrix.rust }}
+      RUSTV: stable
       SCCACHE_CACHE_SIZE: 2G
-      SCCACHE_DIR: ${{ matrix.sccache-path }}
+      SCCACHE_DIR: /home/runner/.cache/sccache
       # SCCACHE_RECACHE: 1 # Uncomment this to clear cache, then comment it back out
+
     steps:
       - uses: actions/checkout@v2
-      - name: Install sccache (ubuntu-latest)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install sccache
         env:
           LINK: https://github.com/mozilla/sccache/releases/download
           SCCACHE_VERSION: v0.2.15
@@ -47,14 +37,9 @@ jobs:
           mv -f $SCCACHE_FILE/sccache $HOME/.local/bin/sccache
           chmod +x $HOME/.local/bin/sccache
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-      - name: Install sccache (macos-latest)
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew update
-          brew install sccache
       - uses: ./.github/actions/install-rust
         with:
-          toolchain: ${{ matrix.rust }}
+          toolchain: stable
       - name: Add wasm toolchain
         run: |
           rustup target add wasm32-unknown-unknown
@@ -69,17 +54,17 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ubuntu-latest-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ubuntu-latest-cargo-
       - name: Save sccache
         uses: actions/cache@v2
         continue-on-error: false
         with:
-          path: ${{ matrix.sccache-path }}
-          key: ${{ runner.os }}-sccache-${{ hashFiles('**/Cargo.lock') }}
+          path: /home/runner/.cache/sccache
+          key: ubuntu-latest-sccache-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-sccache-
+            ubuntu-latest-sccache-
       - name: Start sccache server
         run: sccache --start-server
       - name: ${{ matrix.make.name }}
