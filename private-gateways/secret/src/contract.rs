@@ -10,12 +10,13 @@ use secret_toolkit::{
 
 use crate::{
     msg::{
-        BroadcastMsg, ContractStatus, HandleMsg, InitMsg, InputResponse,
-        PostExecutionMsg, PreExecutionMsg, PrivContractHandleMsg, PublicKeyResponse, QueryMsg, ResponseStatus::Success
+        BroadcastMsg, ContractStatus, HandleMsg, InitMsg, InputResponse, PostExecutionMsg,
+        PreExecutionMsg, PrivContractHandleMsg, PublicKeyResponse, QueryMsg,
+        ResponseStatus::Success,
     },
     state::{
         config, config_read, creator_address, map2inputs, map2inputs_read, my_address, prng,
-        KeyPair, State, TaskInfo
+        KeyPair, State, TaskInfo,
     },
 };
 
@@ -129,7 +130,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     let input_values = payload.data;
     let input_hash = sha_256(input_values.as_bytes());
 
-    // verify the internal verification key (inside the packet?) matches the user address
+    // verify the internal verification key matches the user address
     if payload.sender != msg.sender_info {
         return Err(StdError::generic_err("verification key mismatch"));
     }
@@ -141,7 +142,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     // create a task information store
     let task_info = TaskInfo {
         payload: msg.payload, // storing the ENCRYPTED payload
-        input_hash, // storing the DECRYPTED inputs, hashed
+        input_hash,           // storing the DECRYPTED inputs, hashed
     };
 
     // map task ID to inputs hash
@@ -151,17 +152,23 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     let mut signing_key_bytes = [0u8; 32];
     signing_key_bytes.copy_from_slice(config.signing_keys.sk.as_slice());
 
-    // this method relies on deps.api.secp256k1_sign, which doesn't work in unit tests
+    // this signature is used in production
+    #[cfg(target_arch = "wasm32")]
     let signature = PrivateKey::parse(&signing_key_bytes)?
         .sign(&input_hash, deps.api)
-        .serialize();
+        .serialize()
+        .to_vec();
 
-    // use this less gas efficient method to sign for unit tests
-    // let secp = secp256k1::Secp256k1::new();
-    // let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
-    // let message = secp256k1::Message::from_slice(&input_hash)
-    //     .map_err(|err| StdError::generic_err(err.to_string()))?;
-    // let signature = secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec();
+    // this signature is only used during unit testing
+    #[cfg(not(target_arch = "wasm32"))]
+    let signature = {
+        let secp = secp256k1::Secp256k1::new();
+        let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
+        let message = secp256k1::Message::from_slice(&input_hash)
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
+        let signature = secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec();
+        signature
+    };
 
     // construct the message to send to the destination contract
     let private_contract_msg = PrivContractHandleMsg {
@@ -169,7 +176,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
         handle: msg.handle,
         task_id: msg.task_id,
         input_hash: Binary(input_hash.to_vec()),
-        signature: Binary(signature.to_vec()),
+        signature: Binary(signature),
     };
     let _cosmos_msg = private_contract_msg.to_cosmos_msg(
         msg.routing_info.hash,
@@ -184,9 +191,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
             log("task_ID", &msg.task_id),
             log("status", "sent to private contract"),
         ],
-        data: Some(to_binary(&InputResponse {
-            status: Success,
-        })?),
+        data: Some(to_binary(&InputResponse { status: Success })?),
     })
 }
 
@@ -205,28 +210,35 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     }
 
     // create hash of (result + payload + inputs)
-    let data = [msg.result.as_bytes(), task_info.payload.as_slice(), &input_hash].concat();
+    let data = [
+        msg.result.as_bytes(),
+        task_info.payload.as_slice(),
+        &input_hash,
+    ]
+    .concat();
     let output_hash = sha_256(&data);
 
     // load this gateway's signing key
     let private_key = config_read(&deps.storage).load()?.signing_keys.sk;
-
-    // TODO consider storing signing key as [u8;32] to eliminate this step
     let mut signing_key_bytes = [0u8; 32];
     signing_key_bytes.copy_from_slice(private_key.as_slice());
 
-
-    // this method relies on deps.api.secp256k1_sign, which doesn't work in unit tests
+    // this signature is used in production
+    #[cfg(target_arch = "wasm32")]
     let signature = PrivateKey::parse(&signing_key_bytes)?
         .sign(output_hash.as_slice(), deps.api)
         .serialize();
 
-    // use this less gas efficient method to sign for unit tests
-    // let secp = secp256k1::Secp256k1::new();
-    // let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
-    // let message = secp256k1::Message::from_slice(&output_hash)
-    //     .map_err(|err| StdError::generic_err(err.to_string()))?;
-    // let signature = secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec();
+    // this signature is only used during unit testing
+    #[cfg(not(target_arch = "wasm32"))]
+    let signature = {
+        let secp = secp256k1::Secp256k1::new();
+        let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
+        let message = secp256k1::Message::from_slice(&input_hash)
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
+        let signature = secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec();
+        signature
+    };
 
     let broadcast_msg = BroadcastMsg {
         result: msg.result,
@@ -239,8 +251,9 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![
-            log("task_ID", msg.task_id), 
-            log("status", "sent to relayer")],
+            log("task_ID", msg.task_id),
+            log("status", "sent to relayer"),
+        ],
         data: Some(to_binary(&broadcast_msg)?),
     })
 }
@@ -325,44 +338,75 @@ mod tests {
     use super::*;
     use crate::types::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
-    use cosmwasm_std::{coins, from_binary, Binary, HumanAddr};
+    use cosmwasm_std::{from_binary, Binary, Empty, HumanAddr};
     use secret_toolkit::utils::types::Contract;
 
     use chacha20poly1305::aead::{Aead, NewAead};
     use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
     use secp256k1::{ecdh::SharedSecret, Message, Secp256k1, SecretKey};
 
-    #[test]
-    fn chacha20poly1305() {
-        let key = Key::from_slice(b"an example very very secret key."); // 32-bytes
-        let cipher = ChaCha20Poly1305::new(key);
+    const OWNER: &str = "admin0001";
+    const SOMEBODY: &str = "somebody";
 
-        let nonce = Nonce::from_slice(b"unique nonce"); // 12-bytes; unique per message
+    #[track_caller]
+    fn setup_test_case<S: Storage, A: Api, Q: Querier>(
+        deps: &mut Extern<S, A, Q>,
+    ) -> Result<InitResponse<Empty>, StdError> {
+        // Instantiate a contract with entropy
+        let admin = Some(HumanAddr(OWNER.to_owned()));
+        let entropy = "secret".to_owned();
 
-        let ciphertext = cipher
-            .encrypt(nonce, b"plaintext message".as_ref())
-            .expect("encryption failure!"); // NOTE: handle this error to avoid panics!
-        let plaintext = cipher
-            .decrypt(nonce, ciphertext.as_ref())
-            .expect("decryption failure!"); // NOTE: handle this error to avoid panics!
+        let init_msg = InitMsg { admin, entropy };
+        init(deps, mock_env(OWNER, &[]), init_msg)
+    }
 
-        assert_eq!(&plaintext, b"plaintext message");
+    #[track_caller]
+    fn get_gateway_key<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> Binary {
+        let query_msg = QueryMsg::GetPublicKey {};
+        let query_result = query(&deps, query_msg);
+        let query_answer: PublicKeyResponse = from_binary(&query_result.unwrap()).unwrap();
+        let gateway_pubkey = query_answer.key;
+        gateway_pubkey
     }
 
     #[test]
-    fn proper_initialization() {
+    fn test_init() {
         let mut deps = mock_dependencies(20, &[]);
-        let env = mock_env("creator", &coins(1000, "earth"));
-        let msg = InitMsg {
+        let env = mock_env(OWNER, &[]);
+
+        let init_msg = InitMsg {
             admin: None,
             entropy: "secret".to_owned(),
         };
 
-        // we can just call .unwrap() to assert this was a success
-        let res = init(&mut deps, env, msg).unwrap();
-        assert_eq!(2, res.log.len());
+        // TODO add a fail case if admin address is not valid
+        // let init_msg = InitMsg {
+        //     admin: Some(HumanAddr("bad address".to_owned())),
+        //     entropy: "secret".to_owned(),
+        // };
+        // let err = init(
+        //     &mut deps,
+        //     mock_env(OWNER, &[]),
+        //     init_msg.clone(),
+        // )
+        // .unwrap_err();
+        // assert_eq!(err, StdError::generic_err("invalid admin address".to_string()));
 
-        // it worked, let's query the state
+        let response = init(&mut deps, env, init_msg.clone()).unwrap();
+        assert_eq!(2, response.log.len());
+        let pubkey = Binary::from_base64(&response.log[0].value).unwrap();
+        assert_eq!(pubkey.len(), 33);
+    }
+
+    #[test]
+    fn test_query() {
+        let mut deps = mock_dependencies(20, &[]);
+        let _env = mock_env(SOMEBODY, &[]);
+
+        // initialize
+        setup_test_case(&mut deps).unwrap();
+
+        // query
         let msg = QueryMsg::GetPublicKey {};
         let res = query(&deps, msg);
         assert!(res.is_ok(), "query failed: {}", res.err().unwrap());
@@ -370,36 +414,16 @@ mod tests {
         assert_eq!(value.key.as_slice().len(), 33);
     }
 
-    #[ignore = "doesn't work with deps.api crypto methods"]
     #[test]
     fn pre_execution() {
-        // initialize
         let mut deps = mock_dependencies(20, &[]);
-        let env = mock_env("creator", &coins(1000, "earth"));
-        let init_msg = InitMsg {
-            admin: None,
-            entropy: "secret".to_string(),
-        };
-        let init_result = init(&mut deps, env.clone(), init_msg);
-        assert!(
-            init_result.is_ok(),
-            "Init failed: {}",
-            init_result.err().unwrap()
-        );
-        let pubkey = Binary::from_base64(&init_result.unwrap().log[0].value).unwrap();
-        assert_eq!(pubkey.len(), 33);
+        let env = mock_env(OWNER, &[]);
 
-        // test query / get key to use for encryption
-        let query_msg = QueryMsg::GetPublicKey {};
-        let query_result = query(&deps, query_msg);
-        assert!(
-            query_result.is_ok(),
-            "query failed: {}",
-            query_result.err().unwrap()
-        );
-        let query_answer: PublicKeyResponse = from_binary(&query_result.unwrap()).unwrap();
-        let gateway_pubkey = query_answer.key;
-        assert_eq!(gateway_pubkey.len(), 33);
+        // initialize
+        setup_test_case(&mut deps).unwrap();
+
+        // get gateway public encryption key
+        let gateway_pubkey = get_gateway_key(&deps);
 
         // mock key pair
         let secp = Secp256k1::new();
@@ -473,36 +497,16 @@ mod tests {
     }
 
     // TODO reduce code duplication among tests
-    #[ignore = "doesn't work with deps.api crypto methods"]
     #[test]
     fn post_execution() {
-        // initialize
         let mut deps = mock_dependencies(20, &[]);
-        let env = mock_env("creator", &coins(1000, "earth"));
-        let init_msg = InitMsg {
-            admin: None,
-            entropy: "secret".to_string(),
-        };
-        let init_result = init(&mut deps, env.clone(), init_msg);
-        assert!(
-            init_result.is_ok(),
-            "Init failed: {}",
-            init_result.err().unwrap()
-        );
-        let pubkey = Binary::from_base64(&init_result.unwrap().log[0].value).unwrap();
-        assert_eq!(pubkey.len(), 33);
+        let env = mock_env(OWNER, &[]);
 
-        // test query / get key to use for encryption
-        let query_msg = QueryMsg::GetPublicKey {};
-        let query_result = query(&deps, query_msg);
-        assert!(
-            query_result.is_ok(),
-            "query failed: {}",
-            query_result.err().unwrap()
-        );
-        let query_answer: PublicKeyResponse = from_binary(&query_result.unwrap()).unwrap();
-        let gateway_pubkey = query_answer.key;
-        assert_eq!(gateway_pubkey.len(), 33);
+        // initialize
+        setup_test_case(&mut deps).unwrap();
+
+        // get gateway public encryption key
+        let gateway_pubkey = get_gateway_key(&deps);
 
         // mock key pair
         let secp = Secp256k1::new();
@@ -580,7 +584,7 @@ mod tests {
             task_id: 1,
             input_hash: Binary(sha_256(&data.as_bytes()).to_vec()),
         };
-        
+
         let handle_msg = HandleMsg::Output {
             outputs: post_execution_msg,
         };
@@ -590,7 +594,8 @@ mod tests {
             "handle failed: {}",
             handle_result.err().unwrap()
         );
-        let handle_answer: BroadcastMsg = from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
+        let handle_answer: BroadcastMsg =
+            from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
         assert_eq!(handle_answer.result, "{\"answer\": 42}")
     }
 }
