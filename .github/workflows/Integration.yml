@@ -3,7 +3,7 @@ name: Integration Tests
 on: [push, pull_request]
 
 jobs:
-  tests:
+  secret_gateway_tests:
     name: Integration Tests
     runs-on: ubuntu-latest
     strategy:

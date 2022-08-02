@@ -3,7 +3,7 @@ name: Static Checks
 on: [push, pull_request]
 
 jobs:
-  tests:
+  secret_gateway_tests:
     name: ${{ matrix.make.name }}
     runs-on: ubuntu-latest
     strategy:
