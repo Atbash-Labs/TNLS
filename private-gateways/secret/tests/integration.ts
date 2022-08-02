@@ -307,6 +307,12 @@ async function outputTx(
   const jsonString = Buffer.from(tx.data[0]).toString('utf8');
   const broadcastMsg = JSON.parse(jsonString) as BroadcastMsg;
 
+  assert(broadcastMsg.task_id == 1);
+
+  const result = JSON.parse(broadcastMsg.result)
+  assert(result.answer == 42);
+
+  console.log("broadcast_msg:");
   console.log(broadcastMsg)
   console.log(`outputTx used \x1b[33m${tx.gasUsed}\x1b[0m gas`);
 }
