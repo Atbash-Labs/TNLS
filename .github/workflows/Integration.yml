@@ -71,7 +71,7 @@ jobs:
       - name: Start sccache server
         run: sccache --start-server
       - name: Compile code
-        run: make build
+        run: cd private-gateways/secret/ && make build
       - name: Run integration tests
         run: "npx ts-node private-gateways/secret/tests/integration.ts"
       - name: Print sccache stats

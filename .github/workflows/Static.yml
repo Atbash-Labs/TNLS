@@ -11,11 +11,10 @@ jobs:
       matrix:
         make:
           - name: Clippy
-            task: "cargo clippy"
-          - name: Unit tests
-            task: "make unit-test"
-        include:
-            sccache-path: /home/runner/.cache/sccache
+            task: "cd private-gateways/secret/ && cargo clippy"
+          - name: Unit Tests
+            task: "cd private-gateways/secret/ && make unit-test"
+
     env:
       RUST_BACKTRACE: full
       RUSTC_WRAPPER: sccache
