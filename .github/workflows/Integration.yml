@@ -4,26 +4,17 @@ on: [push, pull_request]
 
 jobs:
   tests:
-    name: ${{ matrix.make.name }} (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        rust: [stable]
-        make:
-          - name: Run integration tests # Integration tests
-            task: "npx ts-node tests/integration.ts"
-        include:
-          - os: ubuntu-latest
-            sccache-path: /home/runner/.cache/sccache
 
     env:
       RUST_BACKTRACE: full
       RUSTC_WRAPPER: sccache
-      RUSTV: ${{ matrix.rust }}
+      RUSTV: stable
       SCCACHE_CACHE_SIZE: 2G
-      SCCACHE_DIR: ${{ matrix.sccache-path }}
+      SCCACHE_DIR: /home/runner/.cache/sccache
       # SCCACHE_RECACHE: 1 # Uncomment this to clear cache, then comment it back out
 
     # Service containers to run with `container-job`
@@ -51,10 +42,10 @@ jobs:
           chmod +x $HOME/.local/bin/sccache
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Install dependencies
-        run: npm --prefix tests/ install # Install dependencies
+        run: npm --prefix private-gateway/secret/tests/ install
       - uses: ./.github/actions/install-rust
         with:
-          toolchain: ${{ matrix.rust }}
+          toolchain: stable
       - name: Add wasm toolchain
         run: |
           rustup target add wasm32-unknown-unknown
@@ -66,23 +57,23 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ubuntu-latest-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ubuntu-latest-cargo-
       - name: Save sccache
         uses: actions/cache@v2
         continue-on-error: false
         with:
-          path: ${{ matrix.sccache-path }}
-          key: ${{ runner.os }}-sccache-${{ hashFiles('**/Cargo.lock') }}
+          path: /home/runner/.cache/sccache
+          key: ubuntu-latest-sccache-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-sccache-
+            ubuntu-latest-sccache-
       - name: Start sccache server
         run: sccache --start-server
       - name: Compile code
         run: make build
-      - name: ${{ matrix.make.name }}
-        run: ${{ matrix.make.task }}
+      - name: run integration tests
+        run: "npx ts-node private-gateways/secret/tests/integration.ts"
       - name: Print sccache stats
         run: sccache --show-stats
       - name: Stop sccache server

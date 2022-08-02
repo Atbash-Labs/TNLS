@@ -1,4 +1,5 @@
 # install-rust
+(credit to SCRT Labs: https://github.com/scrtlabs/secret-template)
 
 A small github action to install `rustup` and a Rust toolchain. This is
 generally expressed inline, but it was repeated enough in this repository it
