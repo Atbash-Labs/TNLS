@@ -73,7 +73,7 @@ jobs:
       - name: Compile code
         run: cd private-gateways/secret/ && make build
       - name: Run integration tests
-        run: "npx ts-node private-gateways/secret/tests/integration.ts"
+        run: cd private-gateways/secret/ && npx ts-node tests/integration.ts
       - name: Print sccache stats
         run: sccache --show-stats
       - name: Stop sccache server
