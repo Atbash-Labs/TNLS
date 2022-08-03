@@ -3,6 +3,7 @@ from pprint import pprint
 from web3 import Web3
 from base_interface import BaseChainInterface, BaseContractInterface, Task
 from typing import List
+from logging import getLogger, basicConfig, DEBUG, StreamHandler
 with open("infura_api_endpoint.txt") as file:
     infura_endpoint = file.read()
 
@@ -23,11 +24,17 @@ class EthInterface(BaseChainInterface):
         self.private_key = private_key
         self.provider = provider
         self.address = address
+        basicConfig(
+            level=DEBUG,
+            format="%(asctime)s [Eth Interface: %(levelname)8.8s] %(message)s",
+            handlers=[StreamHandler()],
+        )
+        self.logger = getLogger()
         pass
 
     def create_transaction(self, contract_function, data):
         #create task
-        nonce = self.provider.eth.getTransactionCount(self.address)
+        nonce = self.provider.eth.get_transaction_count(self.address)
         tx = contract_function(data).buildTransaction({
             'from': self.address,
             'gas': 200000,
@@ -37,9 +44,9 @@ class EthInterface(BaseChainInterface):
         return tx
     def sign_and_send_transaction(self, tx):
         #sign task
-        signed_tx = self.provider.eth.account.signTransaction(tx, self.private_key)
+        signed_tx = self.provider.eth.account.sign_transaction(tx, self.private_key)
         #send task
-        tx_hash = self.provider.eth.sendRawTransaction(signed_tx.rawTransaction)
+        tx_hash = self.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         return tx_hash
 
     def get_transactions(self):
@@ -63,6 +70,12 @@ class EthContract(BaseContractInterface):
         self.abi = abi
         self.interface = interface
         self.contract = interface.provider.eth.contract(address=self.address, abi=self.abi)
+        basicConfig(
+            level=DEBUG,
+            format="%(asctime)s [Eth Contract: %(levelname)8.8s] %(message)s",
+            handlers=[StreamHandler()],
+        )
+        self.logger = getLogger()
         pass
 
     def get_function(self, function_name):
@@ -74,7 +87,11 @@ class EthContract(BaseContractInterface):
         return self.interface.sign_and_send_transaction(txn)
     def parse_event_from_txn(self, event_name, txn) -> List[Task]:
         event = self.contract.events[event_name]
-        tasks = event.processReceipt(txn)
+        try:
+            tasks = event.processReceipt(txn)
+        except Exception as e:
+            self.logger.info(e)
+            return []
         task_list = []
         for task in tasks:
             args = task['args']

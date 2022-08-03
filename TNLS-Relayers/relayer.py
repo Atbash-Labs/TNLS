@@ -34,7 +34,7 @@ class Relayer:
         self.dict_of_names_to_interfaces = dict_of_names_to_interfaces
         basicConfig(
             level=DEBUG,
-            format="%(asctime)s [%(levelname)8.8s] %(message)s",
+            format="%(asctime)s [relayer: %(levelname)8.8s] %(message)s",
             handlers=[StreamHandler()],
         )
         self.logger = getLogger()
