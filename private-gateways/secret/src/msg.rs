@@ -56,7 +56,7 @@ impl ContractStatus {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InputResponse {
-    pub status: ResponseStatus
+    pub status: ResponseStatus,
 }
 
 // #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -117,12 +117,12 @@ impl PreExecutionMsg {
             .map_err(|err| StdError::generic_err(err.to_string()))?;
         let shared_key = SharedSecret::new(&their_public, &my_secret);
         let cipher = ChaCha20Poly1305::new_from_slice(shared_key.as_ref())
-            .map_err(|_err| StdError::generic_err("could not create cipher".to_string()))?; // TODO change msg back to err.to_string()
-        let nonce = Nonce::from_slice(self.nonce.as_slice()); // TODO get nonce as part of the input message
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
+        let nonce = Nonce::from_slice(self.nonce.as_slice());
         let plaintext = cipher
             .decrypt(nonce, self.payload.as_slice())
             .map(Binary)
-            .map_err(|_err| StdError::generic_err("could not decrypt".to_string()))?;
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
         let payload: Payload = from_binary(&plaintext)?;
         Ok(payload)
     }
@@ -156,6 +156,10 @@ pub struct PostExecutionMsg {
     pub task_id: u64,
     /// SHA256 hash of decrypted inputs for verification.
     pub input_hash: Binary,
+}
+
+impl HandleCallback for PostExecutionMsg {
+    const BLOCK_SIZE: usize = 256;
 }
 
 /// Message sent to the relayer.
