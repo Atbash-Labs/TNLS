@@ -19,9 +19,9 @@ web3provider = Web3(Web3.HTTPProvider(API_URL))
 
 
 class EthInterface(BaseChainInterface):
-    def __init__(self, private_key="", address=ADDRESS, api_url=API_URL):
+    def __init__(self, private_key="", address=ADDRESS, provider=Web3(Web3.HTTPProvider(API_URL))):
         self.private_key = private_key
-        self.provider = Web3(Web3.HTTPProvider(api_url))
+        self.provider = provider
         self.address = address
         pass
 
