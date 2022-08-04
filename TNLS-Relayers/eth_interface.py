@@ -6,7 +6,7 @@ from typing import List, Mapping, Sequence
 from logging import getLogger, basicConfig, INFO, StreamHandler
 import os
 
-with open(f"{os.getcwd()}\infura_api_endpoint.txt") as file:
+with open(f"{os.getcwd()}/infura_api_endpoint.txt") as file:
     infura_endpoint = file.read()
 
 API_MODE = "dev"
