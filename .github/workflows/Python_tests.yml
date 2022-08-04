@@ -27,6 +27,6 @@ jobs:
           touch infura_api_endpoint.txt
           echo "$INFURA_ENDPOINT" > infura_api_endpoint.txt
       - name: Test with pytest
-        working-directory: ./TNLS-Relayers
+        working-directory: ./TNLS-Relayers/relayer_tests
         run: |
           pytest

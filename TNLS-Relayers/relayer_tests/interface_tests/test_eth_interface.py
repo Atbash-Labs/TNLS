@@ -1,3 +1,4 @@
+import os
 import pytest
 from web3 import Web3
 try:
@@ -16,7 +17,7 @@ def filter_out_hashes():
 
 @pytest.fixture
 def non_send_provider(monkeypatch):
-    with open("../../infura_api_endpoint.txt") as file:
+    with open(f"{os.getcwd()}/../../infura_api_endpoint.txt") as file:
         infura_endpoint = file.read()
 
     API_MODE = "dev"
