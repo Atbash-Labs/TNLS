@@ -81,7 +81,7 @@ pub struct TaskInfo {
     /// Encryption of (data, routing info, and user address/verifying key).
     pub payload: Binary,
     /// sha256(decrypted input_values)
-    pub input_hash: [u8;32],
+    pub input_hash: [u8; 32],
 }
 
 // Cashmap is convenient, but may not be the best solution if we need to maintain an ordered list
