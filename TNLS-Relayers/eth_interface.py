@@ -3,6 +3,7 @@ from pprint import pprint
 from web3 import Web3
 from base_interface import BaseChainInterface, BaseContractInterface, Task
 from typing import List, Mapping, Sequence
+from requests import HTTPError
 from logging import getLogger, basicConfig, INFO, StreamHandler
 import os
 
@@ -35,12 +36,21 @@ class EthInterface(BaseChainInterface):
     def create_transaction(self, contract_function, data):
         # create task
         nonce = self.provider.eth.get_transaction_count(self.address)
-        tx = contract_function(data).buildTransaction({
+        try:
+            tx = contract_function(data).buildTransaction({
             'from': self.address,
             'gas': 200000,
             'nonce': nonce,
             'gasPrice': self.provider.eth.gasPrice,
-        })
+            })
+        except HTTPError:
+            tx = contract_function(data).buildTransaction({
+                'from': self.address,
+                'gas': 200000,
+                'nonce': nonce,
+                'gasPrice': 20000,
+            })
+
         return tx
 
     def sign_and_send_transaction(self, tx):
