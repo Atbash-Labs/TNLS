@@ -1,5 +1,6 @@
 import pytest
 from web3 import Web3
+from eth_interface import EthInterface, EthContract
 
 
 @pytest.fixture
@@ -13,20 +14,24 @@ def non_send_provider(monkeypatch):
 
     web3provider = Web3(Web3.HTTPProvider(API_URL))
     web3provider.transaction_info = []
+
     def mock_send_raw_transaction(tx):
         web3provider.transaction_info.append(tx)
         return tx
+
     monkeypatch.setattr(web3provider.eth, 'send_raw_transaction', mock_send_raw_transaction)
     yield web3provider
 
+
 @pytest.fixture
-def fixed_block_and_receipts(non_send_provider, monkeypatch):
+def no_transaction_check_provider(non_send_provider, monkeypatch):
     def mock_get_block(_block_number, _full_transactions=False):
         return {
             'transactions': [
-                #fill later
+                # fill later
                 '1',
             ]}
+
     def mock_get_transaction_receipt(tx_hash):
         if tx_hash == '1':
             return {
@@ -41,7 +46,7 @@ def fixed_block_and_receipts(non_send_provider, monkeypatch):
                 'gasUsed': 1,
                 'contractAddress': '0x0',
                 'logs': [
-                    #fill later
+                    # fill later
                 ],
             }
         else:
@@ -58,13 +63,52 @@ def fixed_block_and_receipts(non_send_provider, monkeypatch):
                     'gasUsed': 1,
                     'contractAddress': '0x0',
                     'logs': [
-                        #fill later
+                        # fill later
                     ],
                 }
 
             }
+
     monkeypatch.setattr(non_send_provider.eth, 'get_block', mock_get_block)
     monkeypatch.setattr(non_send_provider.eth, 'get_transaction_receipt', mock_get_transaction_receipt)
+    monkeypatch.setattr(non_send_provider.eth, 'get_transaction_count', lambda _address: 1)
+    return non_send_provider
 
 
-#NEED TO CREATE A STANDARD ABI AND STUFF TO PULL FROM/SAMPLE EVENTS
+def test_transaction_builder(no_transaction_check_provider):
+    sample_private_key = '8da4ef21b864d2cc526dbdb2a120bd2874c36c9d0a1fb7f8c63d7f7a8b41de8f'
+    sample_address = '0x63FaC9201494f0bd17B9892B9fae4d52fe3BD377'
+
+    def sample_contract_function(data):
+        class ContractFunction:
+            def buildTransaction(self, params):
+                transact_dict = {
+                    'data': data,
+                    'to': sample_address,
+                }
+                transact_dict.update(params)
+                return transact_dict
+
+        return ContractFunction()
+
+    # Note:  the below privkeys/addrs are published online
+
+    interface = EthInterface(address=sample_address, provider=no_transaction_check_provider,
+                             private_key=sample_private_key)
+    transaction = interface.create_transaction(sample_contract_function, '0x123')
+    transaction.pop('gasPrice')
+    assert transaction == {
+        'data': '0x123',
+        'from': sample_address,
+        'nonce': 1,
+        'gas': 200000,
+        'to': sample_address,
+    }
+    transaction['gasPrice'] = 1
+    assert str(Web3.toInt(interface.sign_and_send_transaction(
+        transaction))) == '646961047256234134936427207708597400990062481352738925532\
+44382979189820165162760809784845372096459771505600454239891815718170891799\
+6311654666704958317118883520202866260746151473787908917221684661552359733009\
+6619889394626268873948136817484127'
+
+# NEED TO CREATE A STANDARD ABI AND STUFF TO PULL FROM/SAMPLE EVENTS

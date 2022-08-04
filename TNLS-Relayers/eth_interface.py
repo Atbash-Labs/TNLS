@@ -4,7 +4,8 @@ from web3 import Web3
 from base_interface import BaseChainInterface, BaseContractInterface, Task
 from typing import List
 from logging import getLogger, basicConfig, DEBUG, StreamHandler
-with open("infura_api_endpoint.txt") as file:
+import os
+with open(f"{os.getcwd()}\infura_api_endpoint.txt") as file:
     infura_endpoint = file.read()
 
 
