@@ -78,15 +78,13 @@ requests==2.27.1
 secret-sdk==1.0
 six==1.16.0
 sniffio==1.2.0
-solana==0.23.3
 tomli==2.0.1
 toolz==0.11.2
 types-cachetools==4.2.10
 typing_extensions==4.2.0
 urllib3==1.26.9
 varint==1.0.2
-web3==5.29.0
-websockets==10.3
+web3==5.29.0\
 wrapt==1.14.1
 yarl==1.7.2
 zipp==3.8.0
