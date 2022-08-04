@@ -66,9 +66,11 @@ class EthInterface(BaseChainInterface):
     def get_last_block(self):
         return self.provider.eth.blockNumber
 
-    def get_last_txs(self, address=ADDRESS):
+    def get_last_txs(self, block_number=None, address=ADDRESS):
+        if block_number is None:
+            block_number = self.get_last_block()
         # get last txs for address
-        transactions: Sequence[Mapping] = self.provider.eth.get_block(self.get_last_block(), full_transactions=True)[
+        transactions: Sequence[Mapping] = self.provider.eth.get_block(block_number, full_transactions=True)[
             'transactions']
         correct_transactions = [transaction for transaction in transactions if transaction['from'] == address]
         correct_transactions = list(

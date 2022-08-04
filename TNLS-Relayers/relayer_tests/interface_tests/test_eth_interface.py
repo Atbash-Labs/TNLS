@@ -215,7 +215,7 @@ def test_correct_txn_filtering_one_in(no_transaction_check_provider, filter_out_
         {'from': '0x0', 'to': '0x1', 'hash': '0x2'},
     ]
     interface = EthInterface(address='0x0', provider=no_transaction_check_provider)
-    assert filter_out_hashes(interface.get_last_txs(address='0x0')) == ['0x2']
+    assert filter_out_hashes(interface.get_last_txs(block_number=1, address='0x0')) == ['0x2']
 
 
 def test_correct_txn_filtering_one_out(no_transaction_check_provider, filter_out_hashes):
@@ -223,7 +223,7 @@ def test_correct_txn_filtering_one_out(no_transaction_check_provider, filter_out
         {'from': '0x1', 'to': '0x1', 'hash': '0x2'},
     ]
     interface = EthInterface(address='0x0', provider=no_transaction_check_provider)
-    assert filter_out_hashes(interface.get_last_txs(address='0x0')) == []
+    assert filter_out_hashes(interface.get_last_txs(block_number=1, address='0x0')) == []
 
 
 def test_correct_txn_filtering_many(no_transaction_check_provider, filter_out_hashes):
@@ -236,5 +236,5 @@ def test_correct_txn_filtering_many(no_transaction_check_provider, filter_out_ha
         {'from': '0x0', 'to': '0x1', 'hash': '0x7'},
     ]
     interface = EthInterface(address='0x0', provider=no_transaction_check_provider)
-    assert filter_out_hashes(interface.get_last_txs(address='0x0')) == ['0x5', '0x6', '0x7']
+    assert filter_out_hashes(interface.get_last_txs(block_number=1,address='0x0')) == ['0x5', '0x6', '0x7']
 # NEED TO CREATE A STANDARD ABI AND STUFF TO PULL FROM/SAMPLE EVENTS
