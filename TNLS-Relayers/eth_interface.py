@@ -2,22 +2,21 @@ from pprint import pprint
 
 from web3 import Web3
 from base_interface import BaseChainInterface, BaseContractInterface, Task
-from typing import List
-from logging import getLogger, basicConfig, DEBUG, StreamHandler
+from typing import List, Mapping, Sequence
+from logging import getLogger, basicConfig, INFO, StreamHandler
 import os
+
 with open(f"{os.getcwd()}\infura_api_endpoint.txt") as file:
     infura_endpoint = file.read()
-
-
 
 API_MODE = "dev"
 
 ADDRESS = "0xce1dfc3F67B028Ed19a97974F8cD2bAF6fba1672" if API_MODE != "dev" else "0xae050f76654B1Cf264A203545371F1575119530C"
 
-API_URL = infura_endpoint.replace("{ENDPOINT}", "mainnet") if API_MODE != "dev" else infura_endpoint.replace("{ENDPOINT}", "ropsten")
+API_URL = infura_endpoint.replace("{ENDPOINT}", "mainnet") if API_MODE != "dev" else infura_endpoint.replace(
+    "{ENDPOINT}", "ropsten")
 
 web3provider = Web3(Web3.HTTPProvider(API_URL))
-
 
 
 class EthInterface(BaseChainInterface):
@@ -26,7 +25,7 @@ class EthInterface(BaseChainInterface):
         self.provider = provider
         self.address = address
         basicConfig(
-            level=DEBUG,
+            level=INFO,
             format="%(asctime)s [Eth Interface: %(levelname)8.8s] %(message)s",
             handlers=[StreamHandler()],
         )
@@ -34,7 +33,7 @@ class EthInterface(BaseChainInterface):
         pass
 
     def create_transaction(self, contract_function, data):
-        #create task
+        # create task
         nonce = self.provider.eth.get_transaction_count(self.address)
         tx = contract_function(data).buildTransaction({
             'from': self.address,
@@ -43,10 +42,11 @@ class EthInterface(BaseChainInterface):
             'gasPrice': self.provider.eth.gasPrice,
         })
         return tx
+
     def sign_and_send_transaction(self, tx):
-        #sign task
+        # sign task
         signed_tx = self.provider.eth.account.sign_transaction(tx, self.private_key)
-        #send task
+        # send task
         tx_hash = self.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         return tx_hash
 
@@ -58,21 +58,23 @@ class EthInterface(BaseChainInterface):
 
     def get_last_txs(self, address=ADDRESS):
         # get last txs for address
-        transactions = self.provider.eth.get_block(self.get_last_block(), full_transactions=True)['transactions']
+        transactions: Sequence[Mapping] = self.provider.eth.get_block(self.get_last_block(), full_transactions=True)[
+            'transactions']
         correct_transactions = [transaction for transaction in transactions if transaction['from'] == address]
-        correct_transactions = list(map(lambda tx: self.provider.eth.get_transaction_receipt(tx['hash']), correct_transactions))
+        correct_transactions = list(
+            map(lambda tx: self.provider.eth.get_transaction_receipt(tx['hash']), correct_transactions))
 
         return correct_transactions
 
 
 class EthContract(BaseContractInterface):
-    def __init__(self,interface, address, abi):
+    def __init__(self, interface, address, abi):
         self.address = address
         self.abi = abi
         self.interface = interface
         self.contract = interface.provider.eth.contract(address=self.address, abi=self.abi)
         basicConfig(
-            level=DEBUG,
+            level=INFO,
             format="%(asctime)s [Eth Contract: %(levelname)8.8s] %(message)s",
             handlers=[StreamHandler()],
         )
@@ -86,6 +88,7 @@ class EthContract(BaseContractInterface):
         function = self.get_function(function_name)
         txn = self.interface.create_transaction(function, args)
         return self.interface.sign_and_send_transaction(txn)
+
     def parse_event_from_txn(self, event_name, txn) -> List[Task]:
         event = self.contract.events[event_name]
         try:
@@ -99,7 +102,8 @@ class EthContract(BaseContractInterface):
             task_list.append(Task(args))
         return task_list
 
+
 if __name__ == "__main__":
-    interface = EthInterface()
+    interface = EthInterface(address='0xEB7D94Cefa561E83901aD87cB91eFcA73a1Fc812')
     txs = interface.get_last_txs()
     pprint(txs)

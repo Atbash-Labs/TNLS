@@ -20,17 +20,17 @@ def non_send_provider(monkeypatch):
         return tx
 
     monkeypatch.setattr(web3provider.eth, 'send_raw_transaction', mock_send_raw_transaction)
+    monkeypatch.setattr(web3provider.eth, 'get_transaction_count', lambda _address: 1)
     yield web3provider
 
 
 @pytest.fixture
 def no_transaction_check_provider(non_send_provider, monkeypatch):
+    non_send_provider.transaction_retrieved = []
     def mock_get_block(_block_number, _full_transactions=False):
         return {
-            'transactions': [
-                # fill later
-                '1',
-            ]}
+            'transactions': non_send_provider.transaction_retrieved
+        }
 
     def mock_get_transaction_receipt(tx_hash):
         if tx_hash == '1':
@@ -71,11 +71,10 @@ def no_transaction_check_provider(non_send_provider, monkeypatch):
 
     monkeypatch.setattr(non_send_provider.eth, 'get_block', mock_get_block)
     monkeypatch.setattr(non_send_provider.eth, 'get_transaction_receipt', mock_get_transaction_receipt)
-    monkeypatch.setattr(non_send_provider.eth, 'get_transaction_count', lambda _address: 1)
     return non_send_provider
 
 
-def test_transaction_builder(no_transaction_check_provider):
+def test_transaction_builder_good(non_send_provider):
     sample_private_key = '8da4ef21b864d2cc526dbdb2a120bd2874c36c9d0a1fb7f8c63d7f7a8b41de8f'
     sample_address = '0x63FaC9201494f0bd17B9892B9fae4d52fe3BD377'
 
@@ -93,7 +92,7 @@ def test_transaction_builder(no_transaction_check_provider):
 
     # Note:  the below privkeys/addrs are published online
 
-    interface = EthInterface(address=sample_address, provider=no_transaction_check_provider,
+    interface = EthInterface(address=sample_address, provider=non_send_provider,
                              private_key=sample_private_key)
     transaction = interface.create_transaction(sample_contract_function, '0x123')
     transaction.pop('gasPrice')
@@ -111,4 +110,20 @@ def test_transaction_builder(no_transaction_check_provider):
 6311654666704958317118883520202866260746151473787908917221684661552359733009\
 6619889394626268873948136817484127'
 
+
+def test_transaction_builder_bad_address_from(non_send_provider):
+    pass
+
+def test_transaction_builder_bad_address_to(non_send_provider):
+    pass
+
+def test_transaction_builder_bad_private_key(non_send_provider):
+    pass
+
+def test_transaction_builder_mismatched_private_key(non_send_provider):
+    pass
+
+def test_correct_txn_filtering(no_transaction_check_provider):
+    no_transaction_check_provider.transaction_retrieved = []
+    pass
 # NEED TO CREATE A STANDARD ABI AND STUFF TO PULL FROM/SAMPLE EVENTS
