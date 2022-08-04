@@ -1,6 +1,9 @@
 import pytest
 from web3 import Web3
-from eth_interface import EthInterface, EthContract
+try:
+    from ...eth_interface import EthInterface, EthContract
+except:
+    from eth_interface import EthInterface, EthContract
 
 
 @pytest.fixture
