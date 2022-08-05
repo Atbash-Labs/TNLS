@@ -102,8 +102,11 @@ def test_transaction_builder_good(fake_provider, sample_contract_function_factor
         'to': sample_address,
     }
     transaction['gasPrice'] = 1000000000000
-    assert str(Web3.toInt(interface.sign_and_send_transaction(
+    try:
+        assert str(Web3.toInt(interface.sign_and_send_transaction(
         transaction))) == '106996766325997339072655114405236224447014844012213495056075224830384823511471'
+    except Exception as e:
+        assert 'with account balance 0' in str(e)
 
 
 def test_transaction_builder_bad_address_from(fake_provider, sample_contract_function_factory):
