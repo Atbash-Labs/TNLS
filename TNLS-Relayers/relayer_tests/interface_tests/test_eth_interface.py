@@ -186,7 +186,7 @@ def test_transaction_builder_mismatched_private_key(fake_provider, sample_contra
         'data': '0x123',
         'from': sample_address,
         'nonce': 0,
-        'gas': 2000000,
+        'gas': 200000,
         'to': sample_address,
     }
     transaction['gasPrice'] = 1
