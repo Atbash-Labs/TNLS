@@ -23,7 +23,7 @@ class EthInterface(BaseChainInterface):
                                               "mainnet") if API_MODE != "dev" else infura_endpoint.replace(
                 "{ENDPOINT}", "ropsten")
 
-            web3provider = Web3(Web3.HTTPProvider(API_URL))
+            provider = Web3(Web3.HTTPProvider(API_URL))
         self.private_key = private_key
         self.provider = provider
         self.address = address
