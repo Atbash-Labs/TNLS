@@ -59,9 +59,11 @@ class EthInterface(BaseChainInterface):
     def get_last_block(self):
         return self.provider.eth.blockNumber
 
-    def get_last_txs(self, block_number=None, address=ADDRESS):
+    def get_last_txs(self, block_number=None, address=None):
         if block_number is None:
             block_number = self.get_last_block()
+        if address is None:
+            address = self.address
         # get last txs for address
         transactions: Sequence[Mapping] = self.provider.eth.get_block(block_number, full_transactions=True)[
             'transactions']
@@ -91,7 +93,7 @@ class EthContract(BaseContractInterface):
 
     def call_function(self, function_name, *args):
         function = self.get_function(function_name)
-        txn = self.interface.create_transaction(function, args)
+        txn = self.interface.create_transaction(function, *args)
         return self.interface.sign_and_send_transaction(txn)
 
     def parse_event_from_txn(self, event_name, txn) -> List[Task]:
