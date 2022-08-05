@@ -101,7 +101,7 @@ def test_transaction_builder_good(fake_provider, sample_contract_function_factor
         'gas': 200000,
         'to': sample_address,
     }
-    transaction['gasPrice'] = 1
+    transaction['gasPrice'] = 1000000000000
     assert str(Web3.toInt(interface.sign_and_send_transaction(
         transaction))) == '106996766325997339072655114405236224447014844012213495056075224830384823511471'
 
@@ -183,7 +183,7 @@ def test_transaction_builder_mismatched_private_key(fake_provider, sample_contra
         'data': '0x123',
         'from': sample_address,
         'nonce': 0,
-        'gas': 200000,
+        'gas': 2000000,
         'to': sample_address,
     }
     transaction['gasPrice'] = 1
@@ -270,7 +270,7 @@ def address_and_abi_of_contract(non_send_provider):
     return tx_receipt.contractAddress, abi, FooContract(tx_receipt.contractAddress)
 
 
-@pytest.mark.skipif(sys.platform.startswith('win'))
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
 def test_basic_contract_init(non_send_provider, address_and_abi_of_contract):
     interface = EthInterface(address=Web3.EthereumTesterProvider().ethereum_tester.get_accounts()[0],
                              provider=non_send_provider)
