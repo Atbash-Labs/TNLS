@@ -26,27 +26,9 @@ def non_send_provider(monkeypatch):
 
 @pytest.fixture
 def fake_provider(monkeypatch):
-
-
-    with open(f"{os.getcwd()}/infura_api_endpoint.txt") as file:
-        infura_endpoint = file.read()
-
-    API_MODE = "dev"
-    API_URL = infura_endpoint.replace("{ENDPOINT}", "mainnet") if API_MODE != "dev" else infura_endpoint.replace(
-        "{ENDPOINT}", "ropsten")
-
-    web3provider = Web3(Web3.HTTPProvider(API_URL))
-    web3provider.transaction_info = []
-
-
-    def mock_send_raw_transaction(tx):
-        web3provider.transaction_info.append(tx)
-        return tx
-
-
-    monkeypatch.setattr(web3provider.eth, 'send_raw_transaction', mock_send_raw_transaction)
-    monkeypatch.setattr(web3provider.eth, 'get_transaction_count', lambda _address: 1)
+    web3provider = Web3(Web3.EthereumTesterProvider())
     yield web3provider
+
 
 @pytest.fixture
 def no_transaction_check_provider(fake_provider, monkeypatch):
