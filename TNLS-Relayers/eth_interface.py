@@ -7,21 +7,23 @@ from requests import HTTPError
 from logging import getLogger, basicConfig, INFO, StreamHandler
 import os
 
-with open(f"{os.getcwd()}/infura_api_endpoint.txt") as file:
-    infura_endpoint = file.read()
-
-API_MODE = "dev"
-
-ADDRESS = "0xce1dfc3F67B028Ed19a97974F8cD2bAF6fba1672" if API_MODE != "dev" else "0xae050f76654B1Cf264A203545371F1575119530C"
-
-API_URL = infura_endpoint.replace("{ENDPOINT}", "mainnet") if API_MODE != "dev" else infura_endpoint.replace(
-    "{ENDPOINT}", "ropsten")
-
-web3provider = Web3(Web3.HTTPProvider(API_URL))
-
 
 class EthInterface(BaseChainInterface):
-    def __init__(self, private_key="", address=ADDRESS, provider=Web3(Web3.HTTPProvider(API_URL))):
+    def __init__(self, private_key="", address="", provider=None):
+        if provider is None:
+            with open(f"{os.getcwd()}/infura_api_endpoint.txt") as file:
+                infura_endpoint = file.read()
+
+            API_MODE = "dev"
+
+            address = "0xce1dfc3F67B028Ed19a97974F8cD2bAF6fba1672" \
+                if API_MODE != "dev" else "0xae050f76654B1Cf264A203545371F1575119530C"
+
+            API_URL = infura_endpoint.replace("{ENDPOINT}",
+                                              "mainnet") if API_MODE != "dev" else infura_endpoint.replace(
+                "{ENDPOINT}", "ropsten")
+
+            web3provider = Web3(Web3.HTTPProvider(API_URL))
         self.private_key = private_key
         self.provider = provider
         self.address = address
@@ -36,20 +38,12 @@ class EthInterface(BaseChainInterface):
     def create_transaction(self, contract_function, data):
         # create task
         nonce = self.provider.eth.get_transaction_count(self.address)
-        try:
-            tx = contract_function(data).buildTransaction({
+        tx = contract_function(data).buildTransaction({
             'from': self.address,
             'gas': 200000,
             'nonce': nonce,
             'gasPrice': self.provider.eth.gasPrice,
-            })
-        except HTTPError:
-            tx = contract_function(data).buildTransaction({
-                'from': self.address,
-                'gas': 200000,
-                'nonce': nonce,
-                'gasPrice': 20000,
-            })
+        })
 
         return tx
 

@@ -17,21 +17,15 @@ def filter_out_hashes():
 
 @pytest.fixture
 def non_send_provider(monkeypatch):
-    with open(f"{os.getcwd()}/infura_api_endpoint.txt") as file:
-        infura_endpoint = file.read()
 
-    API_MODE = "dev"
-    API_URL = infura_endpoint.replace("{ENDPOINT}", "mainnet") if API_MODE != "dev" else infura_endpoint.replace(
-        "{ENDPOINT}", "ropsten")
 
-    web3provider = Web3(Web3.HTTPProvider(API_URL))
+    web3provider = Web3(Web3.EthereumTesterProvider())
     web3provider.transaction_info = []
 
     def mock_send_raw_transaction(tx):
         web3provider.transaction_info.append(tx)
         return tx
 
-    monkeypatch.setattr(web3provider.eth, 'send_raw_transaction', mock_send_raw_transaction)
     monkeypatch.setattr(web3provider.eth, 'get_transaction_count', lambda _address: 1)
     yield web3provider
 
@@ -106,10 +100,7 @@ def test_transaction_builder_good(non_send_provider, sample_contract_function_fa
     }
     transaction['gasPrice'] = 1
     assert str(Web3.toInt(interface.sign_and_send_transaction(
-        transaction))) == '646961047256234134936427207708597400990062481352738925532\
-44382979189820165162760809784845372096459771505600454239891815718170891799\
-6311654666704958317118883520202866260746151473787908917221684661552359733009\
-6619889394626268873948136817484127'
+        transaction))) == '106996766325997339072655114405236224447014844012213495056075224830384823511471'
 
 
 def test_transaction_builder_bad_address_from(non_send_provider, sample_contract_function_factory):
