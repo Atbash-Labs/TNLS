@@ -22,8 +22,11 @@ def filter_out_hashes():
 
 @pytest.fixture
 def non_send_provider(monkeypatch):
-    web3provider = Web3(Web3.EthereumTesterProvider(EthereumTester(backend=PyEVMBackend())))
-    yield web3provider
+    base_provider = Web3.EthereumTesterProvider(EthereumTester(backend=PyEVMBackend()))
+    base_priv_key = base_provider.ethereum_tester.backend.account_keys[0]
+    base_addr = base_provider.ethereum_tester.get_accounts()[0]
+    web3provider = Web3(base_provider)
+    yield web3provider, base_priv_key, base_addr
 
 
 
@@ -84,13 +87,11 @@ def sample_contract_function_factory():
     return _sample_contract_function
 
 
-def test_transaction_builder_good(fake_provider, sample_contract_function_factory):
-    sample_private_key = '8da4ef21b864d2cc526dbdb2a120bd2874c36c9d0a1fb7f8c63d7f7a8b41de8f'
-    sample_address = '0x63FaC9201494f0bd17B9892B9fae4d52fe3BD377'
+def test_transaction_builder_good(non_send_provider, sample_contract_function_factory):
+    provider, sample_private_key, sample_address = non_send_provider
 
-    # Note:  the below privkeys/addrs are published online
 
-    interface = EthInterface(address=sample_address, provider=fake_provider,
+    interface = EthInterface(address=sample_address, provider=provider,
                              private_key=sample_private_key)
     transaction = interface.create_transaction(sample_contract_function_factory(sample_address), '0x123')
     transaction.pop('gasPrice')
@@ -102,11 +103,9 @@ def test_transaction_builder_good(fake_provider, sample_contract_function_factor
         'to': sample_address,
     }
     transaction['gasPrice'] = 1000000000000
-    try:
-        assert str(Web3.toInt(interface.sign_and_send_transaction(
-        transaction))) == '106996766325997339072655114405236224447014844012213495056075224830384823511471'
-    except Exception as e:
-        assert 'with account balance 0' in str(e)
+    assert str(Web3.toInt(interface.sign_and_send_transaction(
+        transaction))) == '65179427771983584748417465488745607597763943977140432452056461044412680211905'
+
 
 
 def test_transaction_builder_bad_address_from(fake_provider, sample_contract_function_factory):
@@ -259,7 +258,7 @@ def address_and_abi_of_contract(non_send_provider):
     bytecode = """608060405234801561001057600080fd5b506040805190810160405280600b81526020017f68656c6c6f20776f726c640000000000000000000000000000000000000000008152506000908051906020019061005c929190610062565b50610107565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106100a357805160ff19168380011785556100d1565b828001600101855582156100d1579182015b828111156100d05782518255916020019190600101906100b5565b5b5090506100de91906100e2565b5090565b61010491905b808211156101005760008160009055506001016100e8565b5090565b90565b6103bb806101166000396000f3fe608060405234801561001057600080fd5b5060043610610053576000357c01000000000000000000000000000000000000000000000000000000009004806397bc14aa14610058578063febb0f7e14610113575b600080fd5b6101116004803603602081101561006e57600080fd5b810190808035906020019064010000000081111561008b57600080fd5b82018360208201111561009d57600080fd5b803590602001918460018302840111640100000000831117156100bf57600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600081840152601f19601f820116905080830192505050505050509192919290505050610196565b005b61011b61024c565b6040518080602001828103825283818151815260200191508051906020019080838360005b8381101561015b578082015181840152602081019050610140565b50505050905090810190601f1680156101885780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b80600090805190602001906101ac9291906102ea565b507f5f71ad82e16f082de5ff496b140e2fbc8621eeb37b36d59b185c3f1364bbd529816040518080602001828103825283818151815260200191508051906020019080838360005b8381101561020f5780820151818401526020810190506101f4565b50505050905090810190601f16801561023c5780820380516001836020036101000a031916815260200191505b509250505060405180910390a150565b60008054600181600116156101000203166002900480601f0160208091040260200160405190810160405280929190818152602001828054600181600116156101000203166002900480156102e25780601f106102b7576101008083540402835291602001916102e2565b820191906000526020600020905b8154815290600101906020018083116102c557829003601f168201915b505050505081565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061032b57805160ff1916838001178555610359565b82800160010185558215610359579182015b8281111561035857825182559160200191906001019061033d565b5b509050610366919061036a565b5090565b61038c91905b80821115610388576000816000905550600101610370565b5090565b9056fea165627a7a72305820ae6ca683d45ee8a71bba45caee29e4815147cd308f772c853a20dfe08214dbb50029"""  # noqa: E501
 
     # Create our contract class.
-    FooContract = non_send_provider.eth.contract(abi=abi, bytecode=bytecode)
+    FooContract = non_send_provider[0].eth.contract(abi=abi, bytecode=bytecode)
     # issue a transaction to deploy the contract.
     tx_hash = FooContract.constructor().transact(
         {
@@ -268,43 +267,57 @@ def address_and_abi_of_contract(non_send_provider):
         }
     )
     # wait for the transaction to be mined
-    tx_receipt = non_send_provider.eth.wait_for_transaction_receipt(tx_hash, 180)
+    tx_receipt = non_send_provider[0].eth.wait_for_transaction_receipt(tx_hash, 180)
     # instantiate and return an instance of our contract.
     return tx_receipt.contractAddress, abi, FooContract(tx_receipt.contractAddress)
 
 
 @pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
 def test_basic_contract_init(non_send_provider, address_and_abi_of_contract):
-    interface = EthInterface(address=Web3.EthereumTesterProvider().ethereum_tester.get_accounts()[0],
-                             provider=non_send_provider)
+    provider, private_key, address = non_send_provider
+    interface = EthInterface(address=address,
+                             provider=provider,
+                             private_key=private_key)
     _ = EthContract(interface=interface, address=address_and_abi_of_contract[0],
                     abi=address_and_abi_of_contract[1])
 
 
-@pytest.mark.skip(reason="need to ask prince how to fix this")
-def test_function_call(non_send_provider, address_and_abi_of_contract):
-    sample_private_key = '8da4ef21b864d2cc526dbdb2a120bd2874c36c9d0a1fb7f8c63d7f7a8b41de8f'
-    sample_address = '0x63FaC9201494f0bd17B9892B9fae4d52fe3BD377'
-    interface = EthInterface(address=sample_address,
-                             private_key=sample_private_key,
-                             provider=non_send_provider)
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
+def test_event_getter(non_send_provider, address_and_abi_of_contract):
+    provider, private_key, address = non_send_provider
+    interface = EthInterface(address=address,
+                             private_key=private_key,
+                             provider=provider)
     contract = EthContract(interface=interface, address=address_and_abi_of_contract[0],
                            abi=address_and_abi_of_contract[1])
-    tx = contract.call_function('setBar', 'TEST')
     foo_contract = address_and_abi_of_contract[2]
     tx_hash = foo_contract.functions.setBar("testing contracts is easy", ).transact(
         {
-            "from": non_send_provider.eth.accounts[1],
+            "from": address,
             'gas': 1000000,
         }
     )
-    receipt = non_send_provider.eth.wait_for_transaction_receipt(tx_hash, 180)
-    #receipt = non_send_provider.eth.wait_for_transaction_receipt(tx, 180)
-    print(receipt)
-    logs = foo_contract.events.barred.getLogs()
-    assert len(logs) == 1
+    receipt = provider.eth.wait_for_transaction_receipt(tx_hash, 180)
+    evt_logs = contract.parse_event_from_txn('barred', receipt)
+    assert evt_logs != []
+    assert evt_logs[0].task_data['_bar'] == "testing contracts is easy"
 
+
+
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
+def test_function_call(non_send_provider, address_and_abi_of_contract):
+    provider, private_key, address = non_send_provider
+    interface = EthInterface(address=address,
+                             private_key=private_key,
+                             provider=provider)
+    contract = EthContract(interface=interface, address=address_and_abi_of_contract[0],
+                           abi=address_and_abi_of_contract[1])
+    foo_contract = address_and_abi_of_contract[2]
+    tx = contract.call_function('setBar', 'testing contracts is easy')
     # verify that the log's data matches the expected value
+    receipt = provider.eth.wait_for_transaction_receipt(tx, 180)
+    logs = list(foo_contract.events.barred.getLogs())
+    assert len(logs) == 1
     event = logs[0]
     assert event.blockHash == receipt.blockHash
-    assert contract.parse_event_from_txn('barred', receipt) != []
+    assert event.__dict__['args']['_bar'] == 'testing contracts is easy'

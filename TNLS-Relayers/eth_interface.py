@@ -3,7 +3,7 @@ from pprint import pprint
 from web3 import Web3
 from base_interface import BaseChainInterface, BaseContractInterface, Task
 from typing import List, Mapping, Sequence
-from requests import HTTPError
+from web3.logs import WARN
 from logging import getLogger, basicConfig, INFO, StreamHandler
 import os
 
@@ -97,11 +97,12 @@ class EthContract(BaseContractInterface):
         return self.interface.sign_and_send_transaction(txn)
 
     def parse_event_from_txn(self, event_name, txn) -> List[Task]:
-        event = self.contract.events[event_name]
+        event = self.contract.events[event_name]()
+        print(event)
         try:
             tasks = event.processReceipt(txn)
         except Exception as e:
-            self.logger.info(e)
+            self.logger.warning(e)
             return []
         task_list = []
         for task in tasks:
