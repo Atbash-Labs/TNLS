@@ -301,6 +301,16 @@ def test_event_getter(provider_privkey_address, address_and_abi_of_contract):
     evt_logs = contract.parse_event_from_txn('barred', receipt)
     assert evt_logs != []
     assert evt_logs[0].task_data['_bar'] == "testing contracts is easy"
+    tx_hash = foo_contract.constructor().transact(
+        {
+            "from": address,
+            'gas': 1000000,
+        }
+    )
+    # wait for the transaction to be mined
+    tx_receipt = provider_privkey_address[0].eth.wait_for_transaction_receipt(tx_hash, 180)
+    evt_logs = contract.parse_event_from_txn('barred', tx_receipt)
+    assert evt_logs == []
 
 
 
