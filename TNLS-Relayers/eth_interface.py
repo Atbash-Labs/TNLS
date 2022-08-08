@@ -8,8 +8,14 @@ import os
 
 
 class EthInterface(BaseChainInterface):
+    """
+    Implementaion of BaseChainInterface for eth.
+    """
     def __init__(self, private_key="", address="", provider=None):
         if provider is None:
+            """
+            If we don't have a set provider, read it from config.
+            """
             with open(f"{os.getcwd()}/infura_api_endpoint.txt") as file:
                 infura_endpoint = file.read()
 
@@ -34,6 +40,9 @@ class EthInterface(BaseChainInterface):
         pass
 
     def create_transaction(self, contract_function, data):
+        """
+        See base_interface.py for documentation
+        """
         # create task
         nonce = self.provider.eth.get_transaction_count(self.address)
         tx = contract_function(data).buildTransaction({
@@ -46,6 +55,9 @@ class EthInterface(BaseChainInterface):
         return tx
 
     def sign_and_send_transaction(self, tx):
+        """
+        See base_interface.py for documentation
+        """
         # sign task
         signed_tx = self.provider.eth.account.sign_transaction(tx, self.private_key)
         # send task
@@ -53,12 +65,27 @@ class EthInterface(BaseChainInterface):
         return tx_hash
 
     def get_transactions(self):
+        """
+        See base_interface.py for documentation
+        """
         return self.get_last_txs(self.address)
 
     def get_last_block(self):
+        """
+        Gets the number of the most recent block
+        """
         return self.provider.eth.blockNumber
 
     def get_last_txs(self, block_number=None, address=None):
+        """
+        Gets the transactions from a particular block for a particular address.
+        Args:
+            block_number:  Which block to get
+            address: Which address to get transactions for
+
+        Returns: a list of transaction receipts
+
+        """
         if block_number is None:
             block_number = self.get_last_block()
         if address is None:
@@ -74,6 +101,9 @@ class EthInterface(BaseChainInterface):
 
 
 class EthContract(BaseContractInterface):
+    """
+    Implementation of BaseContractInterface for eth.
+    """
     def __init__(self, interface, address, abi):
         self.address = address
         self.abi = abi
@@ -88,14 +118,25 @@ class EthContract(BaseContractInterface):
         pass
 
     def get_function(self, function_name):
+        """
+        Gets a particular function from the contract.
+        Args:
+            function_name: The name of the function to get.
+        """
         return self.contract.functions[function_name]
 
     def call_function(self, function_name, *args):
+        """
+        See base_interface.py for documentation
+        """
         function = self.get_function(function_name)
         txn = self.interface.create_transaction(function, *args)
         return self.interface.sign_and_send_transaction(txn)
 
     def parse_event_from_txn(self, event_name, txn) -> List[Task]:
+        """
+        See base_interface.py for documentation
+        """
         event = self.contract.events[event_name]()
         try:
             tasks = event.processReceipt(txn)
