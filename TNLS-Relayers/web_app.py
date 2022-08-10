@@ -6,7 +6,12 @@ from relayer import Relayer
 
 
 def convert_config_file_to_dict(_config_file) -> dict:
-    pass
+    config_dict = {}
+    with open(_config_file) as f:
+        for line in f.readlines():
+            key, val = line.split('=')
+            config_dict[key] = val
+    return config_dict
 
 
 route_blueprint = Blueprint('route_blueprint', __name__)
