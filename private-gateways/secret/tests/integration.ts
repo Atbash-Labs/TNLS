@@ -40,10 +40,9 @@ const initializeClient = async (endpoint: string, chainId: string) => {
   return client;
 };
 
-// Stores and instantiaties a new contract in our network
-const initializeContract = async (
+const initializeGateway = async (
   client: SecretNetworkClient,
-  contractPath: string
+  contractPath: string,
 ) => {
   const wasmCode = fs.readFileSync(contractPath);
   console.log("Uploading contract");
@@ -85,7 +84,7 @@ const initializeContract = async (
     {
       sender: client.address,
       codeId,
-      initMsg: { entropy: "secret"},
+      initMsg: { entropy: "secret" },
       codeHash: contractCodeHash,
       label: "My contract" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
     },
@@ -119,8 +118,86 @@ const initializeContract = async (
 
   console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas`);
 
-  var contractInfo: [string, string] = [contractCodeHash, contractAddress];
-  return contractInfo;
+  var gatewayInfo: [string, string, string] = [contractCodeHash, contractAddress, encryption_pubkey];
+  return gatewayInfo;
+};
+
+const initializeContract = async (
+  client: SecretNetworkClient,
+  contractPath: string,
+  gatewayHash: string,
+  gatewayAddress: string,
+  gatewayKey: string,
+) => {
+  const wasmCode = fs.readFileSync(contractPath);
+  console.log("Uploading example contract");
+
+  const uploadReceipt = await client.tx.compute.storeCode(
+    {
+      wasmByteCode: wasmCode,
+      sender: client.address,
+      source: "",
+      builder: "",
+    },
+    {
+      gasLimit: 5000000,
+    }
+  );
+
+  if (uploadReceipt.code !== 0) {
+    console.log(
+      `Failed to get code id: ${JSON.stringify(uploadReceipt.rawLog)}`
+    );
+    throw new Error(`Failed to upload contract`);
+  }
+
+  const codeIdKv = uploadReceipt.jsonLog![0].events[0].attributes.find(
+    (a: any) => {
+      return a.key === "code_id";
+    }
+  );
+
+  console.log(`Upload used \x1b[33m${uploadReceipt.gasUsed}\x1b[0m gas\n`);
+
+  const codeId = Number(codeIdKv!.value);
+  console.log("Contract codeId: ", codeId);
+
+  const contractCodeHash = await client.query.compute.codeHash(codeId);
+  console.log(`Contract hash: ${contractCodeHash}`);
+
+  const contract = await client.tx.compute.instantiateContract(
+    {
+      sender: client.address,
+      codeId,
+      initMsg: {
+        gateway_hash: gatewayHash,
+        gateway_address: gatewayAddress,
+        gateway_key: gatewayKey,
+      },
+      codeHash: contractCodeHash,
+      label: "My contract" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
+    },
+    {
+      gasLimit: 5000000,
+    }
+  );
+
+  if (contract.code !== 0) {
+    throw new Error(
+      `Failed to instantiate the contract with the following error ${contract.rawLog}`
+    );
+  }
+
+  const contractAddress = contract.arrayLog!.find(
+    (log) => log.type === "message" && log.key === "contract_address"
+  )!.value;
+
+  console.log(`Contract address: ${contractAddress}\n`);
+
+  console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas`);
+
+  var gatewayInfo: [string, string] = [contractCodeHash, contractAddress];
+  return gatewayInfo;
 };
 
 const getFromFaucet = async (address: string) => {
@@ -158,13 +235,23 @@ async function initializeAndUploadContract() {
 
   if (chainId == "secretdev-1") {await fillUpFromFaucet(client, 100_000_000)};
 
-  const [contractHash, contractAddress] = await initializeContract(
+  const [gatewayHash, gatewayAddress, gatewayKey] = await initializeGateway(
     client,
-    "contract.wasm.gz"
+    "contract.wasm.gz",
   );
 
-  var clientInfo: [SecretNetworkClient, string, string] = [
+  const [contractHash, contractAddress] = await initializeContract(
     client,
+    "tests/example-private-contract/contract.wasm.gz",
+    gatewayHash,
+    gatewayAddress,
+    gatewayKey,
+  );
+
+  var clientInfo: [SecretNetworkClient, string, string, string, string] = [
+    client,
+    gatewayHash,
+    gatewayAddress,
     contractHash,
     contractAddress
   ];
@@ -173,6 +260,8 @@ async function initializeAndUploadContract() {
 
 async function inputTx(
   client: SecretNetworkClient,
+  gatewayHash: string,
+  gatewayAddress: string,
   contractHash: string,
   contractAddress: string,
   gatewayPublicKey: string, // base64
@@ -188,14 +277,14 @@ async function inputTx(
   const gatewayPublicKeyBytes = arrayify(gatewayPublicKeyBuffer)
 
   const routing_info: Contract = {
-    address: "secret19zpyd046u4swqpksr3n44cej4j8pg6ahw95y85",
-    hash: "2a2fbe493ef25b536bbe0baa3917b51e5ba092e14bd76abf50a59526e2789be3"
+    address: contractAddress,
+    hash: contractHash
   };
   const sender: Sender = {
     address: userPublicAddress,
     public_key: Buffer.from(userPublicKeyBytes).toString('base64'),
   };
-  const inputs = JSON.stringify({"input1": "some string", "input2": 1, "input3": true});
+  const inputs = JSON.stringify({"my_value": 1});
   const payload: Payload = {
     data: inputs,
     routing_info: routing_info,
@@ -221,13 +310,14 @@ async function inputTx(
 
   const handle_msg: PreExecutionMsg = {
     task_id: 1,
-    handle: "test",
+    handle: "add_one",
     routing_info: routing_info,
     sender_info: sender,
     payload: ciphertext,
     nonce: Buffer.from(nonce).toString('base64'),
     payload_hash: payloadHash64,
     payload_signature: payloadSignature64,
+    source_network: "ethereum",
   };
   console.log("handle_msg:");
   console.log(handle_msg);
@@ -235,8 +325,8 @@ async function inputTx(
   const tx = await client.tx.compute.executeContract(
     {
       sender: client.address,
-      contractAddress: contractAddress,
-      codeHash: contractHash,
+      contractAddress: gatewayAddress,
+      codeHash: gatewayHash,
       msg: {
         input: { inputs: handle_msg },
       },
@@ -254,18 +344,30 @@ async function inputTx(
       `Failed with the following error:\n ${tx.rawLog}`
     );
   };
-  // assert(tx.code === 0, `\x1b[31;1m[FAIL]\x1b[0m`);
 
-  const status = tx.arrayLog!.find(
-    (log) => log.type === "wasm" && log.key === "status"
-  )!.value;
-  assert(status == "sent to private contract");
+  console.log(tx.arrayLog);
+
+  const jsonString = Buffer.from(tx.data[0]).toString('utf8');
+  const broadcastMsg = JSON.parse(jsonString) as BroadcastMsg;
+  
+  console.log("broadcast_msg:");
+  console.log(broadcastMsg)
+
+  
+  // const result = JSON.parse(broadcastMsg.result)
+  // assert(result.my_value == 2);
+  // assert(broadcastMsg.task_id == 1);
+
+  // const status = tx.arrayLog!.find(
+  //   (log) => log.type === "wasm" && log.key === "status"
+  // )!.value;
+  // assert(status == "sent to private contract");
 }
 
 async function outputTx(
   client: SecretNetworkClient,
-  contractHash: string,
-  contractAddress: string,
+  gatewayHash: string,
+  gatewayAddress: string,
 ) {
   const inputs = JSON.stringify({"input1": "some string", "input2": 1, "input3": true});
   const input_hash = createHash('sha256').update(inputs).digest(); // hash needs to match the one inside the contract
@@ -280,8 +382,8 @@ async function outputTx(
   const tx = await client.tx.compute.executeContract(
     {
       sender: client.address,
-      contractAddress: contractAddress,
-      codeHash: contractHash,
+      contractAddress: gatewayAddress,
+      codeHash: gatewayHash,
       msg: {
         output: { outputs: handle_msg },
       },
@@ -319,14 +421,14 @@ async function outputTx(
 
 async function queryPubKey(
   client: SecretNetworkClient,
-  contractHash: string,
-  contractAddress: string,
+  gatewayHash: string,
+  gatewayAddress: string,
 ): Promise<string> {
   type PublicKeyResponse = { key: Binary };
 
   const response = (await client.query.compute.queryContract({
-    contractAddress: contractAddress,
-    codeHash: contractHash,
+    contractAddress: gatewayAddress,
+    codeHash: gatewayHash,
     query: { get_public_key: {} },
   })) as PublicKeyResponse;
 
@@ -336,40 +438,48 @@ async function queryPubKey(
 
 async function test_input_tx(
   client: SecretNetworkClient,
+  gatewayHash: string,
+  gatewayAddress: string,
   contractHash: string,
   contractAddress: string,
 ) {
   console.log(`Sending query: {"get_public_key": {} }`);
-  const gatewayPublicKey = await queryPubKey(client, contractHash, contractAddress);
-  await inputTx(client, contractHash, contractAddress, gatewayPublicKey);
+  const gatewayPublicKey = await queryPubKey(client, gatewayHash, gatewayAddress);
+  await inputTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey);
 }
 
 async function test_output_tx(
   client: SecretNetworkClient,
+  gatewayHash: string,
+  gatewayAddress: string,
   contractHash: string,
   contractAddress: string,
 ) {
-  await outputTx(client, contractHash, contractAddress);
+  await outputTx(client, gatewayHash, gatewayAddress);
 }
 
 async function runTestFunction(
   tester: (
     client: SecretNetworkClient,
+    gatewayHash: string,
+    gatewayAddress: string,
     contractHash: string,
     contractAddress: string
   ) => void,
   client: SecretNetworkClient,
+  gatewayHash: string,
+  gatewayAddress: string,
   contractHash: string,
   contractAddress: string
 ) {
-  console.log(`\n\x1b[1m[TESTING] ${tester.name}\x1b[0m\n`);
-  await tester(client, contractHash, contractAddress);
-  console.log(`\x1b[92;1m[SUCCESS] ${tester.name}\x1b[0m\n`);
+  console.log(`\n\x1b[1m[  TEST  ] ${tester.name}\x1b[0m\n`);
+  await tester(client, gatewayHash, gatewayAddress, contractHash, contractAddress);
+  console.log(`\x1b[92;1m[   OK   ] ${tester.name}\x1b[0m\n`);
 }
 
 (async () => {
-  const [client, contractHash, contractAddress] =
+  const [client, gatewayHash, gatewayAddress, contractHash, contractAddress] =
     await initializeAndUploadContract();
-  await runTestFunction(test_input_tx, client, contractHash, contractAddress);
-  await runTestFunction(test_output_tx, client, contractHash, contractAddress);
+    await runTestFunction(test_input_tx, client, gatewayHash, gatewayAddress, contractHash, contractAddress);
+    // await runTestFunction(test_output_tx, client, gatewayHash, gatewayAddress, contractHash, contractAddress);
 })();

@@ -73,7 +73,6 @@ pub enum QueryMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub struct PublicKeyResponse {
     pub key: Binary,
 }
@@ -97,6 +96,8 @@ pub struct PreExecutionMsg {
     pub payload_signature: Binary,
     /// User verification key / public chain address.
     pub sender_info: Sender,
+    /// Source network (where to go once pulled into the next gateway).
+    pub source_network: String,
 }
 
 impl PreExecutionMsg {
@@ -130,6 +131,15 @@ impl PreExecutionMsg {
 
 /// Message sent to destination private contract with decrypted inputs.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SecretMsg {
+    Input { message: PrivContractHandleMsg },
+}
+impl HandleCallback for SecretMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PrivContractHandleMsg {
     /// JSON string of decrypted user inputs.
     pub input_values: String,
@@ -141,10 +151,6 @@ pub struct PrivContractHandleMsg {
     pub input_hash: Binary,
     /// Signature of `input_hash`, signed by the private gateway.
     pub signature: Binary,
-}
-
-impl HandleCallback for PrivContractHandleMsg {
-    const BLOCK_SIZE: usize = 256;
 }
 
 /// Message received from destination private contract with results.
@@ -175,6 +181,8 @@ pub struct BroadcastMsg {
     pub output_hash: Binary,
     /// `output_hash` signed with Private Gateway key.
     pub signature: Binary,
+    /// Source network (where to go once pulled into the next gateway).
+    pub routing_info: String,
 }
 
 impl HandleCallback for BroadcastMsg {

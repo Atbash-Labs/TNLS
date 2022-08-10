@@ -11,13 +11,13 @@ use secret_toolkit::{
 use crate::{
     msg::{
         BroadcastMsg, ContractStatus, HandleMsg, InitMsg, InputResponse, PostExecutionMsg,
-        PreExecutionMsg, PrivContractHandleMsg, PublicKeyResponse, QueryMsg,
-        ResponseStatus::Success,
+        PreExecutionMsg, PublicKeyResponse, QueryMsg, ResponseStatus::Success, SecretMsg,
     },
     state::{
         config, config_read, creator_address, map2inputs, map2inputs_read, my_address, prng,
         KeyPair, State, TaskInfo,
     },
+    PrivContractHandleMsg,
 };
 
 /// pad handle responses and log attributes to blocks of 256 bytes to prevent leaking info based on
@@ -143,6 +143,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     let task_info = TaskInfo {
         payload: msg.payload, // storing the ENCRYPTED payload
         input_hash,           // storing the DECRYPTED inputs, hashed
+        source_network: msg.source_network,
     };
 
     // map task ID to inputs hash
@@ -166,26 +167,27 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
         let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
         let message = secp256k1::Message::from_slice(&input_hash)
             .map_err(|err| StdError::generic_err(err.to_string()))?;
-        let signature = secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec();
-        signature
+        secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec()
     };
 
     // construct the message to send to the destination contract
-    let private_contract_msg = PrivContractHandleMsg {
-        input_values,
-        handle: msg.handle,
-        task_id: msg.task_id,
-        input_hash: Binary(input_hash.to_vec()),
-        signature: Binary(signature),
+    let private_contract_msg = SecretMsg::Input {
+        message: PrivContractHandleMsg {
+            input_values,
+            handle: msg.handle,
+            task_id: msg.task_id,
+            input_hash: Binary(input_hash.to_vec()),
+            signature: Binary(signature),
+        },
     };
-    let _cosmos_msg = private_contract_msg.to_cosmos_msg(
+    let cosmos_msg = private_contract_msg.to_cosmos_msg(
         msg.routing_info.hash,
         msg.routing_info.address,
         None,
     )?;
 
     Ok(HandleResponse {
-        messages: vec![], // TODO add cosmos_msg when ready to test
+        messages: vec![cosmos_msg],
         // TODO decide what logs and data to return
         log: vec![
             log("task_ID", &msg.task_id),
@@ -203,6 +205,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     // load task ID information
     let task_info = map2inputs_read(&deps.storage).load(&msg.task_id.to_le_bytes())?;
     let input_hash = task_info.input_hash;
+    let routing_info = task_info.source_network;
 
     // verify that input hash is correct one for Task ID
     if msg.input_hash.as_slice() != input_hash.to_vec() {
@@ -236,8 +239,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
         let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
         let message = secp256k1::Message::from_slice(&input_hash)
             .map_err(|err| StdError::generic_err(err.to_string()))?;
-        let signature = secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec();
-        signature
+        secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec()
     };
 
     let broadcast_msg = BroadcastMsg {
@@ -246,6 +248,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
         task_id: msg.task_id,
         output_hash: Binary(output_hash.to_vec()),
         signature: Binary(signature.to_vec()),
+        routing_info,
     };
 
     Ok(HandleResponse {
@@ -483,6 +486,7 @@ mod tests {
             nonce: Binary(b"unique nonce".to_vec()),
             payload_hash: Binary(payload_hash.to_vec()),
             payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
+            source_network: "ethereum".to_string(),
         };
         let handle_msg = HandleMsg::Input {
             inputs: pre_execution_msg,
@@ -506,6 +510,7 @@ mod tests {
             nonce: Binary(b"unique nonce".to_vec()),
             payload_hash: Binary(payload_hash.to_vec()),
             payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
+            source_network: "ethereum".to_string(),
         };
         let handle_msg = HandleMsg::Input {
             inputs: pre_execution_msg,
@@ -523,6 +528,7 @@ mod tests {
             nonce: Binary(b"unique nonce".to_vec()),
             payload_hash: Binary(payload_hash.to_vec()),
             payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
+            source_network: "ethereum".to_string(),
         };
         let handle_msg = HandleMsg::Input {
             inputs: pre_execution_msg,
@@ -602,6 +608,7 @@ mod tests {
             nonce: Binary(b"unique nonce".to_vec()),
             payload_hash: Binary(payload_hash.to_vec()),
             payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
+            source_network: "ethereum".to_string(),
         };
         let handle_msg = HandleMsg::Input {
             inputs: pre_execution_msg,

@@ -82,6 +82,8 @@ pub struct TaskInfo {
     pub payload: Binary,
     /// sha256(decrypted input_values)
     pub input_hash: [u8; 32],
+    /// Source network (where to go once pulled into the next gateway).
+    pub source_network: String,
 }
 
 // Cashmap is convenient, but may not be the best solution if we need to maintain an ordered list

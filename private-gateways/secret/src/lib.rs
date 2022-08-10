@@ -1,32 +1,23 @@
-/// Master Private Gateway
-///
-/// * bullet point
-/// * bullet point
-///
-/// ## Usage
-///
-/// ```rust,ignore
-/// use tnls_gateway::*;
-///
-/// // A destination contract address
-/// let contract = Contract {
-///     address,
-///     hash,
-/// };
-///
-/// let inputs = "something";
-///
-/// // Generates a new gateway message from inputs
-/// let message = TnlsMessage::new(contract, inputs);
-/// ```
-///
-/// ## Cargo Features
-///
-/// * `library`: disable all init/handle/query exports
+//! # Master Private Gateway
+//!
+//! ## Example Usage
+//!
+//! ```rust,ignore
+//! // TBD
+//! ```
+//!
+//! ### Cargo Features
+//!
+//! * `library`: disable all init/handle/query exports
 pub mod contract;
 pub mod msg;
 pub mod state;
 pub mod types;
+
+pub use crate::msg::{
+    InputResponse, PostExecutionMsg, PrivContractHandleMsg, ResponseStatus::Success,
+};
+pub use crate::types::{Payload, Sender};
 
 #[cfg(not(feature = "library"))]
 #[cfg(target_arch = "wasm32")]

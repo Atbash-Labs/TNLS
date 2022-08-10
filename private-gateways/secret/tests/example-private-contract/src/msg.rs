@@ -1,5 +1,6 @@
 use cosmwasm_std::{Binary, HumanAddr};
-use tnls::msg::PrivContractHandleMsg;
+use secret_toolkit::utils::HandleCallback;
+use tnls::msg::{PostExecutionMsg, PrivContractHandleMsg};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -13,15 +14,8 @@ pub struct InitMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum GatewayMsg {
-    Input { input: PrivContractHandleMsg },
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    Increment {},
-    Reset { count: i32 },
+    Input { message: PrivContractHandleMsg },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -35,4 +29,14 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct CountResponse {
     pub count: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum GatewayMsg {
+    Output { outputs: PostExecutionMsg },
+}
+
+impl HandleCallback for GatewayMsg {
+    const BLOCK_SIZE: usize = 256;
 }

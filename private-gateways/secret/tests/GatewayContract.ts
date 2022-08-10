@@ -10,6 +10,7 @@ export interface PreExecutionMsg {
   nonce: Binary;
   payload_hash: Binary;
   payload_signature: Binary;
+  source_network: string;
   [k: string]: unknown;
 }
 export interface Contract {

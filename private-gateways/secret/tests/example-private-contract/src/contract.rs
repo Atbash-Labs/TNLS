@@ -1,17 +1,14 @@
 use cosmwasm_std::{
-    log, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult,
-    InitResponse, InitResult, Querier, QueryResult, StdError, StdResult, Storage,
+    to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult, InitResponse,
+    InitResult, Querier, QueryResult, StdError, Storage,
 };
 use secret_toolkit::utils::{pad_handle_result, pad_query_result, HandleCallback};
 
 use crate::{
-    msg::{CountResponse, GatewayMsg, InitMsg, QueryMsg},
+    msg::{CountResponse, GatewayMsg, HandleMsg, InitMsg, QueryMsg},
     state::{config, config_read, State},
 };
-use tnls::msg::{
-    InputResponse, PostExecutionMsg, PrivContractHandleMsg, ResponseStatus::Failure,
-    ResponseStatus::Success,
-};
+use tnls::msg::{InputResponse, PostExecutionMsg, PrivContractHandleMsg, ResponseStatus::Success};
 
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +18,7 @@ pub const BLOCK_SIZE: usize = 256;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _env: Env,
     msg: InitMsg,
 ) -> InitResult {
     let state = State {
@@ -38,10 +35,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
-    msg: GatewayMsg,
+    msg: HandleMsg,
 ) -> HandleResult {
     let response = match msg {
-        GatewayMsg::Input { input } => _handle(deps, env, input),
+        HandleMsg::Input { message } => _handle(deps, env, message),
     };
     pad_handle_result(response, BLOCK_SIZE)
 }
@@ -63,7 +60,7 @@ pub fn _handle<S: Storage, A: Api, Q: Querier>(
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     // determine which function to call based on the included handle
-    // TODO I wonder if there's a way to use a HandleMsg enum here instead    
+    // TODO I wonder if there's a way to use a HandleMsg enum here instead
     let handle = msg.handle.as_str();
     match handle {
         "add_one" => try_add_one(deps, env, msg.input_values, msg.task_id, msg.input_hash),
@@ -85,7 +82,7 @@ pub fn try_add_one<S: Storage, A: Api, Q: Querier>(
     input_values: String,
     task_id: u64,
     input_hash: Binary,
-) -> StdResult<HandleResponse> {
+) -> HandleResult {
     // increment count each time this handle is called
     config(&mut deps.storage).update(|mut state| {
         state.count += 1;
@@ -102,10 +99,13 @@ pub fn try_add_one<S: Storage, A: Api, Q: Querier>(
 
     let config = config_read(&deps.storage).load()?;
 
-    let callback_msg = PostExecutionMsg {
-        result,
-        task_id,
-        input_hash,
+    let callback_msg = GatewayMsg::Output {
+        // is this nested structure unneccessary?
+        outputs: PostExecutionMsg {
+            result,
+            task_id,
+            input_hash,
+        },
     }
     .to_cosmos_msg(config.gateway_hash, config.gateway_address, None)?;
 
@@ -167,8 +167,8 @@ mod tests {
         init(&mut deps, env.clone(), init_msg).unwrap();
 
         // test invalid handle
-        let handle_msg = GatewayMsg::Input {
-            input: PrivContractHandleMsg {
+        let handle_msg = HandleMsg::Input {
+            message: PrivContractHandleMsg {
                 input_values: "{\"my_value\": 1}".to_string(),
                 handle: "add_two".to_string(),
                 task_id: 1,
@@ -179,8 +179,8 @@ mod tests {
         let err = handle(&mut deps, env.clone(), handle_msg).unwrap_err();
         assert_eq!(err, StdError::generic_err("invalid handle".to_string()));
 
-        let handle_msg = GatewayMsg::Input {
-            input: PrivContractHandleMsg {
+        let handle_msg = HandleMsg::Input {
+            message: PrivContractHandleMsg {
                 input_values: "{\"my_value\": 1}".to_string(),
                 handle: "add_one".to_string(),
                 task_id: 1,
