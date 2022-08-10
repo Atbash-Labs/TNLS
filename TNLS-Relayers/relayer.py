@@ -19,12 +19,11 @@ update sqlite db (keyed by task ID) with state of object
 
 '''
 
-from eth_interface import EthInterface, EthContract
-from scrt_interface import SCRTInterface, SCRTContract
-from base_interface import Task
-from threading import Thread
 from logging import getLogger, basicConfig, DEBUG, StreamHandler
+from threading import Thread
 from time import sleep
+
+from base_interface import Task
 
 
 class Relayer:
@@ -65,6 +64,7 @@ class Relayer:
             thread.start()
             self.task_threads.append(thread)
         self.task_threads = [thread_live for thread_live in self.task_threads if thread_live.is_alive()]
+
     def run(self):
         self.logger.info('Starting relayer')
         while True:
@@ -74,6 +74,9 @@ class Relayer:
             self.logger.info('handled transactions')
             sleep(5)
         pass
+
+    def __str__(self):
+        return f'Tasks: {[str(task) for task in self.task_list]}'
 
 
 if __name__ == '__main__':
