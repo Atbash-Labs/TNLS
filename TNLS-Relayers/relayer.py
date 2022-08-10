@@ -27,7 +27,8 @@ from base_interface import Task, BaseContractInterface, BaseChainInterface
 
 class Relayer:
     def __init__(self,
-                 dict_of_names_to_interfaces: Dict[str, Tuple[BaseChainInterface, BaseContractInterface, str, str]]):
+                 dict_of_names_to_interfaces: Dict[str, Tuple[BaseChainInterface, BaseContractInterface, str, str]],
+                 num_loops=None):
         """
 
         Args:
@@ -43,6 +44,7 @@ class Relayer:
             handlers=[StreamHandler()],
         )
         self.logger = getLogger()
+        self.num_loops = num_loops
 
         pass
 
@@ -68,8 +70,7 @@ class Relayer:
             self.logger.warning(f'Task {task} has no destination network, not routing')
             return
         if task.task_destination_network not in self.dict_of_names_to_interfaces:
-            self.logger.warning(f'Network {task.task_destination_network} is unknown, not routing') \
- \
+            self.logger.warning(f'Network {task.task_destination_network} is unknown, not routing')
         contract_for_txn = self.dict_of_names_to_interfaces[task.task_destination_network][1]
         function_name = self.dict_of_names_to_interfaces[task.task_destination_network][3]
         contract_for_txn.call_function(function_name, str(task))
@@ -93,7 +94,7 @@ class Relayer:
             self.task_threads.append(thread)
         self.task_threads = [thread_live for thread_live in self.task_threads if thread_live.is_alive()]
 
-    def run(self, numloops=None):
+    def run(self):
         """
         Runs the central relayer event loop:
         poll for transactions,
@@ -104,7 +105,7 @@ class Relayer:
         """
         self.logger.info('Starting relayer')
         loops_run = 0
-        while (numloops is not None and loops_run < numloops) or numloops is None:
+        while (self.num_loops is not None and loops_run < self.num_loops) or self.num_loops is None:
             self.poll_for_transactions()
             self.logger.info('Polled for transactions, now have {} remaining'.format(len(self.task_list)))
             self.task_list_handle()
