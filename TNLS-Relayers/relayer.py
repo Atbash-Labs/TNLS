@@ -36,6 +36,7 @@ class Relayer:
             (chain_interface, contract_interface, evt_name, function_name) tuples
         """
         self.task_list = []
+        self.task_ids_to_statuses = {}
         self.task_threads = []
         self.dict_of_names_to_interfaces = dict_of_names_to_interfaces
         basicConfig(
@@ -57,6 +58,9 @@ class Relayer:
             transactions = chain_interface.get_transactions()
             for transaction in transactions:
                 tasks = contract_interface.parse_event_from_txn(evt_name, transaction)
+                for task in tasks:
+                    task_id = task.task_data['task_id']
+                    self.task_ids_to_statuses[task_id] = 'Received from {}'.format(name)
                 self.task_list.extend(tasks)
 
     def route_transaction(self, task: Task):
@@ -68,13 +72,16 @@ class Relayer:
         self.logger.info('Routing task {}'.format(task))
         if task.task_destination_network is None:
             self.logger.warning(f'Task {task} has no destination network, not routing')
+            self.task_ids_to_statuses[task.task_data['task_id']] = 'Failed to route'
             return
         if task.task_destination_network not in self.dict_of_names_to_interfaces:
             self.logger.warning(f'Network {task.task_destination_network} is unknown, not routing')
+            self.task_ids_to_statuses[task.task_data['task_id']] = 'Failed to route'
             return
         contract_for_txn = self.dict_of_names_to_interfaces[task.task_destination_network][1]
         function_name = self.dict_of_names_to_interfaces[task.task_destination_network][3]
         contract_for_txn.call_function(function_name, str(task))
+        self.task_ids_to_statuses[task.task_data['task_id']] = 'Routed to {}'.format(task.task_destination_network)
         self.logger.info('Routed {} to {}'.format(task, task.task_destination_network))
         pass
 
@@ -115,7 +122,8 @@ class Relayer:
         pass
 
     def __str__(self):
-        return f'Tasks: {[str(task) for task in self.task_list]}'
+        return f'Tasks to be handled: {[str(task) for task in self.task_list]}, ' \
+               f'Status of all tasks: {self.task_ids_to_statuses}'
 
 
 if __name__ == '__main__':

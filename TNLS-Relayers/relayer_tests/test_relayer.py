@@ -79,7 +79,9 @@ def test_basic_relayer_route(fake_interface_factory):
     dict_of_names_to_interfaces = {'fake': (chain_interface, contract_interface, '', '')}
     relayer = Relayer(dict_of_names_to_interfaces, num_loops=1)
     relayer.route_transaction(Task(task_dict_list[0]))
+    assert relayer.task_ids_to_statuses['1'] == 'Routed to fake'
     assert contract_interface.results['1'] == 4
+    assert str(relayer) == "Tasks to be handled: [], Status of all tasks: {'1': 'Routed to fake'}"
 
 
 def test_basic_relayer_route_no_dest(fake_interface_factory, caplog):
