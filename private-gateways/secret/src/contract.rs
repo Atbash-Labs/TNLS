@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    log, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult, InitResponse,
-    InitResult, Querier, QueryResult, StdError, Storage,
+    log, plaintext_log, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult,
+    InitResponse, InitResult, Querier, QueryResult, StdError, Storage,
 };
 use secret_toolkit::{
     crypto::secp256k1::{PrivateKey, PublicKey},
@@ -10,8 +10,8 @@ use secret_toolkit::{
 
 use crate::{
     msg::{
-        BroadcastMsg, ContractStatus, HandleMsg, InitMsg, InputResponse, PostExecutionMsg,
-        PreExecutionMsg, PublicKeyResponse, QueryMsg, ResponseStatus::Success, SecretMsg,
+        ContractStatus, HandleMsg, InitMsg, InputResponse, PostExecutionMsg, PreExecutionMsg,
+        PublicKeyResponse, QueryMsg, ResponseStatus::Success, SecretMsg,
     },
     state::{
         config, config_read, creator_address, map2inputs, map2inputs_read, my_address, prng,
@@ -107,11 +107,12 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: HandleMsg,
 ) -> HandleResult {
-    let response = match msg {
-        HandleMsg::Input { inputs } => pre_execution(deps, env, inputs),
+    match msg {
+        HandleMsg::Input { inputs } => {
+            pad_handle_result(pre_execution(deps, env, inputs), BLOCK_SIZE)
+        }
         HandleMsg::Output { outputs } => post_execution(deps, env, outputs),
-    };
-    pad_handle_result(response, BLOCK_SIZE)
+    }
 }
 
 fn pre_execution<S: Storage, A: Api, Q: Querier>(
@@ -188,10 +189,9 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![cosmos_msg],
-        // TODO decide what logs and data to return
         log: vec![
-            log("task_ID", &msg.task_id),
-            log("status", "sent to private contract"),
+            plaintext_log("task_id", &msg.task_id),
+            plaintext_log("status", "sent to private contract"),
         ],
         data: Some(to_binary(&InputResponse { status: Success })?),
     })
@@ -202,62 +202,151 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     _env: Env,
     msg: PostExecutionMsg,
 ) -> HandleResult {
-    // load task ID information
+    // load task ID information (remember this is decrypted)
     let task_info = map2inputs_read(&deps.storage).load(&msg.task_id.to_le_bytes())?;
-    let input_hash = task_info.input_hash;
-    let routing_info = task_info.source_network;
 
     // verify that input hash is correct one for Task ID
-    if msg.input_hash.as_slice() != input_hash.to_vec() {
-        return Err(StdError::generic_err("input hash does not match task ID"));
+    if msg.input_hash.as_slice() != task_info.input_hash.to_vec() {
+        return Err(StdError::generic_err("input hash does not match task id"));
     }
 
-    // create hash of (result + payload + inputs)
+    let routing_hash = sha_256(task_info.source_network.as_bytes());
+    let payload_hash = sha_256(task_info.payload.as_slice());
+    let task_hash = sha_256(&msg.task_id.to_le_bytes());
+
+    // create message hash of (result + payload + inputs)
     let data = [
         msg.result.as_bytes(),
         task_info.payload.as_slice(),
-        &input_hash,
+        &task_info.input_hash,
     ]
     .concat();
-    let output_hash = sha_256(&data);
+    let result_hash = sha_256(&data);
 
     // load this gateway's signing key
     let private_key = config_read(&deps.storage).load()?.signing_keys.sk;
     let mut signing_key_bytes = [0u8; 32];
     signing_key_bytes.copy_from_slice(private_key.as_slice());
 
-    // this signature is used in production
+    // used in production
     #[cfg(target_arch = "wasm32")]
-    let signature = PrivateKey::parse(&signing_key_bytes)?
-        .sign(output_hash.as_slice(), deps.api)
-        .serialize();
+    let (routing_signature, payload_signature, result_signature, task_signature) = {
+        let sk = PrivateKey::parse(&signing_key_bytes)?;
 
-    // this signature is only used during unit testing
-    #[cfg(not(target_arch = "wasm32"))]
-    let signature = {
-        let secp = secp256k1::Secp256k1::new();
-        let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
-        let message = secp256k1::Message::from_slice(&input_hash)
-            .map_err(|err| StdError::generic_err(err.to_string()))?;
-        secp.sign_ecdsa(&message, &sk).serialize_compact().to_vec()
+        let routing_signature = sk.sign(&routing_hash, deps.api).serialize().to_vec();
+        let payload_signature = sk.sign(&payload_hash, deps.api).serialize().to_vec();
+        let result_signature = sk.sign(&result_hash, deps.api).serialize().to_vec();
+        let task_signature = sk.sign(&task_hash, deps.api).serialize().to_vec();
+
+        (
+            routing_signature,
+            payload_signature,
+            result_signature,
+            task_signature,
+        )
     };
 
-    let broadcast_msg = BroadcastMsg {
-        result: msg.result,
-        payload: task_info.payload,
-        task_id: msg.task_id,
-        output_hash: Binary(output_hash.to_vec()),
-        signature: Binary(signature.to_vec()),
-        routing_info,
+    // used in unit testing
+    #[cfg(not(target_arch = "wasm32"))]
+    let (routing_signature, payload_signature, result_signature, task_signature) = {
+        let secp = secp256k1::Secp256k1::new();
+        let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
+
+        let routing_message = secp256k1::Message::from_slice(&routing_hash)
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
+        let routing_signature = secp
+            .sign_ecdsa(&routing_message, &sk)
+            .serialize_compact()
+            .to_vec();
+
+        let payload_message = secp256k1::Message::from_slice(&payload_hash)
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
+        let payload_signature = secp
+            .sign_ecdsa(&payload_message, &sk)
+            .serialize_compact()
+            .to_vec();
+
+        let result_message = secp256k1::Message::from_slice(&result_hash)
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
+        let result_signature = secp
+            .sign_ecdsa(&result_message, &sk)
+            .serialize_compact()
+            .to_vec();
+
+        let task_message = secp256k1::Message::from_slice(&task_hash)
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
+        let task_signature = secp
+            .sign_ecdsa(&task_message, &sk)
+            .serialize_compact()
+            .to_vec();
+
+        (
+            routing_signature,
+            payload_signature,
+            result_signature,
+            task_signature,
+        )
+    };
+
+    // create hash of entire packet (used to verify the message wasn't modified in transit)
+    let data = [
+        "secret".as_bytes(),                 // source network
+        task_info.source_network.as_bytes(), // routing info
+        &routing_hash,                       // routing info message
+        &routing_signature,                  // routing info signature
+        task_info.payload.as_slice(),        // payload (original encrypted payload)
+        &payload_hash,                       // payload message
+        &payload_signature,                  // payload signature
+        msg.result.as_bytes(),               // result
+        &result_hash,                        // result message
+        &result_signature,                   // result signature
+    ]
+    .concat();
+    let packet_hash = sha_256(&data);
+
+    // used in production
+    #[cfg(target_arch = "wasm32")]
+    let packet_signature = {
+        PrivateKey::parse(&signing_key_bytes)?
+            .sign(&packet_hash, deps.api)
+            .serialize()
+            .to_vec()
+    };
+
+    // used in unit testing
+    #[cfg(not(target_arch = "wasm32"))]
+    let packet_signature = {
+        let secp = secp256k1::Secp256k1::new();
+        let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
+
+        let packet_message = secp256k1::Message::from_slice(&packet_hash)
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
+
+        secp.sign_ecdsa(&packet_message, &sk)
+            .serialize_compact()
+            .to_vec()
     };
 
     Ok(HandleResponse {
         messages: vec![],
         log: vec![
-            log("task_ID", msg.task_id),
-            log("status", "sent to relayer"),
+            plaintext_log("source_network", "secret"),
+            plaintext_log("routing_info", task_info.source_network),
+            plaintext_log("routing_info_hash", Binary(routing_hash.to_vec())),
+            plaintext_log("routing_info_signature", Binary(routing_signature)),
+            plaintext_log("payload", task_info.payload),
+            plaintext_log("payload_hash", Binary(payload_hash.to_vec())),
+            plaintext_log("payload_signature", Binary(payload_signature)),
+            plaintext_log("result", msg.result),
+            plaintext_log("result_hash", Binary(result_hash.to_vec())),
+            plaintext_log("result_signature", Binary(result_signature)),
+            plaintext_log("packet_hash", Binary(packet_hash.to_vec())),
+            plaintext_log("packet_signature", Binary(packet_signature)),
+            plaintext_log("task_id", msg.task_id),
+            plaintext_log("task_id_hash", Binary(task_hash.to_vec())),
+            plaintext_log("task_id_signature", Binary(task_signature)),
         ],
-        data: Some(to_binary(&broadcast_msg)?),
+        data: None,
     })
 }
 
@@ -381,19 +470,6 @@ mod tests {
             admin: None,
             entropy: "secret".to_owned(),
         };
-
-        // TODO add a fail case if admin address is not valid
-        // let init_msg = InitMsg {
-        //     admin: Some(HumanAddr("bad address".to_owned())),
-        //     entropy: "secret".to_owned(),
-        // };
-        // let err = init(
-        //     &mut deps,
-        //     mock_env(OWNER, &[]),
-        //     init_msg.clone(),
-        // )
-        // .unwrap_err();
-        // assert_eq!(err, StdError::generic_err("invalid admin address".to_string()));
 
         let response = init(&mut deps, env, init_msg.clone()).unwrap();
         assert_eq!(2, response.log.len());
@@ -611,7 +687,7 @@ mod tests {
             source_network: "ethereum".to_string(),
         };
         let handle_msg = HandleMsg::Input {
-            inputs: pre_execution_msg,
+            inputs: pre_execution_msg.clone(),
         };
         handle(&mut deps, env.clone(), handle_msg).unwrap();
 
@@ -627,7 +703,7 @@ mod tests {
         let err = handle(&mut deps, env.clone(), handle_msg).unwrap_err();
         assert_eq!(
             err,
-            StdError::generic_err("input hash does not match task ID")
+            StdError::generic_err("input hash does not match task id")
         );
 
         // test output handle
@@ -646,8 +722,22 @@ mod tests {
             "handle failed: {}",
             handle_result.err().unwrap()
         );
-        let handle_answer: BroadcastMsg =
-            from_binary(&handle_result.unwrap().data.unwrap()).unwrap();
-        assert_eq!(handle_answer.result, "{\"answer\": 42}")
+        let logs = handle_result.unwrap().log;
+
+        assert_eq!(logs[0].value, "secret".to_string());
+        assert_eq!(logs[1].value, "ethereum".to_string());
+        assert_eq!(base64::decode(logs[2].value.clone()).unwrap().len(), 32);
+        assert_eq!(base64::decode(logs[3].value.clone()).unwrap().len(), 64);
+        assert_eq!(logs[4].value, pre_execution_msg.payload.to_base64());
+        assert_eq!(base64::decode(logs[5].value.clone()).unwrap().len(), 32);
+        assert_eq!(base64::decode(logs[6].value.clone()).unwrap().len(), 64);
+        assert_eq!(logs[7].value, "{\"answer\": 42}".to_string());
+        assert_eq!(base64::decode(logs[8].value.clone()).unwrap().len(), 32);
+        assert_eq!(base64::decode(logs[9].value.clone()).unwrap().len(), 64);
+        assert_eq!(base64::decode(logs[10].value.clone()).unwrap().len(), 32);
+        assert_eq!(base64::decode(logs[11].value.clone()).unwrap().len(), 64);
+        assert_eq!(logs[12].value, "1".to_string());
+        assert_eq!(base64::decode(logs[13].value.clone()).unwrap().len(), 32);
+        assert_eq!(base64::decode(logs[14].value.clone()).unwrap().len(), 64);
     }
 }

@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult, InitResponse,
-    InitResult, Querier, QueryResult, StdError, Storage,
+    to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult, InitResponse, InitResult,
+    Querier, QueryResult, StdError, Storage,
 };
 use secret_toolkit::utils::{pad_handle_result, pad_query_result, HandleCallback};
 
@@ -44,7 +44,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 }
 
 // acts like a gateway message handle filter
-pub fn _handle<S: Storage, A: Api, Q: Querier>(
+fn _handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: PrivContractHandleMsg,
@@ -60,23 +60,24 @@ pub fn _handle<S: Storage, A: Api, Q: Querier>(
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     // determine which function to call based on the included handle
-    // TODO I wonder if there's a way to use a HandleMsg enum here instead
     let handle = msg.handle.as_str();
     match handle {
         "add_one" => try_add_one(deps, env, msg.input_values, msg.task_id, msg.input_hash),
         _ => Err(StdError::generic_err("invalid handle".to_string())),
     }
 }
+
 #[derive(Deserialize, Default)]
-pub struct AddOneInputs {
-    pub my_value: u8,
-}
-#[derive(Serialize)]
-pub struct AddOneResults {
+struct AddOneInputs {
     pub my_value: u8,
 }
 
-pub fn try_add_one<S: Storage, A: Api, Q: Querier>(
+#[derive(Serialize)]
+struct AddOneResults {
+    pub my_value: u8,
+}
+
+fn try_add_one<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: Env,
     input_values: String,
@@ -100,7 +101,6 @@ pub fn try_add_one<S: Storage, A: Api, Q: Querier>(
     let config = config_read(&deps.storage).load()?;
 
     let callback_msg = GatewayMsg::Output {
-        // is this nested structure unneccessary?
         outputs: PostExecutionMsg {
             result,
             task_id,

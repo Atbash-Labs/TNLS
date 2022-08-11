@@ -45,7 +45,7 @@ const initializeGateway = async (
   contractPath: string,
 ) => {
   const wasmCode = fs.readFileSync(contractPath);
-  console.log("Uploading contract");
+  console.log("\nUploading contract");
 
   const uploadReceipt = await client.tx.compute.storeCode(
     {
@@ -130,7 +130,7 @@ const initializeContract = async (
   gatewayKey: string,
 ) => {
   const wasmCode = fs.readFileSync(contractPath);
-  console.log("Uploading example contract");
+  console.log("\nUploading example contract");
 
   const uploadReceipt = await client.tx.compute.storeCode(
     {
@@ -258,7 +258,7 @@ async function initializeAndUploadContract() {
   return clientInfo;
 }
 
-async function inputTx(
+async function gatewayTx(
   client: SecretNetworkClient,
   gatewayHash: string,
   gatewayAddress: string,
@@ -302,11 +302,11 @@ async function inputTx(
 
   const payloadHash = createHash('sha256').update(ciphertext,'base64').digest();
   const payloadHash64 = payloadHash.toString('base64');
-  console.log(`Payload Hash is ${payloadHash.byteLength} bytes`);
+  console.log(`\nPayload Hash is ${payloadHash.byteLength} bytes`);
 
   const payloadSignature = ecdsaSign(payloadHash, userPrivateKeyBytes).signature;
   const payloadSignature64 = Buffer.from(payloadSignature).toString('base64');
-  console.log(`payload Signature is ${payloadSignature.byteLength} bytes`);
+  console.log(`Payload Signature is ${payloadSignature.byteLength} bytes\n`);
 
   const handle_msg: PreExecutionMsg = {
     task_id: 1,
@@ -328,7 +328,7 @@ async function inputTx(
       contractAddress: gatewayAddress,
       codeHash: gatewayHash,
       msg: {
-        input: { inputs: handle_msg },
+        input: { inputs: handle_msg }, // TODO eliminate nesting if reasonable
       },
       sentFunds: [],
     },
@@ -336,8 +336,6 @@ async function inputTx(
       gasLimit: 200000,
     }
   );
-
-  console.log(`inputTx used \x1b[33m${tx.gasUsed}\x1b[0m gas`);
 
   if (tx.code !== 0) {
     throw new Error(
@@ -345,78 +343,51 @@ async function inputTx(
     );
   };
 
-  console.log(tx.arrayLog);
+  // Parsing the logs from the 'Output' handle
 
-  const jsonString = Buffer.from(tx.data[0]).toString('utf8');
-  const broadcastMsg = JSON.parse(jsonString) as BroadcastMsg;
-  
-  console.log("broadcast_msg:");
-  console.log(broadcastMsg)
+  let logs: {[index: string]:string} = {};
+  const logKeys = [
+    "source_network",
+    "routing_info",
+    "routing_info_hash",
+    "routing_info_signature",
+    "payload",
+    "payload_hash",
+    "payload_signature",
+    "result",
+    "result_hash",
+    "result_signature",
+    "packet_hash",
+    "packet_signature",
+    "task_id", 
+    "task_id_hash",
+    "task_id_signature",
+  ];
 
-  
-  // const result = JSON.parse(broadcastMsg.result)
-  // assert(result.my_value == 2);
-  // assert(broadcastMsg.task_id == 1);
+  logKeys.forEach((key) => logs[key] = tx.arrayLog!.find(
+    (log) => log.type === "wasm" && log.key === key
+  )!.value);
 
-  // const status = tx.arrayLog!.find(
-  //   (log) => log.type === "wasm" && log.key === "status"
-  // )!.value;
-  // assert(status == "sent to private contract");
-}
+  console.log("\nOutput Logs:");
+  console.log(logs);
 
-async function outputTx(
-  client: SecretNetworkClient,
-  gatewayHash: string,
-  gatewayAddress: string,
-) {
-  const inputs = JSON.stringify({"input1": "some string", "input2": 1, "input3": true});
-  const input_hash = createHash('sha256').update(inputs).digest(); // hash needs to match the one inside the contract
-  const handle_msg: PostExecutionMsg = {
-    result: "{\"answer\": 42}",
-    task_id: 1,
-    input_hash: Buffer.from(input_hash).toString('base64'),
-  };
-  console.log("handle_msg:");
-  console.log(handle_msg);
+  assert(logs["source_network"] == "secret");
+  assert(logs["routing_info"] == "ethereum");
+  assert(Buffer.from(logs["routing_info_hash"], 'base64').byteLength == 32);
+  assert(Buffer.from(logs["routing_info_signature"], 'base64').byteLength == 64);
+  assert(logs["payload"] == ciphertext);
+  assert(Buffer.from(logs["payload_hash"], 'base64').byteLength == 32);
+  assert(Buffer.from(logs["payload_signature"], 'base64').byteLength == 64);
+  assert(logs["result"] == "{\"my_value\":2}"); // note that value changed
+  assert(Buffer.from(logs["result_hash"], 'base64').byteLength == 32);
+  assert(Buffer.from(logs["result_signature"], 'base64').byteLength == 64);
+  assert(Buffer.from(logs["packet_hash"], 'base64').byteLength == 32);
+  assert(Buffer.from(logs["packet_signature"], 'base64').byteLength == 64);
+  assert(logs["task_id"] == "1");
+  assert(Buffer.from(logs["task_id_hash"], 'base64').byteLength == 32);
+  assert(Buffer.from(logs["task_id_signature"], 'base64').byteLength == 64);
 
-  const tx = await client.tx.compute.executeContract(
-    {
-      sender: client.address,
-      contractAddress: gatewayAddress,
-      codeHash: gatewayHash,
-      msg: {
-        output: { outputs: handle_msg },
-      },
-      sentFunds: [],
-    },
-    {
-      gasLimit: 200000,
-    }
-  );
-  
-  if (tx.code !== 0) {
-    throw new Error(
-      `Failed with the following error:\n ${tx.rawLog}`
-      );
-    };
-  assert(tx.code === 0, `\x1b[31;1m[FAIL]\x1b[0m`);
-  
-  const status = tx.arrayLog!.find(
-    (log) => log.type === "wasm" && log.key === "status"
-    )!.value;
-  assert(status == "sent to relayer");
-
-  const jsonString = Buffer.from(tx.data[0]).toString('utf8');
-  const broadcastMsg = JSON.parse(jsonString) as BroadcastMsg;
-
-  assert(broadcastMsg.task_id == 1);
-
-  const result = JSON.parse(broadcastMsg.result)
-  assert(result.answer == 42);
-
-  console.log("broadcast_msg:");
-  console.log(broadcastMsg)
-  console.log(`outputTx used \x1b[33m${tx.gasUsed}\x1b[0m gas`);
+  console.log(`inputTx used \x1b[33m${tx.gasUsed}\x1b[0m gas`);
 }
 
 async function queryPubKey(
@@ -436,7 +407,7 @@ async function queryPubKey(
   return response.key
 }
 
-async function test_input_tx(
+async function test_gateway_tx(
   client: SecretNetworkClient,
   gatewayHash: string,
   gatewayAddress: string,
@@ -445,17 +416,7 @@ async function test_input_tx(
 ) {
   console.log(`Sending query: {"get_public_key": {} }`);
   const gatewayPublicKey = await queryPubKey(client, gatewayHash, gatewayAddress);
-  await inputTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey);
-}
-
-async function test_output_tx(
-  client: SecretNetworkClient,
-  gatewayHash: string,
-  gatewayAddress: string,
-  contractHash: string,
-  contractAddress: string,
-) {
-  await outputTx(client, gatewayHash, gatewayAddress);
+  await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey);
 }
 
 async function runTestFunction(
@@ -472,14 +433,13 @@ async function runTestFunction(
   contractHash: string,
   contractAddress: string
 ) {
-  console.log(`\n\x1b[1m[  TEST  ] ${tester.name}\x1b[0m\n`);
+  console.log(`\n[  \x1b[47mTEST\x1b[0m  ] ${tester.name}\n`);
   await tester(client, gatewayHash, gatewayAddress, contractHash, contractAddress);
-  console.log(`\x1b[92;1m[   OK   ] ${tester.name}\x1b[0m\n`);
+  console.log(`\n[   \x1b[42mOK\x1b[0m   ] ${tester.name}\n`);
 }
 
 (async () => {
   const [client, gatewayHash, gatewayAddress, contractHash, contractAddress] =
     await initializeAndUploadContract();
-    await runTestFunction(test_input_tx, client, gatewayHash, gatewayAddress, contractHash, contractAddress);
-    // await runTestFunction(test_output_tx, client, gatewayHash, gatewayAddress, contractHash, contractAddress);
+    await runTestFunction(test_gateway_tx, client, gatewayHash, gatewayAddress, contractHash, contractAddress);
 })();
