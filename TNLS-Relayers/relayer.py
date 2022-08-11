@@ -71,6 +71,7 @@ class Relayer:
             return
         if task.task_destination_network not in self.dict_of_names_to_interfaces:
             self.logger.warning(f'Network {task.task_destination_network} is unknown, not routing')
+            return
         contract_for_txn = self.dict_of_names_to_interfaces[task.task_destination_network][1]
         function_name = self.dict_of_names_to_interfaces[task.task_destination_network][3]
         contract_for_txn.call_function(function_name, str(task))
