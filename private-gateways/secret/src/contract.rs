@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     log, plaintext_log, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult,
-    InitResponse, InitResult, Querier, QueryResult, StdError, Storage,
+    HumanAddr, InitResponse, InitResult, Querier, QueryResult, StdError, Storage,
 };
 use secret_toolkit::{
     crypto::secp256k1::{PrivateKey, PublicKey},
@@ -55,40 +55,33 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         .transpose()?
         .unwrap_or(creator_raw);
 
-    // Create pseudo-random-number-generator seed from user provided entropy string
-    let prng_seed: Vec<u8> = sha_256(base64::encode(msg.entropy).as_bytes()).to_vec();
-
-    // Generate secp256k1 key pair for encryption
-    let (secret, public, new_prng_seed) = generate_keypair(&env, prng_seed, None)?;
-    let encryption_keys = KeyPair {
-        sk: Binary(secret.serialize().to_vec()), // private key is 32 bytes,
-        pk: Binary(public.serialize_compressed().to_vec()), // public key is 33 bytes
-    };
-
-    // Generate secp256k1 key pair for signing messages
-    let (secret, public, new_prng_seed) = generate_keypair(&env, new_prng_seed, None)?;
-    let signing_keys = KeyPair {
-        sk: Binary(secret.serialize().to_vec()), // private key is 32 bytes,
-        pk: Binary(public.serialize_compressed().to_vec()), // public key is 33 bytes
-    };
-
     // Save both key pairs
     let state = State {
         admin: admin_raw,
+        keyed: false,
         tx_cnt: 0,
         status: ContractStatus::Normal.to_u8(),
-        encryption_keys: encryption_keys.clone(),
-        signing_keys: signing_keys.clone(),
+        encryption_keys: KeyPair::default(),
+        signing_keys: KeyPair::default(),
     };
 
     config(&mut deps.storage).save(&state)?;
-    prng(&mut deps.storage).save(&new_prng_seed)?;
+
+    let rng_msg = SecretMsg::CreateRn {
+        cb_msg: Binary(vec![]),
+        entropy: msg.entropy,
+        max_blk_delay: None,
+        purpose: Some("secret gateway entropy".to_string()),
+        receiver_addr: Some(env.contract.address),
+        receiver_code_hash: env.contract_code_hash,
+    }
+    .to_cosmos_msg(msg.rng_hash, msg.rng_addr, None)?;
 
     Ok(InitResponse {
-        messages: vec![],
+        messages: vec![rng_msg],
         log: vec![
-            log("encryption_pubkey", &encryption_keys.pk),
-            log("signing_pubkey", &signing_keys.pk),
+            log("encryption_pubkey", &state.encryption_keys.pk), // should be empty
+            log("signing_pubkey", &state.signing_keys.pk),       // should be empty
         ],
     })
 }
@@ -108,11 +101,96 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> HandleResult {
     match msg {
+        HandleMsg::KeyGen { rng_hash, rng_addr } => {
+            pad_handle_result(try_fulfill_rn(deps, env, rng_hash, rng_addr), BLOCK_SIZE)
+        }
+        HandleMsg::ReceiveFRn {
+            cb_msg: _,
+            purpose: _,
+            rn,
+        } => pad_handle_result(create_gateway_keys(deps, env, rn), BLOCK_SIZE),
         HandleMsg::Input { inputs } => {
             pad_handle_result(pre_execution(deps, env, inputs), BLOCK_SIZE)
         }
         HandleMsg::Output { outputs } => post_execution(deps, env, outputs),
     }
+}
+
+fn try_fulfill_rn<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    rng_hash: String,
+    rng_addr: HumanAddr,
+) -> HandleResult {
+    // load config
+    let state = config_read(&deps.storage).load()?;
+
+    // check if the keys have already been created
+    if state.keyed {
+        return Err(StdError::generic_err(
+            "keys have already been created".to_string(),
+        ));
+    }
+
+    let fulfill_rn_msg = SecretMsg::FulfillRn {
+        creator_addr: env.contract.address,
+        purpose: Some("secret gateway entropy".to_string()),
+        receiver_code_hash: env.contract_code_hash,
+    }
+    .to_cosmos_msg(rng_hash, rng_addr, None)?;
+
+    Ok(HandleResponse {
+        messages: vec![fulfill_rn_msg],
+        log: vec![],
+        data: None,
+    })
+}
+
+fn create_gateway_keys<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    prng_seed: [u8; 32],
+) -> HandleResult {
+    // load config
+    let state = config_read(&deps.storage).load()?;
+
+    // check if the keys have already been created
+    if state.keyed {
+        return Err(StdError::generic_err(
+            "keys have already been created".to_string(),
+        ));
+    }
+
+    // Generate secp256k1 key pair for encryption
+    let (secret, public, new_prng_seed) = generate_keypair(&env, prng_seed.to_vec(), None)?;
+    let encryption_keys = KeyPair {
+        sk: Binary(secret.serialize().to_vec()), // private key is 32 bytes,
+        pk: Binary(public.serialize_compressed().to_vec()), // public key is 33 bytes
+    };
+
+    // Generate secp256k1 key pair for signing messages
+    let (secret, public, new_prng_seed) = generate_keypair(&env, new_prng_seed, None)?;
+    let signing_keys = KeyPair {
+        sk: Binary(secret.serialize().to_vec()), // private key is 32 bytes,
+        pk: Binary(public.serialize_compressed().to_vec()), // public key is 33 bytes
+    };
+
+    config(&mut deps.storage).update(|mut state| {
+        state.keyed = true;
+        state.encryption_keys = encryption_keys;
+        state.signing_keys = signing_keys;
+        Ok(state)
+    })?;
+    prng(&mut deps.storage).save(&new_prng_seed)?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![
+            log("encryption_pubkey", &state.encryption_keys.pk),
+            log("signing_pubkey", &state.signing_keys.pk),
+        ],
+        data: None,
+    })
 }
 
 fn pre_execution<S: Storage, A: Api, Q: Querier>(
@@ -447,8 +525,15 @@ mod tests {
         // Instantiate a contract with entropy
         let admin = Some(HumanAddr(OWNER.to_owned()));
         let entropy = "secret".to_owned();
+        let rng_hash = "string".to_string();
+        let rng_addr = HumanAddr("address".to_string());
 
-        let init_msg = InitMsg { admin, entropy };
+        let init_msg = InitMsg {
+            admin,
+            entropy,
+            rng_hash,
+            rng_addr,
+        };
         init(deps, mock_env(OWNER, &[]), init_msg)
     }
 
@@ -464,26 +549,29 @@ mod tests {
     #[test]
     fn test_init() {
         let mut deps = mock_dependencies(20, &[]);
-        let env = mock_env(OWNER, &[]);
 
-        let init_msg = InitMsg {
-            admin: None,
-            entropy: "secret".to_owned(),
-        };
-
-        let response = init(&mut deps, env, init_msg.clone()).unwrap();
+        let response = setup_test_case(&mut deps).unwrap();
         assert_eq!(2, response.log.len());
         let pubkey = Binary::from_base64(&response.log[0].value).unwrap();
-        assert_eq!(pubkey.len(), 33);
+        assert_eq!(pubkey.len(), 0);
     }
 
     #[test]
     fn test_query() {
         let mut deps = mock_dependencies(20, &[]);
-        let _env = mock_env(SOMEBODY, &[]);
+        let env = mock_env(SOMEBODY, &[]);
 
         // initialize
         setup_test_case(&mut deps).unwrap();
+
+        // mock scrt-rng message
+        let mut rng = Prng::new(&[1, 2, 3], &[4, 5, 6]);
+        let fake_msg = HandleMsg::ReceiveFRn {
+            cb_msg: Binary(vec![]),
+            purpose: None,
+            rn: rng.rand_bytes(),
+        };
+        handle(&mut deps, env, fake_msg).unwrap();
 
         // query
         let msg = QueryMsg::GetPublicKey {};
@@ -500,6 +588,15 @@ mod tests {
 
         // initialize
         setup_test_case(&mut deps).unwrap();
+
+        // mock scrt-rng message
+        let mut rng = Prng::new(&[1, 2, 3], &[4, 5, 6]);
+        let fake_msg = HandleMsg::ReceiveFRn {
+            cb_msg: Binary(vec![]),
+            purpose: None,
+            rn: rng.rand_bytes(),
+        };
+        handle(&mut deps, env.clone(), fake_msg).unwrap();
 
         // get gateway public encryption key
         let gateway_pubkey = get_gateway_key(&deps);
@@ -620,7 +717,6 @@ mod tests {
         assert_eq!(handle_answer.status, Success);
     }
 
-    // TODO reduce code duplication among tests
     #[test]
     fn test_post_execution() {
         let mut deps = mock_dependencies(20, &[]);
@@ -628,6 +724,15 @@ mod tests {
 
         // initialize
         setup_test_case(&mut deps).unwrap();
+
+        // mock scrt-rng message
+        let mut rng = Prng::new(&[1, 2, 3], &[4, 5, 6]);
+        let fake_msg = HandleMsg::ReceiveFRn {
+            cb_msg: Binary(vec![]),
+            purpose: None,
+            rn: rng.rand_bytes(),
+        };
+        handle(&mut deps, env.clone(), fake_msg).unwrap();
 
         // get gateway public encryption key
         let gateway_pubkey = get_gateway_key(&deps);

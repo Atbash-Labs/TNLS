@@ -18,13 +18,28 @@ pub struct InitMsg {
     pub entropy: String,
     /// Optional admin address, env.message.sender if missing.
     pub admin: Option<HumanAddr>,
+    pub rng_hash: String,
+    pub rng_addr: HumanAddr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-    Input { inputs: PreExecutionMsg },
-    Output { outputs: PostExecutionMsg },
+    KeyGen {
+        rng_hash: String,
+        rng_addr: HumanAddr,
+    },
+    ReceiveFRn {
+        cb_msg: Binary,
+        purpose: Option<String>,
+        rn: [u8; 32],
+    },
+    Input {
+        inputs: PreExecutionMsg,
+    },
+    Output {
+        outputs: PostExecutionMsg,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -129,11 +144,26 @@ impl PreExecutionMsg {
     }
 }
 
-/// Message sent to destination private contract with decrypted inputs.
+/// Messages sent to other secret contracts.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SecretMsg {
-    Input { message: PrivContractHandleMsg },
+    CreateRn {
+        cb_msg: Binary,
+        entropy: String,
+        max_blk_delay: Option<u64>,
+        purpose: Option<String>,
+        receiver_addr: Option<HumanAddr>,
+        receiver_code_hash: String,
+    },
+    FulfillRn {
+        creator_addr: HumanAddr,
+        purpose: Option<String>,
+        receiver_code_hash: String,
+    },
+    Input {
+        message: PrivContractHandleMsg,
+    },
 }
 impl HandleCallback for SecretMsg {
     const BLOCK_SIZE: usize = 256;
@@ -186,5 +216,27 @@ pub struct BroadcastMsg {
 }
 
 impl HandleCallback for BroadcastMsg {
+    const BLOCK_SIZE: usize = 256;
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ScrtRngMsg {
+    CreateRn {
+        cb_msg: Binary,
+        entropy: String,
+        max_blk_delay: Option<u64>,
+        purpose: Option<String>,
+        receiver_addr: Option<HumanAddr>,
+        receiver_hash: String,
+    },
+    FulfullRn {
+        creator_addr: HumanAddr,
+        purpose: Option<String>,
+        receiver_code_hash: String,
+    },
+}
+
+impl HandleCallback for ScrtRngMsg {
     const BLOCK_SIZE: usize = 256;
 }

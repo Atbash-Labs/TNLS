@@ -43,6 +43,8 @@ const initializeClient = async (endpoint: string, chainId: string) => {
 const initializeGateway = async (
   client: SecretNetworkClient,
   contractPath: string,
+  scrtRngHash: string,
+  scrtRngAddress: string,
 ) => {
   const wasmCode = fs.readFileSync(contractPath);
   console.log("\nUploading contract");
@@ -84,7 +86,11 @@ const initializeGateway = async (
     {
       sender: client.address,
       codeId,
-      initMsg: { entropy: "secret" },
+      initMsg: { 
+        entropy: "secret",
+        rng_hash: scrtRngHash,
+        rng_addr: scrtRngAddress,
+      },
       codeHash: contractCodeHash,
       label: "My contract" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
     },
@@ -120,6 +126,76 @@ const initializeGateway = async (
 
   var gatewayInfo: [string, string, string] = [contractCodeHash, contractAddress, encryption_pubkey];
   return gatewayInfo;
+};
+
+const initializeScrtRng = async (
+  client: SecretNetworkClient,
+  contractPath: string,
+) => {
+  const wasmCode = fs.readFileSync(contractPath);
+  console.log("\nUploading scrt-rng contract");
+
+  const uploadReceipt = await client.tx.compute.storeCode(
+    {
+      wasmByteCode: wasmCode,
+      sender: client.address,
+      source: "",
+      builder: "",
+    },
+    {
+      gasLimit: 5000000,
+    }
+  );
+
+  if (uploadReceipt.code !== 0) {
+    console.log(
+      `Failed to get code id: ${JSON.stringify(uploadReceipt.rawLog)}`
+    );
+    throw new Error(`Failed to upload contract`);
+  }
+
+  const codeIdKv = uploadReceipt.jsonLog![0].events[0].attributes.find(
+    (a: any) => {
+      return a.key === "code_id";
+    }
+  );
+
+  console.log(`Upload used \x1b[33m${uploadReceipt.gasUsed}\x1b[0m gas\n`);
+
+  const codeId = Number(codeIdKv!.value);
+  console.log("Contract codeId: ", codeId);
+
+  const contractCodeHash = await client.query.compute.codeHash(codeId);
+  console.log(`Contract hash: ${contractCodeHash}`);
+
+  const contract = await client.tx.compute.instantiateContract(
+    {
+      sender: client.address,
+      codeId,
+      initMsg: { initseed: "secret", prng_seed: "secret" },
+      codeHash: contractCodeHash,
+      label: "My contract" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
+    },
+    {
+      gasLimit: 5000000,
+    }
+  );
+
+  if (contract.code !== 0) {
+    throw new Error(
+      `Failed to instantiate the contract with the following error ${contract.rawLog}`
+    );
+  }
+
+  const contractAddress = contract.arrayLog!.find(
+    (log) => log.type === "message" && log.key === "contract_address"
+  )!.value;
+
+  console.log(`Contract address: ${contractAddress}\n`);
+  console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas`);
+
+  var scrtRngInfo: [string, string] = [contractCodeHash, contractAddress];
+  return scrtRngInfo;
 };
 
 const initializeContract = async (
@@ -234,11 +310,23 @@ async function initializeAndUploadContract() {
   const client = await initializeClient(endpoint, chainId);
 
   if (chainId == "secretdev-1") {await fillUpFromFaucet(client, 100_000_000)};
-
-  const [gatewayHash, gatewayAddress, gatewayKey] = await initializeGateway(
+  
+  const [scrtRngHash, scrtRngAddress] = await initializeScrtRng(
+    client,
+    "tests/scrt-rng/contract.wasm.gz",
+  );
+  
+  const [gatewayHash, gatewayAddress] = await initializeGateway(
     client,
     "contract.wasm.gz",
+    scrtRngHash,
+    scrtRngAddress,
   );
+
+  console.log(`Retrieving random number...`);
+  await rngTx(client, gatewayHash, gatewayAddress, scrtRngHash, scrtRngAddress);
+  console.log(`Sending query: {"get_public_key": {} }`);
+  const gatewayKey = await queryPubKey(client, gatewayHash, gatewayAddress);
 
   const [contractHash, contractAddress] = await initializeContract(
     client,
@@ -248,14 +336,50 @@ async function initializeAndUploadContract() {
     gatewayKey,
   );
 
-  var clientInfo: [SecretNetworkClient, string, string, string, string] = [
+  var clientInfo: [SecretNetworkClient, string, string, string, string, string, string] = [
     client,
     gatewayHash,
     gatewayAddress,
     contractHash,
-    contractAddress
+    contractAddress,
+    scrtRngHash,
+    scrtRngAddress,
   ];
   return clientInfo;
+}
+
+async function rngTx(
+  client: SecretNetworkClient,
+  gatewayHash: string,
+  gatewayAddress: string,
+  scrtRngHash: string,
+  scrtRngAddress: string,
+) {
+  const tx = await client.tx.compute.executeContract(
+    {
+      sender: client.address,
+      contractAddress: gatewayAddress,
+      codeHash: gatewayHash,
+      msg: {
+        key_gen: { 
+          rng_hash: scrtRngHash,
+          rng_addr: scrtRngAddress,
+        },
+      },
+      sentFunds: [],
+    },
+    {
+      gasLimit: 5000000,
+    }
+  );
+
+  if (tx.code !== 0) {
+    throw new Error(
+      `Failed with the following error:\n ${tx.rawLog}`
+    );
+  };
+
+  console.log(`"key_gen" used \x1b[33m${tx.gasUsed}\x1b[0m gas`);
 }
 
 async function gatewayTx(
@@ -413,6 +537,8 @@ async function test_gateway_tx(
   gatewayAddress: string,
   contractHash: string,
   contractAddress: string,
+  scrtRngHash: string,
+  scrtRngAddress: string,
 ) {
   console.log(`Sending query: {"get_public_key": {} }`);
   const gatewayPublicKey = await queryPubKey(client, gatewayHash, gatewayAddress);
@@ -425,21 +551,35 @@ async function runTestFunction(
     gatewayHash: string,
     gatewayAddress: string,
     contractHash: string,
-    contractAddress: string
+    contractAddress: string,
+    scrtRngHash: string,
+    scrtRngAddress: string,
   ) => void,
   client: SecretNetworkClient,
   gatewayHash: string,
   gatewayAddress: string,
   contractHash: string,
-  contractAddress: string
+  contractAddress: string,
+  scrtRngHash: string,
+  scrtRngAddress: string,
 ) {
-  console.log(`\n[  \x1b[47mTEST\x1b[0m  ] ${tester.name}\n`);
-  await tester(client, gatewayHash, gatewayAddress, contractHash, contractAddress);
-  console.log(`\n[   \x1b[42mOK\x1b[0m   ] ${tester.name}\n`);
+  console.log(`\n[  \x1b[35mTEST\x1b[0m  ] ${tester.name}\n`);
+  await tester(client, gatewayHash, gatewayAddress, contractHash, contractAddress, scrtRngHash, scrtRngAddress);
+  console.log(`\n[   \x1b[32mOK\x1b[0m   ] ${tester.name}\n`);
 }
 
 (async () => {
-  const [client, gatewayHash, gatewayAddress, contractHash, contractAddress] =
+  const [client, gatewayHash, gatewayAddress, contractHash, contractAddress, scrtRngHash, scrtRngAddress] =
     await initializeAndUploadContract();
-    await runTestFunction(test_gateway_tx, client, gatewayHash, gatewayAddress, contractHash, contractAddress);
+
+  await runTestFunction(
+    test_gateway_tx,
+    client,
+    gatewayHash, 
+    gatewayAddress, 
+    contractHash, 
+    contractAddress,
+    scrtRngHash,
+    scrtRngAddress,
+  );
 })();

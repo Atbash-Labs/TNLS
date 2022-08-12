@@ -20,6 +20,8 @@ pub const TASK_KEY: &[u8] = b"tasks";
 pub struct State {
     /// Admin adress.
     pub admin: CanonicalAddr,
+    /// Status of gateway key generation.
+    pub keyed: bool,
     /// Count of tx.
     pub tx_cnt: u64,
     /// Contract status.
@@ -31,8 +33,7 @@ pub struct State {
 }
 
 /// A key pair using the [Binary] type
-// TODO change the secret key to [u8;32] possibly?
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
 pub struct KeyPair {
     /// Secret key part of the key pair.
     pub sk: Binary,
