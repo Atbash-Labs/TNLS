@@ -22,9 +22,9 @@ def index():
     return str(current_app.config['RELAYER'])
 
 
-def app_factory(config_filename, num_loops=None):
+def app_factory(config_filename, config_file_converter=convert_config_file_to_dict, num_loops=None):
     app = Flask(__name__)
-    relayer = Relayer(convert_config_file_to_dict(config_filename), num_loops=num_loops)
+    relayer = Relayer(config_file_converter(config_filename), num_loops=num_loops)
     thread = Thread(target=relayer.run)
     thread.start()
     app.config['RELAYER'] = relayer

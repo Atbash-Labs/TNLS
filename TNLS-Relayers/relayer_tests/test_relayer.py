@@ -7,6 +7,7 @@ import pytest
 
 from base_interface import BaseChainInterface, BaseContractInterface, Task
 from relayer import Relayer
+from web_app import app_factory
 
 """
 Figure out something where the fake chain returns a fixed set of transactions,
@@ -172,3 +173,27 @@ def test_full_run(fake_interface_factory, caplog):
     assert contract_interface_2.results['2'] == 4
     assert '2' not in contract_interface.results
     assert '1' not in contract_interface_2.results
+
+
+def test_web_app(fake_interface_factory):
+    task_dict_list_1 = [{'task_id': '1', 'args': '1', 'task_destination_network': 'add1'},
+                        {'task_id': '2', 'args': '2', 'task_destination_network': 'add2'},
+                        {'task_id': '3', 'args': '1'},
+                        {'task_id': '4', 'args': '2', 'task_destination_network': 'add3'}]
+    num_to_add_1 = 1
+    chain_interface, contract_interface = fake_interface_factory(task_dict_list_1, num_to_add_1)
+    chain_2, contract_interface_2 = fake_interface_factory([], 2)
+    dict_of_names_to_interfaces = {'add1': (chain_interface, contract_interface, '', ''),
+                                   'add2': (chain_2, contract_interface_2, '', '')}
+
+    def get_dict_of_names_to_interfaces(_):
+        return dict_of_names_to_interfaces
+
+    app = app_factory("", config_file_converter=get_dict_of_names_to_interfaces, num_loops=1)
+    with app.test_client() as client:
+        response = client.get('/')
+        assert response.status_code == 200
+        assert \
+            "Tasks to be handled: [], Status of all tasks: {'1': 'Routed to add1', '2': 'Routed to add2', " \
+            "'3': 'Failed to route', '4': 'Failed to route'}" \
+            == response.text
