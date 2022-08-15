@@ -7,7 +7,7 @@ import pytest
 
 from base_interface import BaseChainInterface, BaseContractInterface, Task
 from relayer import Relayer
-from web_app import app_factory
+from web_app import app_factory, convert_config_file_to_dict
 
 """
 Figure out something where the fake chain returns a fixed set of transactions,
@@ -30,6 +30,35 @@ class FakeChainInterface(BaseChainInterface):
         pass
 
     def sign_and_send_transaction(self, _tx):
+        pass
+
+
+class FakeChainForConfig(BaseChainInterface):
+
+    def __init__(self, **kwargs):
+        self.__dict__ = kwargs
+        pass
+
+    def get_transactions(self):
+        pass
+
+    def create_transaction(self, _contract_function, _data):
+        pass
+
+    def sign_and_send_transaction(self, _tx):
+        pass
+
+
+class FakeContractForConfig(BaseContractInterface):
+
+    def __init__(self, **kwargs):
+        self.__dict__ = kwargs
+        pass
+
+    def call_function(self, *args):
+        pass
+
+    def parse_event_from_txn(self, _evt_name, _txn):
         pass
 
 
@@ -57,6 +86,23 @@ def fake_interface_factory():
         return FakeChainInterface(task_dict_list), FakeContractInterface(num_to_add)
 
     return _factory_fn
+
+
+@pytest.fixture
+def fake_map_names_to_interfaces():
+    return {'fake_contract': (FakeChainForConfig, FakeContractForConfig)}
+
+
+def test_config_file_parsing(fake_map_names_to_interfaces):
+    config_file = './sample_config.yml'
+    config_dict = convert_config_file_to_dict(config_file, map_of_names_to_interfaces=fake_map_names_to_interfaces)
+    assert config_dict.keys() == {'fake_contract'}
+    assert config_dict['fake_contract'][0].__dict__ == {'address': 'Fake_wallet', 'private_key': 'Fake_key'}
+    assert config_dict['fake_contract'][1].__dict__ == {'abi': 'Fake_schema',
+                                                        'address': 'Fake_address',
+                                                        'interface': config_dict['fake_contract'][0]}
+    assert config_dict['fake_contract'][2] == 'Fake_event'
+    assert config_dict['fake_contract'][3] == 'Fake_function'
 
 
 def test_basic_relayer_poll(fake_interface_factory):
