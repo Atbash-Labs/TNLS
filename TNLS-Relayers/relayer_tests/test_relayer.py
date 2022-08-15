@@ -93,8 +93,8 @@ def fake_map_names_to_interfaces():
     return {'fake_contract': (FakeChainForConfig, FakeContractForConfig)}
 
 
-def test_config_file_parsing(fake_map_names_to_interfaces):
-    config_file = './sample_config.yml'
+def test_config_file_parsing(fake_map_names_to_interfaces, request):
+    config_file = f'{request.path.parent}/sample_config.yml'
     config_dict = convert_config_file_to_dict(config_file, map_of_names_to_interfaces=fake_map_names_to_interfaces)
     assert config_dict.keys() == {'fake_contract'}
     assert config_dict['fake_contract'][0].__dict__ == {'address': 'Fake_wallet', 'private_key': 'Fake_key'}
