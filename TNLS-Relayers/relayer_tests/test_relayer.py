@@ -105,6 +105,21 @@ def test_config_file_parsing(fake_map_names_to_interfaces, request):
     assert config_dict['fake_contract'][3] == 'Fake_function'
 
 
+def test_config_file_parsing_missing(fake_map_names_to_interfaces, request):
+    config_file = f'{request.path.parent}/sample_config_missing_keys.yml'
+    with pytest.raises(ValueError) as e:
+        convert_config_file_to_dict(config_file, map_of_names_to_interfaces=fake_map_names_to_interfaces)
+    for string in ['event_name', 'wallet_address', 'function_name', 'private_key']:
+        assert string in str(e.value)
+
+
+def test_config_file_parsing_bad_name(fake_map_names_to_interfaces, request):
+    config_file = f'{request.path.parent}/sample_config_bad_name.yml'
+    with pytest.raises(ValueError) as e:
+        convert_config_file_to_dict(config_file, map_of_names_to_interfaces=fake_map_names_to_interfaces)
+    assert str(e.value) == "fake_contract_bad not in map of names to interfaces"
+
+
 def test_basic_relayer_poll(fake_interface_factory):
     task_dict_list = [{'task_id': '1', 'args': '1', 'task_destination_network': 'fake'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
