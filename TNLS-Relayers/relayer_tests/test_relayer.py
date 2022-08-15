@@ -237,6 +237,7 @@ def test_web_app(fake_interface_factory):
 
     app = app_factory("", config_file_converter=get_dict_of_names_to_interfaces, num_loops=1)
     with app.test_client() as client:
+        time.sleep(1)
         response = client.get('/')
         assert response.status_code == 200
         assert \
