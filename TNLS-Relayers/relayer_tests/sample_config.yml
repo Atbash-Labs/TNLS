@@ -1,0 +1,7 @@
+fake_contract:
+  contract_address: 0x0000000000000000000000000000000000000000
+  contract_schema: "Fake"
+  private_key: "Fake"
+  wallet_address: "Fake"
+  event_name: "Fake"
+  function_name: "Fake"

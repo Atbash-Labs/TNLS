@@ -56,6 +56,7 @@ PyNaCl==1.5.0
 pyparsing==3.0.9
 pyrsistent==0.18.1
 pytest==7.1.2
+PyYaml==6.0.0
 requests==2.27.1
 secret-sdk==1.0
 six==1.16.0
