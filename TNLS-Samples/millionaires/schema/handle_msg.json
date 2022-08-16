@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HandleMsg",
+  "anyOf": [
+    {
+      "type": "object",
+      "required": [
+        "input"
+      ],
+      "properties": {
+        "input": {
+          "type": "object",
+          "required": [
+            "input"
+          ],
+          "properties": {
+            "input": {
+              "$ref": "#/definitions/PrivContractHandleMsg"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>",
+      "type": "string"
+    },
+    "PrivContractHandleMsg": {
+      "type": "object",
+      "required": [
+        "handle",
+        "input_hash",
+        "input_values",
+        "signature",
+        "task_id"
+      ],
+      "properties": {
+        "handle": {
+          "description": "Handle function to be called in the destination contract.",
+          "type": "string"
+        },
+        "input_hash": {
+          "description": "sha256(input_values)",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            }
+          ]
+        },
+        "input_values": {
+          "description": "JSON formatted string of decrypted user inputs.",
+          "type": "string"
+        },
+        "signature": {
+          "description": "Signature of sha256(input_values), signed by the private gateway.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            }
+          ]
+        },
+        "task_id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    }
+  }
+}

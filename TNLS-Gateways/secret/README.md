@@ -1,4 +1,4 @@
-# TNLS-gateways
+# Master Private Gateway
 
 ```mermaid
 flowchart LR
