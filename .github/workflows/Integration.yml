@@ -3,7 +3,7 @@ name: Integration Tests
 on:
   push:
     paths:
-      - 'private-gateways/secret/**'
+      - 'TNLS-Gateways/secret/**'
 
 jobs:
   secret_gateway_tests:
@@ -45,7 +45,7 @@ jobs:
           chmod +x $HOME/.local/bin/sccache
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Install dependencies
-        run: npm --prefix private-gateways/secret/tests/ install
+        run: npm --prefix TNLS-Gateways/secret/tests/ install
       - uses: ./.github/actions/install-rust
         with:
           toolchain: stable
@@ -74,9 +74,9 @@ jobs:
       - name: Start sccache server
         run: sccache --start-server
       - name: Compile code
-        run: cd private-gateways/secret/ && make build
+        run: cd TNLS-Gateways/secret/ && make build
       - name: Run integration tests
-        run: cd private-gateways/secret/ && npx ts-node tests/integration.ts
+        run: cd TNLS-Gateways/secret/ && npx ts-node tests/integration.ts
       - name: Print sccache stats
         run: sccache --show-stats
       - name: Stop sccache server

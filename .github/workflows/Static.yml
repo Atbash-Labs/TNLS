@@ -3,7 +3,7 @@ name: Static Checks
 on:
   push:
     paths:
-      - 'private-gateways/secret/**'
+      - 'TNLS-Gateways/secret/**'
 
 jobs:
   secret_gateway_tests:
@@ -14,9 +14,9 @@ jobs:
       matrix:
         make:
           - name: Clippy
-            task: "cd private-gateways/secret/ && cargo clippy"
+            task: "cd TNLS-Gateways/secret/ && cargo clippy"
           - name: Unit Tests
-            task: "cd private-gateways/secret/ && make unit-test"
+            task: "cd TNLS-Gateways/secret/ && make unit-test"
 
     env:
       RUST_BACKTRACE: full
