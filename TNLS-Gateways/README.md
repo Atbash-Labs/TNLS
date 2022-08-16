@@ -12,6 +12,6 @@ flowchart LR
       D-->C;
       C-->B;
       B-->A;
-      style F stroke:#d83,stroke-width:3px;
+      style E stroke:#d83,stroke-width:3px;
       style C stroke:#d83,stroke-width:3px;
 ```
