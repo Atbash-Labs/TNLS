@@ -46,10 +46,25 @@ route_blueprint = Blueprint('route_blueprint', __name__)
 
 @route_blueprint.route('/')
 def index():
+    """
+
+    Returns: The status of the relayer
+
+    """
     return str(current_app.config['RELAYER'])
 
 
 def app_factory(config_filename, config_file_converter=convert_config_file_to_dict, num_loops=None):
+    """
+    Creates a Flask app with a relayer running on the backend
+    Args:
+        config_filename: Which filepath to pull config from
+        config_file_converter: How to convert that config file into relayer config
+        num_loops: How many times the relayer should run before shutting down, None=Infinity
+
+    Returns: a flask app
+
+    """
     app = Flask(__name__)
     relayer = Relayer(config_file_converter(config_filename), num_loops=num_loops)
     thread = Thread(target=relayer.run)

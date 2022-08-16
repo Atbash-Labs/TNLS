@@ -17,6 +17,9 @@ specific destination network the contract gets routed to?
 
 
 class FakeChainInterface(BaseChainInterface):
+    """
+    A testing chain interface that returns a fixed set of transactions
+    """
 
     def __init__(self, tx_list):
         self.tx_list = tx_list
@@ -34,6 +37,9 @@ class FakeChainInterface(BaseChainInterface):
 
 
 class FakeChainForConfig(BaseChainInterface):
+    """
+    A testing chain interface that saves its config
+    """
 
     def __init__(self, **kwargs):
         self.__dict__ = kwargs
@@ -50,6 +56,9 @@ class FakeChainForConfig(BaseChainInterface):
 
 
 class FakeContractForConfig(BaseContractInterface):
+    """
+    A testing contract interface that saves its config
+    """
 
     def __init__(self, **kwargs):
         self.__dict__ = kwargs
@@ -63,6 +72,9 @@ class FakeContractForConfig(BaseContractInterface):
 
 
 class FakeContractInterface(BaseContractInterface):
+    """
+    A fake contract interface that adds some value to its incoming arguments and saves the results
+    """
 
     def __init__(self, num_to_add):
         self.num_to_add = num_to_add
@@ -82,6 +94,13 @@ class FakeContractInterface(BaseContractInterface):
 
 @pytest.fixture
 def fake_interface_factory():
+    """
+    A factory that returns a fake chain interface and contract interface
+    based on a transaction list and number to add
+    Returns: the factory fn
+
+    """
+
     def _factory_fn(task_dict_list, num_to_add):
         return FakeChainInterface(task_dict_list), FakeContractInterface(num_to_add)
 
@@ -90,10 +109,16 @@ def fake_interface_factory():
 
 @pytest.fixture
 def fake_map_names_to_interfaces():
+    """
+
+    Returns: a fake initial map of names to interfaces to test the config generator
+
+    """
     return {'fake_contract': (FakeChainForConfig, FakeContractForConfig)}
 
 
 def test_config_file_parsing(fake_map_names_to_interfaces, request):
+    # Tests that basic config parsing works
     config_file = f'{request.path.parent}/sample_config.yml'
     config_dict = convert_config_file_to_dict(config_file, map_of_names_to_interfaces=fake_map_names_to_interfaces)
     assert config_dict.keys() == {'fake_contract'}
@@ -106,6 +131,7 @@ def test_config_file_parsing(fake_map_names_to_interfaces, request):
 
 
 def test_config_file_parsing_missing(fake_map_names_to_interfaces, request):
+    # Tests that the right error is raised if config files have missing keys
     config_file = f'{request.path.parent}/sample_config_missing_keys.yml'
     with pytest.raises(ValueError) as e:
         convert_config_file_to_dict(config_file, map_of_names_to_interfaces=fake_map_names_to_interfaces)
@@ -114,6 +140,7 @@ def test_config_file_parsing_missing(fake_map_names_to_interfaces, request):
 
 
 def test_config_file_parsing_bad_name(fake_map_names_to_interfaces, request):
+    # Tests that the right error is raised if the config file is for a missing interface
     config_file = f'{request.path.parent}/sample_config_bad_name.yml'
     with pytest.raises(ValueError) as e:
         convert_config_file_to_dict(config_file, map_of_names_to_interfaces=fake_map_names_to_interfaces)
@@ -121,6 +148,8 @@ def test_config_file_parsing_bad_name(fake_map_names_to_interfaces, request):
 
 
 def test_basic_relayer_poll(fake_interface_factory):
+    # Tests that relayer poll properly calls the interface poll_for_transactions method
+    # and assembles the results into tasks
     task_dict_list = [{'task_id': '1', 'args': '1', 'task_destination_network': 'fake'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
     num_to_add = 3
@@ -134,6 +163,8 @@ def test_basic_relayer_poll(fake_interface_factory):
 
 
 def test_basic_relayer_route(fake_interface_factory):
+    # Tests that relayer route properly routes tasks to the correct interface
+    # and that the interface correctly calls the desired function
     task_dict_list = [{'task_id': '1', 'args': '1', 'task_destination_network': 'fake'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
     num_to_add = 3
@@ -147,6 +178,7 @@ def test_basic_relayer_route(fake_interface_factory):
 
 
 def test_basic_relayer_route_no_dest(fake_interface_factory, caplog):
+    # Tests that the relayer warns on a task with no destination
     task_dict_list = [{'task_id': '1', 'args': '1'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
     num_to_add = 3
@@ -162,6 +194,7 @@ def test_basic_relayer_route_no_dest(fake_interface_factory, caplog):
 
 
 def test_basic_relayer_route_bad_dest(fake_interface_factory, caplog):
+    # Tests that the relayer warns on a task with a bad/missing destination
     task_dict_list = [{'task_id': '1', 'args': '1', 'task_destination_network': 'fake2'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
     num_to_add = 3
@@ -177,6 +210,7 @@ def test_basic_relayer_route_bad_dest(fake_interface_factory, caplog):
 
 
 def test_basic_relayer_route_multiple_dest(fake_interface_factory):
+    # Tests that the relayer routes tasks to the correct interface when there are multiple
     task_dict_list_1 = [{'task_id': '1', 'args': '1', 'task_destination_network': 'add1'},
                         {'task_id': '2', 'args': '2', 'task_destination_network': 'add2'}]
     num_to_add_1 = 1
@@ -194,6 +228,7 @@ def test_basic_relayer_route_multiple_dest(fake_interface_factory):
 
 
 def test_run(fake_interface_factory):
+    # Tests that the full relayer loop runs properly
     task_dict_list_1 = [{'task_id': '1', 'args': '1', 'task_destination_network': 'add1'},
                         {'task_id': '2', 'args': '2', 'task_destination_network': 'add2'}]
     num_to_add_1 = 1
@@ -212,6 +247,7 @@ def test_run(fake_interface_factory):
 
 
 def test_full_run(fake_interface_factory, caplog):
+    # Tests that the full relayer loop runs properly with bad and good tasks
     task_dict_list_1 = [{'task_id': '1', 'args': '1', 'task_destination_network': 'add1'},
                         {'task_id': '2', 'args': '2', 'task_destination_network': 'add2'},
                         {'task_id': '3', 'args': '1'},
@@ -237,6 +273,7 @@ def test_full_run(fake_interface_factory, caplog):
 
 
 def test_web_app(fake_interface_factory):
+    # Tests that the web app runs properly with a complex relayer
     task_dict_list_1 = [{'task_id': '1', 'args': '1', 'task_destination_network': 'add1'},
                         {'task_id': '2', 'args': '2', 'task_destination_network': 'add2'},
                         {'task_id': '3', 'args': '1'},
