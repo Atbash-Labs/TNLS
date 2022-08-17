@@ -214,8 +214,9 @@ def test_basic_relayer_route_multiple_dest(fake_interface_factory):
     task_dict_list_1 = [{'task_id': '1', 'args': '1', 'task_destination_network': 'add1'},
                         {'task_id': '2', 'args': '2', 'task_destination_network': 'add2'}]
     num_to_add_1 = 1
+    num_to_add_2 = 2
     chain_interface, contract_interface = fake_interface_factory(task_dict_list_1, num_to_add_1)
-    chain_2, contract_interface_2 = fake_interface_factory([], 2)
+    chain_2, contract_interface_2 = fake_interface_factory([], num_to_add_2)
     dict_of_names_to_interfaces = {'add1': (chain_interface, contract_interface, '', ''),
                                    'add2': (chain_2, contract_interface_2, '', '')}
     relayer = Relayer(dict_of_names_to_interfaces, num_loops=1)
@@ -232,8 +233,9 @@ def test_run(fake_interface_factory):
     task_dict_list_1 = [{'task_id': '1', 'args': '1', 'task_destination_network': 'add1'},
                         {'task_id': '2', 'args': '2', 'task_destination_network': 'add2'}]
     num_to_add_1 = 1
+    num_to_add_2 = 2
     chain_interface, contract_interface = fake_interface_factory(task_dict_list_1, num_to_add_1)
-    chain_2, contract_interface_2 = fake_interface_factory([], 2)
+    chain_2, contract_interface_2 = fake_interface_factory([], num_to_add_2)
     dict_of_names_to_interfaces = {'add1': (chain_interface, contract_interface, '', ''),
                                    'add2': (chain_2, contract_interface_2, '', '')}
     relayer = Relayer(dict_of_names_to_interfaces, num_loops=1)
@@ -253,8 +255,9 @@ def test_full_run(fake_interface_factory, caplog):
                         {'task_id': '3', 'args': '1'},
                         {'task_id': '4', 'args': '2', 'task_destination_network': 'add3'}]
     num_to_add_1 = 1
+    num_to_add_2 = 2
     chain_interface, contract_interface = fake_interface_factory(task_dict_list_1, num_to_add_1)
-    chain_2, contract_interface_2 = fake_interface_factory([], 2)
+    chain_2, contract_interface_2 = fake_interface_factory([], num_to_add_2)
     dict_of_names_to_interfaces = {'add1': (chain_interface, contract_interface, '', ''),
                                    'add2': (chain_2, contract_interface_2, '', '')}
     relayer = Relayer(dict_of_names_to_interfaces, num_loops=1)
@@ -279,8 +282,9 @@ def test_web_app(fake_interface_factory):
                         {'task_id': '3', 'args': '1'},
                         {'task_id': '4', 'args': '2', 'task_destination_network': 'add3'}]
     num_to_add_1 = 1
+    num_to_add_2 = 2
     chain_interface, contract_interface = fake_interface_factory(task_dict_list_1, num_to_add_1)
-    chain_2, contract_interface_2 = fake_interface_factory([], 2)
+    chain_2, contract_interface_2 = fake_interface_factory([], num_to_add_2)
     dict_of_names_to_interfaces = {'add1': (chain_interface, contract_interface, '', ''),
                                    'add2': (chain_2, contract_interface_2, '', '')}
 
