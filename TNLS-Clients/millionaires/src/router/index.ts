@@ -17,6 +17,11 @@ const router = createRouter({
       component: DemoView,
     },
     {
+      path: "/metamask",
+      name: "metamask",
+      component: MetaView,
+    },
+    {
       path: "/about",
       name: "about",
       // route level code-splitting

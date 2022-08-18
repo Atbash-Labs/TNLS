@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from "vue-router";
-import TheWallet from "@/components/TheWallet.vue";
+import KeplrWallet from "@/components/KeplrWallet.vue";
 </script>
 
 <template>
@@ -9,7 +9,7 @@ import TheWallet from "@/components/TheWallet.vue";
     <RouterLink to="/demo">Demo</RouterLink>
     <RouterLink to="/metamask">MetaMask</RouterLink>
     <RouterLink to="/about">About</RouterLink>
-    <TheWallet />
+    <!-- <KeplrWallet /> -->
   </nav>
 
   <RouterView />

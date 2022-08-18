@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import Payload from "@/components/Payload.vue";
+import MetaMask from "@/components/MetaMask.vue";
 </script>
 
 <template>
   <main>
-    <Payload />
+    <!-- <MetaMask /> -->
+    coming soon
   </main>
 </template>
 

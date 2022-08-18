@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import Payload from "@/components/Payload.vue";
+import ThePayload from "@/components/ThePayload.vue";
 </script>
 
 <template>
   <main>
-    <Payload />
+    <ThePayload />
   </main>
 </template>
 
