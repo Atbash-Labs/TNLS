@@ -18,6 +18,10 @@ class SCRTInterface(BaseChainInterface):
         return self.provider.tx.broadcast(signed_tx)
 
     def get_transactions(self):
+        # Find all txn hashes for address
+        # Get info for each hash
+        # Parse logs out of info
+        # Return list of logs
         # gets the transactions from the most recent block for a particular address.
         pass
 
@@ -53,5 +57,8 @@ class SCRTContract(BaseContractInterface):
 
     def parse_event_from_txn(self, event_name, txn):
         # FIGURE THIS OUT!
+        # For given logs
+        # Get logs out with the right event name
+        # Pass logs to Task constructor
 
         pass
