@@ -28,15 +28,26 @@ def convert_config_file_to_dict(config_file, map_of_names_to_interfaces=None) ->
         config_dict = safe_load(f)
     necessary_keys = ['contract_address', 'contract_schema', 'private_key', 'wallet_address',
                       'event_name', 'function_name']
+    using_code_hash = False
+    if 'code_hash' in config_dict:
+        necessary_keys.append('code_hash')
+        using_code_hash = True
     for key, val in config_dict.items():
         if not all(val_key in val for val_key in necessary_keys):
             raise ValueError(f'{key} is missing necessary keys: {set(necessary_keys) - set(val.keys())}')
         if key not in map_of_names_to_interfaces:
             raise ValueError(f'{key} not in map of names to interfaces')
         chain_interface, contract_interface = map_of_names_to_interfaces[key]
-        initialized_chain = chain_interface(private_key=val['private_key'], address=val['wallet_address'])
-        initialized_contract = contract_interface(interface=initialized_chain, address=val['contract_address'],
-                                                  abi=val['contract_schema'])
+        remaining_kwargs = {key: val[key] for key in val if key not in necessary_keys}
+        initialized_chain = chain_interface(private_key=val['private_key'], address=val['wallet_address'],
+                                            **remaining_kwargs)
+        if using_code_hash:
+            initialized_contract = contract_interface(interface=initialized_chain, address=val['contract_address'],
+                                                      abi=val['contract_schema'],
+                                                      code_hash=val['code_hash'])
+        else:
+            initialized_contract = contract_interface(interface=initialized_chain, address=val['contract_address'],
+                                                      abi=val['contract_schema'])
         config_dict[key] = (initialized_chain, initialized_contract, val['event_name'], val['function_name'])
     return config_dict
 
