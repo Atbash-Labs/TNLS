@@ -460,6 +460,7 @@ async function gatewayTx(
       gasLimit: 200000,
     }
   );
+  console.log(tx);
 
   if (tx.code !== 0) {
     throw new Error(

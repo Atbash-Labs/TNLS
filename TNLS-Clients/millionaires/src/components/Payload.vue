@@ -40,10 +40,11 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { encrypt_payload } from '@/wasm';
+import { encrypt_payload } from "@/wasm";
 import { Wallet as EthWallet } from "ethers";
 import { arrayify, SigningKey } from "ethers/lib/utils";
-import {Buffer} from 'buffer/'
+import { Buffer } from "buffer/";
+import secureRandom from "secure-random";
 import type {
   PreExecutionMsg,
   Contract,
@@ -51,25 +52,6 @@ import type {
   Sender,
   Payload,
 } from "@/contracts/private-gateway";
-// const {randomBytes} = await import('node:crypto');
-
-// const form = ref<PreExecutionMsg>({
-//     task_id: 0,
-//     handle: '',
-//     routing_info: {
-//         hash:'',
-//         address:'',
-//     },
-//     sender_info: {
-//         address: '',
-//         public_key: '',
-//     },
-//     payload: '',
-//     nonce: '',
-//     payload_hash: '',
-//     payload_signature: '',
-//     source_network: '',
-// });
 
 const payload = ref<Payload>({
   // placeholder values
@@ -86,31 +68,32 @@ const payload = ref<Payload>({
 
 const ciphertext = ref<string>("hello");
 
-// async function encryptPayload() {}
-
 async function encryptPayload() {
-    const thePayload = payload.value;
-    const wallet = EthWallet.createRandom();
-    const userPublicAddress: string = wallet.address;
-    const userPublicKey: string = new SigningKey(wallet.privateKey).compressedPublicKey;
+  const thePayload = payload.value;
+  const wallet = EthWallet.createRandom();
+  const userPublicAddress: string = wallet.address;
+  const userPublicKey: string = new SigningKey(wallet.privateKey)
+    .compressedPublicKey;
 
-    const userPrivateKeyBytes = arrayify(wallet.privateKey)
-    const userPublicKeyBytes = arrayify(userPublicKey)
+  const userPrivateKeyBytes = arrayify(wallet.privateKey);
+  const userPublicKeyBytes = arrayify(userPublicKey);
 
-    const gatewayPublicKey = "AnPh4zgH57ijrnAEaTxQMtBJSYIe9fJruWRRD8JLt+Cf"
-    const gatewayPublicKeyBuffer = Buffer.from(gatewayPublicKey, 'base64')
-    const gatewayPublicKeyBytes = arrayify(gatewayPublicKeyBuffer)
+  const gatewayPublicKey = "AnPh4zgH57ijrnAEaTxQMtBJSYIe9fJruWRRD8JLt+Cf";
+  const gatewayPublicKeyBuffer = Buffer.from(gatewayPublicKey, "base64");
+  const gatewayPublicKeyBytes = arrayify(gatewayPublicKeyBuffer);
 
-    const plaintext = Buffer
-        .from(JSON.stringify(thePayload));
-    // // const nonce = arrayify(randomBytes(12));
-    const nonce = arrayify([0,1,2,3,4,5,6,7,8,9,10,11])
+  const plaintext = Buffer.from(JSON.stringify(thePayload));
+  const nonce = secureRandom(12, { type: "Uint8Array" });
 
-    ciphertext.value = Buffer
-    .from(encrypt_payload(gatewayPublicKeyBytes, userPrivateKeyBytes, plaintext, nonce))
-    .toString('base64');
+  ciphertext.value = Buffer.from(
+    encrypt_payload(
+      gatewayPublicKeyBytes,
+      userPrivateKeyBytes,
+      plaintext,
+      nonce
+    )
+  ).toString("base64");
 }
-
 </script>
 
 <style scoped>
