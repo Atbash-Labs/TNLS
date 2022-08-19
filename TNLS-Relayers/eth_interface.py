@@ -66,11 +66,11 @@ class EthInterface(BaseChainInterface):
         tx_hash = self.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         return tx_hash
 
-    def get_transactions(self):
+    def get_transactions(self, address):
         """
         See base_interface.py for documentation
         """
-        return self.get_last_txs(self.address)
+        return self.get_last_txs(address=address)
 
     def get_last_block(self):
         """

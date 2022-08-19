@@ -70,7 +70,7 @@ class BaseChainInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_transactions(self):
+    def get_transactions(self, address):
         """
             Retrieves all transactions from the chain that fit interface-dependent filters
         """
@@ -82,7 +82,7 @@ class BaseContractInterface(abc.ABC):
     Base class for all contract interfaces
     Governs contract interaction, execution, and event parsing.
     """
-
+    address = None
     @abc.abstractmethod
     def call_function(self, function_name, *args):
         """

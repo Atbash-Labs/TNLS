@@ -1,9 +1,10 @@
 import json
 
 from secret_sdk.client.lcd import LCDClient
+from secret_sdk.core.auth.data import TxLog
 from secret_sdk.key.raw import RawKey
 
-from base_interface import BaseChainInterface, BaseContractInterface
+from base_interface import BaseChainInterface, BaseContractInterface, Task
 
 
 class SCRTInterface(BaseChainInterface):
@@ -17,12 +18,12 @@ class SCRTInterface(BaseChainInterface):
         signed_tx = self.wallet.key.sign_tx(tx)
         return self.provider.tx.broadcast(signed_tx)
 
-    def get_transactions(self):
-        # Find all txn hashes for address
-        # Get info for each hash
-        # Parse logs out of info
-        # Return list of logs
-        # gets the transactions from the most recent block for a particular address.
+    def get_transactions(self, address):
+        block_info = self.provider.tendermint.block_info()
+        height = block_info['block']['header']['height']
+        txns = self.provider.tx.search(options={'message.sender': address, 'tx.minheight': height}).txs
+        txn_info = [txn.logs for txn in txns]
+        return txn_info
         pass
 
 
@@ -55,10 +56,6 @@ class SCRTContract(BaseContractInterface):
         txn = self.construct_txn(function_schema, *args)
         return self.interface.sign_and_send_transaction(txn)
 
-    def parse_event_from_txn(self, event_name, txn):
-        # FIGURE THIS OUT!
-        # For given logs
-        # Get logs out with the right event name
-        # Pass logs to Task constructor
-
-        pass
+    def parse_event_from_txn(self, event_name: str, log: TxLog):
+        task_list = [Task(event) for event in log.events if event['type'] == event_name]
+        return task_list
