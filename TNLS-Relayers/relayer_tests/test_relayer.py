@@ -48,8 +48,6 @@ class FakeChainForConfig(BaseChainInterface):
     def get_transactions(self, _):
         pass
 
-    def create_transaction(self, _contract_function, _data):
-        pass
 
     def sign_and_send_transaction(self, _tx):
         pass
