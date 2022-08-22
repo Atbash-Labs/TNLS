@@ -34,6 +34,9 @@ def fake_provider(monkeypatch):
     """
 
     class FakeProvider:
+        def wallet(self, _priv_key):
+            return []
+
         pass
 
     return FakeProvider()
@@ -86,6 +89,7 @@ def test_transaction_builder_mismatched_private_key(fake_provider, sample_contra
     pass
 
 
+@pytest.mark.skip(reason="Not implemented")
 def test_correct_txn_filtering_one_in(no_transaction_check_provider, filter_out_hashes):
     # Tests that get_transactions correctly finds a single matching transaction
     no_transaction_check_provider.transaction_retrieved = [
@@ -95,6 +99,7 @@ def test_correct_txn_filtering_one_in(no_transaction_check_provider, filter_out_
     assert filter_out_hashes(interface.get_transactions(address='0x0')) == ['0x2']
 
 
+@pytest.mark.skip(reason="Not implemented")
 def test_correct_txn_filtering_one_out(no_transaction_check_provider, filter_out_hashes):
     # Tests that get_transactions correctly ignores a single mismatching transaction
     no_transaction_check_provider.transaction_retrieved = [
@@ -104,6 +109,7 @@ def test_correct_txn_filtering_one_out(no_transaction_check_provider, filter_out
     assert filter_out_hashes(interface.get_transactions(address='0x0')) == []
 
 
+@pytest.mark.skip(reason="Not implemented")
 def test_correct_txn_filtering_many(no_transaction_check_provider, filter_out_hashes):
     # Tests that get_transactions correctly finds multiple matching transactions among mismatched ones
     no_transaction_check_provider.transaction_retrieved = [
