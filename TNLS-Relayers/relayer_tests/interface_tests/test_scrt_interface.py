@@ -32,6 +32,11 @@ def fake_provider(monkeypatch):
     """
     Fixture that provides a mock scrt backend that doesn't process transactions
     """
+
+    class FakeProvider:
+        pass
+
+    return FakeProvider()
     pass
 
 
