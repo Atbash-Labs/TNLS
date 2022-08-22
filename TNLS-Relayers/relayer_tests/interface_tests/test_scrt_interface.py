@@ -53,37 +53,28 @@ def no_transaction_check_provider(fake_provider, monkeypatch):
     return fake_provider
 
 
-@pytest.fixture
-def sample_contract_function_factory():
-    """
-    Fixture that provides a factory for basic contract functions that
-    return their parameters as a dict.
-    """
 
-    pass
-
-
-def test_transaction_builder_good(provider_privkey_address, sample_contract_function_factory):
+def test_transaction_builder_good(provider_privkey_address):
     # Tests that transaction signing and sending works as expected
     pass
 
 
-def test_transaction_builder_bad_address_from(fake_provider, sample_contract_function_factory):
+def test_transaction_builder_bad_address_from(fake_provider):
     # Confirms that when the interface is created with a bad address, it raises an error
     pass
 
 
-def test_transaction_builder_bad_address_to(fake_provider, sample_contract_function_factory):
+def test_transaction_builder_bad_address_to(fake_provider):
     # Confirms that when a transaction is created with a bad destination address, it raises an error
     pass
 
 
-def test_transaction_builder_bad_private_key(fake_provider, sample_contract_function_factory):
+def test_transaction_builder_bad_private_key(fake_provider):
     # Confirms that when an interface is created with a bad private key, it raises an error on transaction creation
     pass
 
 
-def test_transaction_builder_mismatched_private_key(fake_provider, sample_contract_function_factory):
+def test_transaction_builder_mismatched_private_key(fake_provider):
     # Confirms that when an interface is created with the wrong private key for an address
     # it raises an error on transaction creation
     pass

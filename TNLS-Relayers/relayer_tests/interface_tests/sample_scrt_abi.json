@@ -1,8 +1,15 @@
 {
   "function_1": {
-    "args": []
+    "args": [
+      "a",
+      "b"
+    ]
   },
   "function_2": {
-    "args": []
+    "args": [
+      "a",
+      "b",
+      "c"
+    ]
   }
 }

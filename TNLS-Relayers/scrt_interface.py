@@ -1,4 +1,5 @@
 import json
+from logging import getLogger, basicConfig, DEBUG, StreamHandler
 
 from secret_sdk.client.lcd import LCDClient
 from secret_sdk.core.auth.data import TxLog
@@ -36,6 +37,12 @@ class SCRTContract(BaseContractInterface):
         self.abi = json.loads(abi)
         self.interface = interface
         self.code_hash = code_hash
+        basicConfig(
+            level=DEBUG,
+            format="%(asctime)s [SCRT interface: %(levelname)8.8s] %(message)s",
+            handlers=[StreamHandler()],
+        )
+        self.logger = getLogger()
         pass
 
     def get_function(self, function_name):
@@ -47,6 +54,13 @@ class SCRTContract(BaseContractInterface):
         # IS THIS CORRECT?
         arg_keys = function_schema['args']
         arg_values = [arg for arg in args]
+        if len(arg_keys) != len(arg_values):
+            self.logger.warning(f"Arguments do not match schema."
+                                f"  Expected {len(arg_keys)} but got {len(arg_values)}")
+            if len(arg_keys) > len(arg_values):
+                arg_values += [""] * (len(arg_keys) - len(arg_values))
+            else:
+                arg_values = arg_values[:len(arg_keys)]
         arg_dict = dict(zip(arg_keys, arg_values))
         function_schema = {function_schema['name']: arg_dict}
         txn = self.interface.wasm.contract_execute_msg(
