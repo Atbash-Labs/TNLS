@@ -47,7 +47,7 @@ def no_transaction_check_provider(fake_provider, monkeypatch):
     with a user-settable transaction store
     """
     fake_provider.transaction_retrieved = []
-    pass
+    return fake_provider
 
 
 @pytest.fixture
