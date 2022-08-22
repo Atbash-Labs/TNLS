@@ -41,7 +41,10 @@ class SCRTContract(BaseContractInterface):
 
     def construct_txn(self, function_schema, *args):
         # IS THIS CORRECT?
-        function_schema['args'] = args
+        arg_keys = function_schema['args']
+        arg_values = [arg for arg in args]
+        arg_dict = dict(zip(arg_keys, arg_values))
+        function_schema = {function_schema['name']: arg_dict}
         txn = self.interface.wasm.contract_execute_msg(
             sender_address=self.interface.address,
             contract_address=self.address,
