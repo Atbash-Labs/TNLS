@@ -50,17 +50,6 @@ class BaseChainInterface(abc.ABC):
     Governs transaction retrieval and creation
     """
     @abc.abstractmethod
-    def create_transaction(self, contract_function, data):
-        """
-        Creates a contract execution to be sent to the chain
-        Args:
-            contract_function:  The function to be executed on chain
-            data: the arguments for that function
-        """
-        # create task
-        pass
-
-    @abc.abstractmethod
     def sign_and_send_transaction(self, tx):
         """
         Given a raw transaction, signs it and sends it to the chain
