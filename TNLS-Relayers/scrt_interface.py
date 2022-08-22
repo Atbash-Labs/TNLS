@@ -22,9 +22,8 @@ class SCRTInterface(BaseChainInterface):
         block_info = self.provider.tendermint.block_info()
         height = block_info['block']['header']['height']
         txns = self.provider.tx.search(options={'message.sender': address, 'tx.minheight': height}).txs
-        txn_info = [txn.logs for txn in txns]
-        return txn_info
-        pass
+        logs_list = [txn.logs for txn in txns]
+        return logs_list
 
 
 class SCRTContract(BaseContractInterface):

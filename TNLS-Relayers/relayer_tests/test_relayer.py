@@ -25,7 +25,7 @@ class FakeChainInterface(BaseChainInterface):
         self.tx_list = tx_list
         pass
 
-    def get_transactions(self):
+    def get_transactions(self, _):
         return self.tx_list
         pass
 
@@ -45,7 +45,7 @@ class FakeChainForConfig(BaseChainInterface):
         self.__dict__ = kwargs
         pass
 
-    def get_transactions(self):
+    def get_transactions(self, _):
         pass
 
     def create_transaction(self, _contract_function, _data):
