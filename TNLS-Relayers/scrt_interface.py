@@ -32,11 +32,10 @@ class SCRTInterface(BaseChainInterface):
 
 
 class SCRTContract(BaseContractInterface):
-    def __init__(self, interface, address, abi, code_hash):
+    def __init__(self, interface, address, abi):
         self.address = address
         self.abi = json.loads(abi)
         self.interface = interface
-        self.code_hash = code_hash
         basicConfig(
             level=DEBUG,
             format="%(asctime)s [SCRT interface: %(levelname)8.8s] %(message)s",
@@ -50,19 +49,19 @@ class SCRTContract(BaseContractInterface):
         return self.abi[function_name]
         pass
 
-    def construct_txn(self, function_schema, *args):
+    def construct_txn(self, function_schema, function_name, *args):
         # IS THIS CORRECT?
         arg_keys = function_schema['args']
         arg_values = [arg for arg in args]
         if len(arg_keys) != len(arg_values):
             self.logger.warning(f"Arguments do not match schema."
-                                f"  Expected {len(arg_keys)} but got {len(arg_values)}")
+                                f"  Expected {len(arg_keys)} arguments but got {len(arg_values)}")
             if len(arg_keys) > len(arg_values):
                 arg_values += [""] * (len(arg_keys) - len(arg_values))
             else:
                 arg_values = arg_values[:len(arg_keys)]
         arg_dict = dict(zip(arg_keys, arg_values))
-        function_schema = {function_schema['name']: arg_dict}
+        function_schema = {function_name: arg_dict}
         txn = self.interface.wasm.contract_execute_msg(
             sender_address=self.interface.address,
             contract_address=self.address,
@@ -73,7 +72,7 @@ class SCRTContract(BaseContractInterface):
 
     def call_function(self, function_name, *args):
         function_schema = self.get_function(function_name)
-        txn = self.construct_txn(function_schema, *args)
+        txn = self.construct_txn(function_schema, function_name, *args)
         return self.interface.sign_and_send_transaction(txn)
 
     def parse_event_from_txn(self, event_name: str, log: TxLog):
