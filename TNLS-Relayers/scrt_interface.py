@@ -17,6 +17,8 @@ class SCRTInterface(BaseChainInterface):
         else:
             self.provider = provider
         self.address = address
+        assert self.address == str(self.private_key.acc_address), f"Address {self.address} and private key " \
+                                                                  f"{self.private_key.acc_address} mismatch"
         self.wallet = self.provider.wallet(self.private_key)
 
     def sign_and_send_transaction(self, tx):

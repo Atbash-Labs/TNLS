@@ -91,25 +91,32 @@ def test_transaction_builder_good(provider_privkey_address):
     pass
 
 
-def test_transaction_builder_bad_address_from(fake_provider):
+def test_interface_initialization_good(fake_provider):
+    # Confirms that interface initialization works
+    SCRTInterface(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag', provider=fake_provider)
+    pass
+
+
+def test_interface_initialization_bad_address_from(fake_provider):
     # Confirms that when the interface is created with a bad address, it raises an error
-    pass
+    with pytest.raises(AssertionError) as e:
+        SCRTInterface(address='', provider=fake_provider)
+    assert 'mismatch' in str(e.value)
 
 
-def test_transaction_builder_bad_address_to(fake_provider):
-    # Confirms that when a transaction is created with a bad destination address, it raises an error
-    pass
+def test_interface_initialization_bad_private_key(fake_provider):
+    # Confirms that when an interface is created with a bad private key, it raises an error on interface creation
+    with pytest.raises(Exception):
+        SCRTInterface(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag', provider=fake_provider,
+                      private_key='')
 
 
-def test_transaction_builder_bad_private_key(fake_provider):
-    # Confirms that when an interface is created with a bad private key, it raises an error on transaction creation
-    pass
-
-
-def test_transaction_builder_mismatched_private_key(fake_provider):
+def test_interface_initialization_mismatched_private_key(fake_provider):
     # Confirms that when an interface is created with the wrong private key for an address
-    # it raises an error on transaction creation
-    pass
+    # it raises an error on interface creation
+    with pytest.raises(AssertionError) as e:
+        SCRTInterface(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcah', provider=fake_provider)
+    assert 'mismatch' in str(e.value)
 
 
 def test_correct_txn_filtering_one_in(no_transaction_check_provider, filter_out_hashes):
@@ -188,6 +195,12 @@ def test_event_getter(provider_privkey_address, address_and_abi_of_contract):
 @pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
 def test_function_call(provider_privkey_address, address_and_abi_of_contract):
     # Confirms that the scrtContract interface correctly calls functions
+    pass
+
+
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
+def test_function_call_bad_addr(provider_privkey_address, address_and_abi_of_contract):
+    # Confirms that the scrtContract interface correctly fails when the contract address is bad
     pass
 
 
