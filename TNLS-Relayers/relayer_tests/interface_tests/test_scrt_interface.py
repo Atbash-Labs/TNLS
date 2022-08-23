@@ -122,10 +122,12 @@ def test_interface_initialization_mismatched_private_key(fake_provider):
 def test_correct_txn_filtering_one_in(no_transaction_check_provider, filter_out_hashes):
     # Tests that get_transactions correctly finds a single matching transaction
     no_transaction_check_provider.transaction_retrieved = [
-        {'from': '0x0', 'to': '0x1', 'hash': '0x2'},
+        {'from': 'secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag', 'to': '0x1', 'hash': '0x2'},
     ]
-    interface = SCRTInterface(address='0x0', provider=no_transaction_check_provider)
-    assert filter_out_hashes(interface.get_transactions(address='0x0')) == ['0x2']
+    interface = SCRTInterface(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag',
+                              provider=no_transaction_check_provider)
+    assert filter_out_hashes(interface.get_transactions(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag')) == [
+        '0x2']
 
 
 def test_correct_txn_filtering_one_out(no_transaction_check_provider, filter_out_hashes):
@@ -133,8 +135,9 @@ def test_correct_txn_filtering_one_out(no_transaction_check_provider, filter_out
     no_transaction_check_provider.transaction_retrieved = [
         {'from': '0x1', 'to': '0x1', 'hash': '0x2'},
     ]
-    interface = SCRTInterface(address='0x0', provider=no_transaction_check_provider)
-    assert filter_out_hashes(interface.get_transactions(address='0x0')) == []
+    interface = SCRTInterface(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag',
+                              provider=no_transaction_check_provider)
+    assert filter_out_hashes(interface.get_transactions(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag')) == []
 
 
 def test_correct_txn_filtering_many(no_transaction_check_provider, filter_out_hashes):
@@ -143,12 +146,14 @@ def test_correct_txn_filtering_many(no_transaction_check_provider, filter_out_ha
         {'from': '0x1', 'to': '0x1', 'hash': '0x2'},
         {'from': '0x1', 'to': '0x1', 'hash': '0x3'},
         {'from': '0x1', 'to': '0x1', 'hash': '0x4'},
-        {'from': '0x0', 'to': '0x1', 'hash': '0x5'},
-        {'from': '0x0', 'to': '0x1', 'hash': '0x6'},
-        {'from': '0x0', 'to': '0x1', 'hash': '0x7'},
+        {'from': 'secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag', 'to': '0x1', 'hash': '0x5'},
+        {'from': 'secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag', 'to': '0x1', 'hash': '0x6'},
+        {'from': 'secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag', 'to': '0x1', 'hash': '0x7'},
     ]
-    interface = SCRTInterface(address='0x0', provider=no_transaction_check_provider)
-    assert filter_out_hashes(interface.get_transactions(address='0x0')) == ['0x5', '0x6', '0x7']
+    interface = SCRTInterface(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag',
+                              provider=no_transaction_check_provider)
+    assert filter_out_hashes(interface.get_transactions(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag')) == [
+        '0x5', '0x6', '0x7']
 
 
 @pytest.fixture
