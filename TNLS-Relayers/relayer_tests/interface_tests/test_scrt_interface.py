@@ -14,7 +14,7 @@ def filter_out_hashes():
     """
 
     def _filter_out_hashes(txns):
-        return [txn['transactionHash'] for txn in txns]
+        return [txn['hash'] for txn in txns]
 
     return _filter_out_hashes
 
@@ -52,6 +52,37 @@ def no_transaction_check_provider(fake_provider, monkeypatch):
     with a user-settable transaction store
     """
     fake_provider.transaction_retrieved = []
+
+    class FakeTendermint:
+        def __init__(self):
+            pass
+
+        def block_info(self):
+            return {'block': {'header': {'height': 0}}}
+
+    class FakeTxn:
+        def __init__(self, log):
+            self.logs = log
+
+    class FakeSearchResults:
+        def __init__(self):
+            self.txs = [FakeTxn(tx) for tx in fake_provider.transaction_retrieved]
+
+    class FakeTx:
+        def __init__(self):
+            self.txs = []
+            pass
+
+        def search(self, **kwargs):
+            self.txs = []
+            txs = FakeSearchResults().txs
+            for tx in txs:
+                if tx.logs['from'] == kwargs['options']['message.sender']:
+                    self.txs.append(tx)
+            return self
+
+    fake_provider.tendermint = FakeTendermint()
+    fake_provider.tx = FakeTx()
     return fake_provider
 
 
@@ -81,7 +112,6 @@ def test_transaction_builder_mismatched_private_key(fake_provider):
     pass
 
 
-@pytest.mark.skip(reason="Not implemented")
 def test_correct_txn_filtering_one_in(no_transaction_check_provider, filter_out_hashes):
     # Tests that get_transactions correctly finds a single matching transaction
     no_transaction_check_provider.transaction_retrieved = [
@@ -91,7 +121,6 @@ def test_correct_txn_filtering_one_in(no_transaction_check_provider, filter_out_
     assert filter_out_hashes(interface.get_transactions(address='0x0')) == ['0x2']
 
 
-@pytest.mark.skip(reason="Not implemented")
 def test_correct_txn_filtering_one_out(no_transaction_check_provider, filter_out_hashes):
     # Tests that get_transactions correctly ignores a single mismatching transaction
     no_transaction_check_provider.transaction_retrieved = [
@@ -101,7 +130,6 @@ def test_correct_txn_filtering_one_out(no_transaction_check_provider, filter_out
     assert filter_out_hashes(interface.get_transactions(address='0x0')) == []
 
 
-@pytest.mark.skip(reason="Not implemented")
 def test_correct_txn_filtering_many(no_transaction_check_provider, filter_out_hashes):
     # Tests that get_transactions correctly finds multiple matching transactions among mismatched ones
     no_transaction_check_provider.transaction_retrieved = [
