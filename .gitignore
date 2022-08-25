@@ -8,3 +8,5 @@ config.txt
 .vscode
 target/
 contracts/
+*.wasm
+*.wasm.gz

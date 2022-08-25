@@ -38,12 +38,12 @@ build-mainnet-reproducible:
 
 .PHONY: compress-wasm
 compress-wasm:
-	# Copying contracts to ./contracts directory
-	cp ./target/wasm32-unknown-unknown/release/*.wasm ./contracts
+	# Copying contracts to root directory
+	cp ./target/wasm32-unknown-unknown/release/*.wasm ./
 	# Optimizing contract file size
 	@# The following line is not necessary, may work only on linux (extra size optimization)
-	find ./contracts -name \*.wasm -type f -exec wasm-opt -Os {} -o {} \; 
-	find ./contracts -name \*.wasm -type f -exec gzip -9kf {} \; 
+	find ./ -name \*.wasm -type f -exec wasm-opt -Os {} -o {} \; 
+	find ./ -name \*.wasm -type f -exec gzip -9kf {} \; 
 
 .PHONY: schema
 schema:
