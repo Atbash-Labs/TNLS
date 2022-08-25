@@ -66,11 +66,11 @@ start-server: # CTRL+C to stop
 store-contract-local:
 	docker exec localsecret secretcli tx compute store -y --from a --gas 1000000 /root/code/contract.wasm.gz
 
-.PHONY: integration-test
-integration-test:
-	npx ts-node tests/integration.ts
+# .PHONY: integration-test
+# integration-test:
+# 	npx ts-node tests/integration.ts
 
 .PHONY: clean
 clean:
 	cargo clean
-	-rm -f ./contract.wasm ./contract.wasm.gz
+	-rm -f ./contracts

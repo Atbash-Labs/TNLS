@@ -318,7 +318,7 @@ async function initializeAndUploadContract() {
   
   const [gatewayHash, gatewayAddress] = await initializeGateway(
     client,
-    "contract.wasm.gz",
+    "../../contracts/secret_gateway.wasm.gz",
     scrtRngHash,
     scrtRngAddress,
   );
@@ -330,7 +330,7 @@ async function initializeAndUploadContract() {
 
   const [contractHash, contractAddress] = await initializeContract(
     client,
-    "tests/example-private-contract/contract.wasm.gz",
+    "../../contracts/example-private-contract.wasm.gz",
     gatewayHash,
     gatewayAddress,
     gatewayKey,

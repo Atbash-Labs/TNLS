@@ -74,7 +74,7 @@ jobs:
       - name: Start sccache server
         run: sccache --start-server
       - name: Compile code
-        run: cd TNLS-Gateways/secret/ && make build
+        run: make build
       - name: Run integration tests
         run: cd TNLS-Gateways/secret/ && npx ts-node tests/integration.ts
       - name: Print sccache stats
