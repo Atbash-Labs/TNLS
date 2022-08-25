@@ -1,14 +1,16 @@
+use std::cmp::Ordering;
+
+use cosmwasm_std::{Binary, HumanAddr};
+use secret_toolkit::{
+    serialization::{Bincode2, Json},
+    storage::{Item, Keymap},
+};
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Binary, HumanAddr, Storage};
-use cosmwasm_storage::{
-    bucket, bucket_read, singleton, singleton_read, Bucket, ReadonlyBucket, ReadonlySingleton,
-    Singleton,
-};
-
-pub const CONFIG_KEY: &[u8] = b"config";
-pub const INPUT_KEY: &[u8] = b"inputs";
+pub static CONFIG: Item<State> = Item::new(b"config");
+pub static MILLIONAIRES: Keymap<String, Millionaire> = Keymap::new(b"millionaires");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
@@ -18,23 +20,46 @@ pub struct State {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Balance {
-    pub amount: u32,
-    pub owner: HumanAddr,
+pub struct Input {
+    // user ethereum address
+    pub address: String,
+    // user name
+    pub name: String,
+    // user monies
+    pub worth: u64,
+    // the expected address to be match with
+    pub other: String,
 }
 
-pub fn config<S: Storage>(storage: &mut S) -> Singleton<S, State> {
-    singleton(storage, CONFIG_KEY)
+#[derive(Serialize, Deserialize, Clone, Debug, Default, Eq)]
+pub struct Millionaire {
+    pub name: String,
+    pub worth: u64,
+    pub other: String,
 }
 
-pub fn config_read<S: Storage>(storage: &S) -> ReadonlySingleton<S, State> {
-    singleton_read(storage, CONFIG_KEY)
+impl Millionaire {
+    /// Constructor function. Takes input parameters and initializes a struct containing both
+    /// those items
+    pub fn new(name: String, worth: u64, other: String) -> Millionaire {
+        return Millionaire { name, worth, other };
+    }
 }
 
-pub fn balances<S: Storage>(storage: &mut S) -> Bucket<S, u32> {
-    bucket(INPUT_KEY, storage)
+impl PartialOrd for Millionaire {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
-pub fn balances_read<S: Storage>(storage: &S) -> ReadonlyBucket<S, u32> {
-    bucket_read(INPUT_KEY, storage)
+impl Ord for Millionaire {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.worth.cmp(&other.worth)
+    }
+}
+
+impl PartialEq for Millionaire {
+    fn eq(&self, other: &Self) -> bool {
+        self.worth == other.worth
+    }
 }

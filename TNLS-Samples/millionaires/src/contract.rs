@@ -1,18 +1,18 @@
+use std::cmp::max;
+
 use cosmwasm_std::{
-    debug_print, log, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult, HumanAddr,
-    InitResponse, InitResult, Querier, QueryResult, StdError, StdResult, Storage,
+    log, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult, InitResponse,
+    InitResult, Querier, QueryResult, StdError, Storage,
 };
 use secret_toolkit::utils::{pad_handle_result, pad_query_result, HandleCallback};
 
 use crate::{
-    msg::{
-        HandleMsg, InitMsg, InputResponse, PostExecutionMsg, PrivContractHandleMsg, QueryMsg,
-        ResponseStatus::Failure, ResponseStatus::Success, TestResponse,
-    },
-    state::{balances, balances_read, config, config_read, Balance, State},
+    msg::{GatewayMsg, HandleMsg, InitMsg, QueryMsg, RicherResponse},
+    state::{Input, Millionaire, State, CONFIG, MILLIONAIRES},
 };
 
 use serde::{Deserialize, Serialize};
+use tnls::msg::{InputResponse, PostExecutionMsg, PrivContractHandleMsg, ResponseStatus::Success};
 
 /// pad handle responses and log attributes to blocks of 256 bytes to prevent leaking info based on
 /// response size
@@ -20,7 +20,7 @@ pub const BLOCK_SIZE: usize = 256;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _env: Env,
     msg: InitMsg,
 ) -> InitResult {
     let state = State {
@@ -29,9 +29,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         gateway_key: msg.gateway_key,
     };
 
-    config(&mut deps.storage).save(&state)?;
-
-    debug_print!("Contract was initialized by {}", env.message.sender);
+    // config(&mut deps.storage).save(&state)?;
+    CONFIG.save(&mut deps.storage, &state)?;
 
     Ok(InitResponse::default())
 }
@@ -42,19 +41,26 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     msg: HandleMsg,
 ) -> HandleResult {
     let response = match msg {
-        HandleMsg::Input { input } => try_handle(deps, env, input),
+        HandleMsg::Input { message } => try_handle(deps, env, message),
     };
     pad_handle_result(response, BLOCK_SIZE)
 }
 
+pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> QueryResult {
+    let response = match msg {
+        QueryMsg::Query {} => todo!(),
+    };
+    pad_query_result(response, BLOCK_SIZE)
+}
+
 // acts like a gateway message handle filter
-pub fn try_handle<S: Storage, A: Api, Q: Querier>(
+fn try_handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: PrivContractHandleMsg,
 ) -> HandleResult {
     // verify signature with stored gateway public key
-    let gateway_key = config_read(&deps.storage).load()?.gateway_key;
+    let gateway_key = CONFIG.load(&deps.storage)?.gateway_key;
     deps.api
         .secp256k1_verify(
             msg.input_hash.as_slice(),
@@ -66,48 +72,53 @@ pub fn try_handle<S: Storage, A: Api, Q: Querier>(
     // determine which function to call based on the included handle
     let handle = msg.handle.as_str();
     match handle {
-        "store_input" => try_store_input(deps, env, msg.input_values, msg.task_id, msg.input_hash),
+        "submit_player" => {
+            try_store_input(deps, env, msg.input_values, msg.task_id, msg.input_hash)
+        }
         "compare" => try_compare(deps, env, msg.input_values, msg.task_id, msg.input_hash),
-        _ => Ok(HandleResponse {
-            messages: vec![],
-            log: vec![],
-            data: Some(to_binary(&InputResponse { status: Failure })?),
-        }),
+        _ => Err(StdError::generic_err("invalid handle".to_string())),
     }
 }
 
-pub fn try_store_input<S: Storage, A: Api, Q: Querier>(
+fn try_store_input<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     _env: Env,
     input_values: String,
     task_id: u64,
     input_hash: Binary,
 ) -> HandleResult {
-    let config = config_read(&deps.storage).load()?;
+    let config = CONFIG.load(&deps.storage)?;
 
-    let balance: Balance = serde_json_wasm::from_str(&input_values).unwrap();
-    let raw_owner = deps.api.canonical_address(&balance.owner)?;
-    balances(&mut deps.storage).save(raw_owner.as_slice(), &balance.amount)?;
+    let input: Input = serde_json_wasm::from_str(&input_values)
+        .map_err(|err| StdError::generic_err(err.to_string()))?;
 
-    let callback_msg = PostExecutionMsg {
-        result: String::new(),
-        task_id,
-        input_hash,
+    let player = Millionaire::new(input.name, input.worth, input.other);
+
+    MILLIONAIRES.insert(&mut deps.storage, &input.address, player)?;
+
+    let result = serde_json_wasm::to_string(&InputResponse { status: Success })
+        .map_err(|err| StdError::generic_err(err.to_string()))?;
+
+    let callback_msg = GatewayMsg::Output {
+        outputs: PostExecutionMsg {
+            result,
+            task_id,
+            input_hash,
+        },
     }
     .to_cosmos_msg(config.gateway_hash, config.gateway_address, None)?;
 
-    debug_print("stored balance successfully");
     Ok(HandleResponse {
         messages: vec![callback_msg],
-        log: vec![],
-        data: Some(to_binary(&InputResponse { status: Success })?),
+        log: vec![log("status", "private computation complete")],
+        data: None,
     })
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Comparison {
-    pub address_a: HumanAddr,
-    pub address_b: HumanAddr,
+    pub address_a: String,
+    pub address_b: String,
 }
 
 pub fn try_compare<S: Storage, A: Api, Q: Querier>(
@@ -117,21 +128,31 @@ pub fn try_compare<S: Storage, A: Api, Q: Querier>(
     task_id: u64,
     input_hash: Binary,
 ) -> HandleResult {
-    let config = config_read(&deps.storage).load()?;
+    let config = CONFIG.load(&deps.storage)?;
 
     let comparison: Comparison = serde_json_wasm::from_str(&input_values).unwrap();
 
-    let raw_address_a = deps.api.canonical_address(&comparison.address_a)?;
-    let raw_address_b = deps.api.canonical_address(&comparison.address_b)?;
+    let address_a = &comparison.address_a;
+    let address_b = &comparison.address_b;
 
-    let balance_a = balances_read(&deps.storage).load(raw_address_a.as_slice())?;
-    let balance_b = balances_read(&deps.storage).load(raw_address_b.as_slice())?;
+    let player1 = MILLIONAIRES.get(&deps.storage, address_a).unwrap();
+    let player2 = MILLIONAIRES.get(&deps.storage, address_b).unwrap();
 
-    let result = if balance_a > balance_b {
-        comparison.address_a
+    let resp: RicherResponse;
+
+    if player1 == player2 {
+        resp = RicherResponse {
+            richer: "It's a tie!".to_string(),
+        };
     } else {
-        comparison.address_b
+        let richer = max(player1, player2);
+        resp = RicherResponse {
+            richer: richer.name,
+        };
     };
+
+    let result =
+        serde_json_wasm::to_string(&resp).map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let callback_msg = PostExecutionMsg {
         result: result.to_string(),
@@ -140,25 +161,17 @@ pub fn try_compare<S: Storage, A: Api, Q: Querier>(
     }
     .to_cosmos_msg(config.gateway_hash, config.gateway_address, None)?;
 
-    debug_print("compared balances successfully");
     Ok(HandleResponse {
         messages: vec![callback_msg],
-        log: vec![],
-        data: Some(to_binary(&InputResponse { status: Success })?),
+        log: vec![log("status", "private computation complete")],
+        data: None,
     })
 }
 
-pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> QueryResult {
-    let response = match msg {
-        QueryMsg::Query {} => query_input(deps),
-    };
-    pad_query_result(response, BLOCK_SIZE)
-}
-
-fn query_input<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> QueryResult {
-    let message = "congratulations".to_string();
-    to_binary(&TestResponse { message })
-}
+// fn query_input<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> QueryResult {
+//     let message = "congratulations".to_string();
+//     to_binary(&TestResponse { message })
+// }
 
 #[cfg(test)]
 mod tests {
@@ -181,10 +194,10 @@ mod tests {
         assert_eq!(0, res.messages.len());
 
         // it worked, let's query
-        let res = query(&deps, QueryMsg::Query {});
-        assert!(res.is_ok(), "query failed: {}", res.err().unwrap());
-        let value: TestResponse = from_binary(&res.unwrap()).unwrap();
-        assert_eq!("congratulations", value.message);
+        // let res = query(&deps, QueryMsg::Query {});
+        // assert!(res.is_ok(), "query failed: {}", res.err().unwrap());
+        // let value: TestResponse = from_binary(&res.unwrap()).unwrap();
+        // assert_eq!("congratulations", value.message);
     }
 
     #[ignore]
