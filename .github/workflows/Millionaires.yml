@@ -45,7 +45,7 @@ jobs:
           chmod +x $HOME/.local/bin/sccache
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Install dependencies
-        run: npm --prefix TNLS-Gateways/secret/tests/ install
+        run: npm --prefix TNLS-Samples/millionaires/tests/ install
       - uses: ./.github/actions/install-rust
         with:
           toolchain: stable

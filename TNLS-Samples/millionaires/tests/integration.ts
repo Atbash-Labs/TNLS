@@ -2,7 +2,7 @@ import axios from "axios";
 import { Wallet, SecretNetworkClient, fromUtf8 } from "secretjs";
 import fs from "fs";
 import assert from "assert";
-import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender, Binary, BroadcastMsg } from "../../../TNLS-Gateways/secret/tests//GatewayContract";
+import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender, Binary, BroadcastMsg } from "../../../TNLS-Gateways/secret/tests/GatewayContract";
 import { ecdsaSign } from "secp256k1";
 import { Wallet as EthWallet } from "ethers";
 import { arrayify, SigningKey } from "ethers/lib/utils";
