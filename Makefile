@@ -38,10 +38,14 @@ build-mainnet-reproducible:
 
 .PHONY: compress-wasm
 compress-wasm:
-	cp ./target/wasm32-unknown-unknown/release/*.wasm ./contract.wasm
-	@## The following line is not necessary, may work only on linux (extra size optimization)
-	@# wasm-opt -Os ./contract.wasm -o ./contract.wasm
-	cat ./contract.wasm | gzip -9 > ./contract.wasm.gz
+	cp ./target/wasm32-unknown-unknown/release/*.wasm ./contracts
+	@# The following line is not necessary, may work only on linux (extra size optimization)
+	wasm-opt -Os ./contracts/example_private_contract.wasm -o ./example_private_contract.wasm
+	wasm-opt -Os ./contracts/secret_gateway.wasm -o ./secret_gateway.wasm
+	wasm-opt -Os ./contracts/secret_millionaires.wasm -o ./secret_millionaires.wasm
+	cat ./contracts/example_private_contract.wasm | gzip -9 > ./contracts/example_private_contract.wasm.gz
+	cat ./contracts/secret_gateway.wasm | gzip -9 > ./contracts/secret_gateway.wasm.gz
+	cat ./contracts/secret_millionaires.wasm | gzip -9 > ./contracts/secret_millionaires.wasm.gz
 
 .PHONY: schema
 schema:
