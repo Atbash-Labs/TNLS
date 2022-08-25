@@ -313,12 +313,12 @@ async function initializeAndUploadContract() {
   
   const [scrtRngHash, scrtRngAddress] = await initializeScrtRng(
     client,
-    "tests/scrt-rng/contract.wasm.gz",
+    "../../TNLS-Gateways/secret/tests/scrt-rng/contract.wasm.gz",
   );
   
   const [gatewayHash, gatewayAddress] = await initializeGateway(
     client,
-    "../../secret_gateway.wasm.gz",
+    "../../TNLS-Gateways/secret/contract.wasm.gz",
     scrtRngHash,
     scrtRngAddress,
   );
@@ -330,7 +330,7 @@ async function initializeAndUploadContract() {
 
   const [contractHash, contractAddress] = await initializeContract(
     client,
-    "../../example-private-contract.wasm.gz",
+    "../../TNLS-Gateways/secret/tests/example-private-contract/contract.wasm.gz",
     gatewayHash,
     gatewayAddress,
     gatewayKey,

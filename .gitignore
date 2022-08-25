@@ -7,6 +7,3 @@ config.txt
 */venv
 .vscode
 target/
-contracts/
-*.wasm
-*.wasm.gz

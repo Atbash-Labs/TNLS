@@ -4,46 +4,53 @@ check:
 
 .PHONY: clippy
 clippy:
-	cargo clippy
+	cd ./TNLS-Gateways/secret && cargo clippy
+	cd ./TNLS-Gateways/secret/tests/example-private-contract && cargo clippy
+	cd ./TNLS-Samples/millionaires && cargo clippy
 
 PHONY: test
 test: unit-test
 
 .PHONY: unit-test
-unit-test:
-	cargo unit-test
+unit-test:	
+	cd ./TNLS-Gateways/secret && cargo unit-test
+	cd ./TNLS-Gateways/secret/tests/example-private-contract && cargo unit-test
+	cd ./TNLS-Samples/millionaires && cargo unit-test
 
 # This is a local build with debug-prints activated. Debug prints only show up
 # in the local development chain (see the `start-server` command below)
 # and mainnet won't accept contracts built with the feature enabled.
 .PHONY: build _build
-build: _build compress-wasm
+build: _build
 _build:
-	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features="debug-print"
-
+	cd ./TNLS-Gateways/secret && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features="debug-print" && make compress-wasm
+	cd ./TNLS-Gateways/secret/tests/example-private-contract && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features="debug-print" && make compress-wasm
+	cd ./TNLS-Samples/millionaires && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features="debug-print" && make compress-wasm
+	
 # This is a build suitable for uploading to mainnet.
 # Calls to `debug_print` get removed by the compiler.
 .PHONY: build-mainnet _build-mainnet
 build-mainnet: _build-mainnet compress-wasm
 _build-mainnet:
-	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
+	cd ./TNLS-Gateways/secret && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
+	cd ./TNLS-Gateways/secret/tests/example-private-contract && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
+	cd ./TNLS-Samples/millionaires && RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
 
 # like build-mainnet, but slower and more deterministic
 .PHONY: build-mainnet-reproducible
 build-mainnet-reproducible:
+	cd ./TNLS-Gateways/secret && \
 	docker run --rm -v "$$(pwd)":/contract \
 		--mount type=volume,source="$$(basename "$$(pwd)")_cache",target=/contract/target \
 		--mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
 		enigmampc/secret-contract-optimizer:1.0.9
 
-.PHONY: compress-wasm
-compress-wasm:
-	# Copying contracts to root directory
-	cp ./target/wasm32-unknown-unknown/release/*.wasm ./
-	# Optimizing contract file size
-	@# The following line is not necessary, may work only on linux (extra size optimization)
-	find ./ -name \*.wasm -type f -exec wasm-opt -Os {} -o {} \; 
-	find ./ -name \*.wasm -type f -exec gzip -9kf {} \; 
+# .PHONY: compress-wasm
+# compress-wasm:
+# 	cp ./target/wasm32-unknown-unknown/release/*.wasm ./contract.wasm
+# 	@# The following line is not necessary, may work only on linux (extra size optimization)
+# 	find . -name \contract.wasm -type f -exec wasm-opt -Os {} -o {} \; 
+# 	find . -name \contract.wasm -type f -exec gzip -9kf {} \; 
 
 .PHONY: schema
 schema:
@@ -64,7 +71,7 @@ start-server: # CTRL+C to stop
 # by using `docker exec localsecret secretcli`.
 .PHONY: store-contract-local
 store-contract-local:
-	docker exec localsecret secretcli tx compute store -y --from a --gas 1000000 /root/code/contract.wasm.gz
+	docker exec localsecret secretcli tx compute store -y --from a --gas 2000000 /root/code/contract.wasm.gz
 
 # .PHONY: integration-test
 # integration-test:
@@ -73,4 +80,5 @@ store-contract-local:
 .PHONY: clean
 clean:
 	cargo clean
-	-rm -f ./contracts
+	-rm -f *.wasm
+	-rm -f *.wasm.gz

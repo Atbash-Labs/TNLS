@@ -9,7 +9,6 @@
 //! ### Cargo Features
 //!
 //! * `library`: disable all init/handle/query exports
-#[cfg(not(feature = "library"))]
 pub mod contract;
 pub mod msg;
 pub mod state;
@@ -20,7 +19,7 @@ pub use crate::msg::{
 };
 pub use crate::types::{Payload, Sender};
 
-#[cfg(not(feature = "library"))]
+#[cfg(feature = "contract")]
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use super::contract;

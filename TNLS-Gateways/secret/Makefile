@@ -19,14 +19,14 @@ unit-test:
 .PHONY: build _build
 build: _build compress-wasm
 _build:
-	RUSTFLAGS='-C link-arg=-s' cargo build -p secret_gateway --release --target wasm32-unknown-unknown --features="debug-print"
+	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --features="debug-print"
 
 # This is a build suitable for uploading to mainnet.
 # Calls to `debug_print` get removed by the compiler.
 .PHONY: build-mainnet _build-mainnet
 build-mainnet: _build-mainnet compress-wasm
 _build-mainnet:
-	RUSTFLAGS='-C link-arg=-s' cargo build -p secret_gateway --release --target wasm32-unknown-unknown
+	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown
 
 # like build-mainnet, but slower and more deterministic
 .PHONY: build-mainnet-reproducible
@@ -38,9 +38,9 @@ build-mainnet-reproducible:
 
 .PHONY: compress-wasm
 compress-wasm:
-	cp ../../target/wasm32-unknown-unknown/release/*.wasm ./contract.wasm
+	cp ./target/wasm32-unknown-unknown/release/*.wasm ./contract.wasm
 	@## The following line is not necessary, may work only on linux (extra size optimization)
-	@# wasm-opt -Os ./contract.wasm -o ./contract.wasm
+	wasm-opt -Os ./contract.wasm -o ./contract.wasm
 	cat ./contract.wasm | gzip -9 > ./contract.wasm.gz
 
 .PHONY: schema
@@ -61,6 +61,10 @@ start-server: # CTRL+C to stop
 .PHONY: store-contract-local
 store-contract-local:
 	docker exec secretdev secretcli tx compute store -y --from a --gas 2000000 /root/code/contract.wasm.gz
+
+.PHONY: integration-test
+integration-test:
+	npx ts-node tests/integration.ts
 
 .PHONY: clean
 clean:

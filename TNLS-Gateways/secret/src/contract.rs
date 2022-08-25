@@ -24,6 +24,7 @@ use crate::{
 /// response size
 pub const BLOCK_SIZE: usize = 256;
 
+#[cfg(feature = "contract")]
 ////////////////////////////////////// Init ///////////////////////////////////////
 /// Returns InitResult
 ///
@@ -85,6 +86,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+#[cfg(feature = "contract")]
 ///////////////////////////////////// Handle //////////////////////////////////////
 /// Returns HandleResult
 ///
@@ -426,6 +428,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+#[cfg(feature = "contract")]
 /////////////////////////////////////// Query /////////////////////////////////////
 /// Returns QueryResult
 ///
