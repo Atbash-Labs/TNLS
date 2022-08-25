@@ -24,7 +24,6 @@ use crate::{
 /// response size
 pub const BLOCK_SIZE: usize = 256;
 
-#[cfg(not(feature = "library"))]
 ////////////////////////////////////// Init ///////////////////////////////////////
 /// Returns InitResult
 ///
@@ -86,7 +85,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-#[cfg(not(feature = "library"))]
 ///////////////////////////////////// Handle //////////////////////////////////////
 /// Returns HandleResult
 ///
@@ -428,7 +426,6 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-#[cfg(not(feature = "library"))]
 /////////////////////////////////////// Query /////////////////////////////////////
 /// Returns QueryResult
 ///

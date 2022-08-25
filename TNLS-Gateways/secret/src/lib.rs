@@ -9,6 +9,7 @@
 //! ### Cargo Features
 //!
 //! * `library`: disable all init/handle/query exports
+#[cfg(not(feature = "library"))]
 pub mod contract;
 pub mod msg;
 pub mod state;
