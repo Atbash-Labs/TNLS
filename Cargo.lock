@@ -167,7 +167,7 @@ dependencies = [
  "secret-cosmwasm-std",
  "secret-cosmwasm-storage",
  "secret-toolkit 0.3.0",
- "secret_gateway 0.1.0 (git+ssh://git@github.com/Atbash-Labs/TNLS)",
+ "secret_gateway",
  "serde",
  "serde-json-wasm 0.4.1",
  "snafu",
@@ -504,25 +504,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "secret_gateway"
-version = "0.1.0"
-source = "git+ssh://git@github.com/Atbash-Labs/TNLS#4c83748cbefd8f33abb0f7610cd3709313dc481e"
-dependencies = [
- "base64 0.12.3",
- "chacha20poly1305",
- "schemars",
- "secp256k1",
- "secret-cosmwasm-std",
- "secret-cosmwasm-storage",
- "secret-toolkit 0.3.0",
- "secret-toolkit-crypto",
- "secret-toolkit-incubator",
- "secret-toolkit-serialization",
- "serde",
- "serde-json-wasm 0.4.1",
-]
-
-[[package]]
 name = "secret_millionaires"
 version = "0.1.0"
 dependencies = [
@@ -531,7 +512,7 @@ dependencies = [
  "secret-cosmwasm-std",
  "secret-cosmwasm-storage",
  "secret-toolkit 0.4.0",
- "secret_gateway 0.1.0 (git+ssh://git@github.com/Atbash-Labs/TNLS)",
+ "secret_gateway",
  "serde",
  "serde-json-wasm 0.4.1",
  "snafu",

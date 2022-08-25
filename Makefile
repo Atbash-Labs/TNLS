@@ -34,22 +34,22 @@ build-mainnet-reproducible:
 	docker run --rm -v "$$(pwd)":/contract \
 		--mount type=volume,source="$$(basename "$$(pwd)")_cache",target=/contract/target \
 		--mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-		enigmampc/secret-contract-optimizer:1.0.3
+		enigmampc/secret-contract-optimizer:1.0.9
 
 .PHONY: compress-wasm
 compress-wasm:
+	# Copying contracts to ./contracts directory
 	cp ./target/wasm32-unknown-unknown/release/*.wasm ./contracts
+	# Optimizing contract file size
 	@# The following line is not necessary, may work only on linux (extra size optimization)
-	wasm-opt -Os ./contracts/example_private_contract.wasm -o ./example_private_contract.wasm
-	wasm-opt -Os ./contracts/secret_gateway.wasm -o ./secret_gateway.wasm
-	wasm-opt -Os ./contracts/secret_millionaires.wasm -o ./secret_millionaires.wasm
-	cat ./contracts/example_private_contract.wasm | gzip -9 > ./contracts/example_private_contract.wasm.gz
-	cat ./contracts/secret_gateway.wasm | gzip -9 > ./contracts/secret_gateway.wasm.gz
-	cat ./contracts/secret_millionaires.wasm | gzip -9 > ./contracts/secret_millionaires.wasm.gz
+	find ./contracts -name \*.wasm -type f -exec wasm-opt -Os {} -o {} \; 
+	find ./contracts -name \*.wasm -type f -exec gzip -9kf {} \; 
 
 .PHONY: schema
 schema:
-	cargo run --example schema
+	cd ./TNLS-Gateways/secret && make schema
+	cd ./TNLS-Gateways/secret/tests/example-private-contract && make schema
+	cd ./TNLS-Samples/millionaires && make schema
 
 # Run local development chain with four funded accounts (named a, b, c, and d)
 .PHONY: start-server

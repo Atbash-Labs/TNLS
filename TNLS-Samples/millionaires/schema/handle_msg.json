@@ -11,10 +11,10 @@
         "input": {
           "type": "object",
           "required": [
-            "input"
+            "message"
           ],
           "properties": {
-            "input": {
+            "message": {
               "$ref": "#/definitions/PrivContractHandleMsg"
             }
           }
@@ -42,7 +42,7 @@
           "type": "string"
         },
         "input_hash": {
-          "description": "sha256(input_values)",
+          "description": "SHA256 hash of `input_values`.",
           "allOf": [
             {
               "$ref": "#/definitions/Binary"
@@ -50,11 +50,11 @@
           ]
         },
         "input_values": {
-          "description": "JSON formatted string of decrypted user inputs.",
+          "description": "JSON string of decrypted user inputs.",
           "type": "string"
         },
         "signature": {
-          "description": "Signature of sha256(input_values), signed by the private gateway.",
+          "description": "Signature of `input_hash`, signed by the private gateway.",
           "allOf": [
             {
               "$ref": "#/definitions/Binary"
@@ -62,6 +62,7 @@
           ]
         },
         "task_id": {
+          "description": "Task ID passed along for later verification.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
