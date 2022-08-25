@@ -327,7 +327,7 @@ async function initializeAndUploadContract() {
   
   const [gatewayHash, gatewayAddress] = await initializeGateway(
     client,
-    "../../contracts/secret_gateway.wasm.gz",
+    "../../TNLS-Gateways/secret/contract.wasm.gz",
     scrtRngHash,
     scrtRngAddress,
   );
@@ -337,7 +337,7 @@ async function initializeAndUploadContract() {
 
   const [contractHash, contractAddress] = await initializeContract(
     client,
-    "../../contracts/secret_millionaires.wasm.gz",
+    "contract.wasm.gz",
     gatewayHash,
     gatewayAddress,
     gatewayKey,
@@ -574,9 +574,9 @@ async function test_gateway_tx(
   scrtRngAddress: string,
 ) {
   const gatewayPublicKey = await queryPubKey(client, gatewayHash, gatewayAddress);
-  const mnemonic1 = "announce room limb pattern dry unit scale effort smooth jazz weasel alcohol";
+  const mnemonic1 = "youth then helmet clutch fresh piece raven demand purity wealth core holiday";
   await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["alice", 2, "bob"], mnemonic1);
-  const mnemonic2 = "announce room limb pattern dry unit scale effort smooth jazz weasel alcohol";
+  const mnemonic2 = "destroy typical minor artist frame kitchen elegant pond gaze alien farm protect";
   await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["bob", 2000, "alice"], mnemonic2);
 }
 
