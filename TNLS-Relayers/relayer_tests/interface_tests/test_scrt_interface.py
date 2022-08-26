@@ -135,8 +135,6 @@ def test_transaction_builder_and_logs_getter_good(provider_privkey_address):
     attribute = [attribute for attribute in event['attributes'] if attribute['key'] == "receiver"][0]
     assert attribute['value'] == address
 
-    pass
-
 
 def test_interface_initialization_good(fake_provider):
     # Confirms that interface initialization works

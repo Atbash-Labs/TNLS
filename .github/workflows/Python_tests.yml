@@ -30,7 +30,19 @@ jobs:
         run: |
           touch infura_api_endpoint.txt
           echo "$INFURA_ENDPOINT" > infura_api_endpoint.txt
+      - name: Start LocalSecret
+        working-directory: ./TNLS-Relayers
+        run: |
+          docker pull ghcr.io/scrtlabs/localsecret
+          docker run -it -d -p 9091:9091 -p 26657:26657 -p 1317:1317 -p 5000:5000 --name localsecret ghcr.io/scrtlabs/localsecret
+
+
       - name: Test with pytest
         working-directory: ./TNLS-Relayers
         run: |
           pytest
+      - name: Stop LocalSecret
+        working-directory: ./TNLS-Relayers
+        run: |
+          docker stop localsecret
+          docker rm localsecret
