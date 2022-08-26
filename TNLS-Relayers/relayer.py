@@ -57,11 +57,14 @@ class Relayer:
         for name, (chain_interface, contract_interface, evt_name, _) in self.dict_of_names_to_interfaces.items():
             transactions = chain_interface.get_transactions(contract_interface.address)
             for transaction in transactions:
-                tasks = contract_interface.parse_event_from_txn(evt_name, transaction)
-                for task in tasks:
-                    task_id = task.task_data['task_id']
-                    self.task_ids_to_statuses[task_id] = 'Received from {}'.format(name)
-                self.task_list.extend(tasks)
+                if not isinstance(transaction, list):
+                    transaction = [transaction]
+                for txn in transaction:
+                    tasks = contract_interface.parse_event_from_txn(evt_name, txn)
+                    for task in tasks:
+                        task_id = task.task_data['task_id']
+                        self.task_ids_to_statuses[task_id] = 'Received from {}'.format(name)
+                    self.task_list.extend(tasks)
 
     def route_transaction(self, task: Task):
         """

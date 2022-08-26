@@ -28,9 +28,10 @@ class SCRTInterface(BaseChainInterface):
         signed_tx = self.wallet.key.sign_tx(tx)
         return self.provider.tx.broadcast(signed_tx)
 
-    def get_transactions(self, address):
+    def get_transactions(self, address, height=None):
         block_info = self.provider.tendermint.block_info()
-        height = block_info['block']['header']['height']
+        if height is None:
+            height = block_info['block']['header']['height']
         txns = self.provider.tx.search(options={'message.sender': address, 'tx.minheight': height}).txs
         logs_list = [txn.logs for txn in txns]
         return logs_list

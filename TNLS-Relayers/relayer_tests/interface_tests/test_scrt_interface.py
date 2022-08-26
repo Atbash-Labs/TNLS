@@ -111,7 +111,7 @@ def no_transaction_check_provider(fake_provider, monkeypatch):
 
 
 @pytest.mark.skip(reason='need to get localsecret running on GHA')
-def test_transaction_builder_good(provider_privkey_address):
+def test_transaction_builder_and_logs_getter_good(provider_privkey_address):
     # Tests that transaction signing and sending works as expected
     local_provider, private_key, address = provider_privkey_address
     interface = SCRTInterface(address=address, provider=local_provider, private_key=private_key)
@@ -125,6 +125,16 @@ def test_transaction_builder_good(provider_privkey_address):
     event = [event for event in logs['events'] if event["type"] == "coin_received"][0]
     attribute = [attribute for attribute in event['attributes'] if attribute['key'] == "amount"][0]
     assert attribute['value'] == "1000uscrt"
+    height = broadcast_rcpt.height
+    txns = interface.get_transactions(address=address, height=height)
+    assert len(txns) == 1
+    logs = txns[0][0]
+    event = [event for event in logs.events if event["type"] == "coin_received"][0]
+    attribute = [attribute for attribute in event['attributes'] if attribute['key'] == "amount"][0]
+    assert attribute['value'] == "1000uscrt"
+    attribute = [attribute for attribute in event['attributes'] if attribute['key'] == "receiver"][0]
+    assert attribute['value'] == address
+
     pass
 
 
