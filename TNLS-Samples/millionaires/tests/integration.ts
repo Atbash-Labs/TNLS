@@ -429,12 +429,9 @@ async function gatewayTx(
       address: userPublicAddress,
       name: inputArray[0],
       worth: inputArray[1],
-      other: inputArray[2],
+      match_with: inputArray[2],
     }
   );
-
-  console.log(inputs);
-
   const payload: Payload = {
     data: inputs,
     routing_info: routing_info,
@@ -531,7 +528,7 @@ async function gatewayTx(
   assert(logs["payload"] == ciphertext);
   assert(Buffer.from(logs["payload_hash"], 'base64').byteLength == 32);
   assert(Buffer.from(logs["payload_signature"], 'base64').byteLength == 64);
-  assert(logs["result"] == "{\"status\":\"success\"}");
+  assert(logs["result"] == "{\"status\":\"success\"}" || "{\"richer\":\"bob\"}" || "{\"richer\":\"alice\"}");
   assert(Buffer.from(logs["result_hash"], 'base64').byteLength == 32);
   assert(Buffer.from(logs["result_signature"], 'base64').byteLength == 64);
   assert(Buffer.from(logs["packet_hash"], 'base64').byteLength == 32);
@@ -570,14 +567,15 @@ async function test_gateway_tx(
   gatewayAddress: string,
   contractHash: string,
   contractAddress: string,
-  scrtRngHash: string,
-  scrtRngAddress: string,
 ) {
   const gatewayPublicKey = await queryPubKey(client, gatewayHash, gatewayAddress);
   const mnemonic1 = "youth then helmet clutch fresh piece raven demand purity wealth core holiday";
-  await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["alice", 2, "bob"], mnemonic1);
+  // 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7
+  await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["alice", 5, "bob"], mnemonic1);
   const mnemonic2 = "destroy typical minor artist frame kitchen elegant pond gaze alien farm protect";
-  await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["bob", 2000, "alice"], mnemonic2);
+  // 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca
+  await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["bob", 10, "0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7"], mnemonic2);
+  await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["alice", 580, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca"], mnemonic1);
 }
 
 async function test_keys_can_only_be_made_once(
@@ -623,16 +621,16 @@ async function runTestFunction(
     await initializeAndUploadContract();
     // console.log(`TOTAL GAS USED FOR UPLOAD AND INIT: \x1b[33;1m${gasTotal}\x1b[0m gas\n`)
     
-  await runTestFunction(
-    test_keys_can_only_be_made_once,
-    client,
-    gatewayHash, 
-    gatewayAddress, 
-    contractHash, 
-    contractAddress,
-    scrtRngHash,
-    scrtRngAddress,
-  );
+  // await runTestFunction(
+  //   test_keys_can_only_be_made_once,
+  //   client,
+  //   gatewayHash, 
+  //   gatewayAddress, 
+  //   contractHash, 
+  //   contractAddress,
+  //   scrtRngHash,
+  //   scrtRngAddress,
+  // );
   await runTestFunction(
     test_gateway_tx,
     client,

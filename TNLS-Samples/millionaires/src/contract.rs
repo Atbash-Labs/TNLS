@@ -75,7 +75,7 @@ fn try_handle<S: Storage, A: Api, Q: Querier>(
         "submit_player" => {
             try_store_input(deps, env, msg.input_values, msg.task_id, msg.input_hash)
         }
-        "compare" => try_compare(deps, env, msg.input_values, msg.task_id, msg.input_hash),
+        // "compare" => try_compare(deps, env, msg.input_values, msg.task_id, msg.input_hash),
         _ => Err(StdError::generic_err("invalid handle".to_string())),
     }
 }
@@ -92,13 +92,24 @@ fn try_store_input<S: Storage, A: Api, Q: Querier>(
     let input: Input = serde_json_wasm::from_str(&input_values)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
-    let player = Millionaire::new(input.name, input.worth, input.other);
+    let player = Millionaire::new(
+        // if no name provided, use player address as name
+        input.name.unwrap_or_else(|| input.address.clone()),
+        input.worth,
+        input.match_with.clone(),
+    );
 
     MILLIONAIRES.insert(&mut deps.storage, &input.address, player)?;
 
-    let result = serde_json_wasm::to_string(&InputResponse { status: Success })
-        .map_err(|err| StdError::generic_err(err.to_string()))?;
-
+    let result: String;
+    if MILLIONAIRES.contains(&mut deps.storage, &input.match_with) {
+        let player1 = MILLIONAIRES.get(&deps.storage, &input.address).unwrap();
+        let player2 = MILLIONAIRES.get(&deps.storage, &input.match_with).unwrap();
+        result = try_compare(player1, player2);
+    } else {
+        result = serde_json_wasm::to_string(&InputResponse { status: Success })
+            .map_err(|err| StdError::generic_err(err.to_string()))?;
+    }
     let callback_msg = GatewayMsg::Output {
         outputs: PostExecutionMsg {
             result,
@@ -115,29 +126,7 @@ fn try_store_input<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Comparison {
-    pub address_a: String,
-    pub address_b: String,
-}
-
-pub fn try_compare<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    _env: Env,
-    input_values: String,
-    task_id: u64,
-    input_hash: Binary,
-) -> HandleResult {
-    let config = CONFIG.load(&deps.storage)?;
-
-    let comparison: Comparison = serde_json_wasm::from_str(&input_values).unwrap();
-
-    let address_a = &comparison.address_a;
-    let address_b = &comparison.address_b;
-
-    let player1 = MILLIONAIRES.get(&deps.storage, address_a).unwrap();
-    let player2 = MILLIONAIRES.get(&deps.storage, address_b).unwrap();
-
+pub fn try_compare(player1: Millionaire, player2: Millionaire) -> String {
     let resp: RicherResponse;
 
     if player1 == player2 {
@@ -151,22 +140,62 @@ pub fn try_compare<S: Storage, A: Api, Q: Querier>(
         };
     };
 
-    let result =
-        serde_json_wasm::to_string(&resp).map_err(|err| StdError::generic_err(err.to_string()))?;
-
-    let callback_msg = PostExecutionMsg {
-        result: result.to_string(),
-        task_id,
-        input_hash,
-    }
-    .to_cosmos_msg(config.gateway_hash, config.gateway_address, None)?;
-
-    Ok(HandleResponse {
-        messages: vec![callback_msg],
-        log: vec![log("status", "private computation complete")],
-        data: None,
-    })
+    let result = serde_json_wasm::to_string(&resp).unwrap();
+    result
 }
+
+// #[derive(Serialize, Deserialize)]
+// pub struct Comparison {
+//     pub address_a: String,
+//     pub address_b: String,
+// }
+
+// pub fn try_compare<S: Storage, A: Api, Q: Querier>(
+//     deps: &mut Extern<S, A, Q>,
+//     _env: Env,
+//     input_values: String,
+//     task_id: u64,
+//     input_hash: Binary,
+// ) -> HandleResult {
+//     let config = CONFIG.load(&deps.storage)?;
+
+//     let comparison: Comparison = serde_json_wasm::from_str(&input_values).unwrap();
+
+//     let address_a = &comparison.address_a;
+//     let address_b = &comparison.address_b;
+
+//     let player1 = MILLIONAIRES.get(&deps.storage, address_a).unwrap();
+//     let player2 = MILLIONAIRES.get(&deps.storage, address_b).unwrap();
+
+//     let resp: RicherResponse;
+
+//     if player1 == player2 {
+//         resp = RicherResponse {
+//             richer: "It's a tie!".to_string(),
+//         };
+//     } else {
+//         let richer = max(player1, player2);
+//         resp = RicherResponse {
+//             richer: richer.name,
+//         };
+//     };
+
+//     let result =
+//         serde_json_wasm::to_string(&resp).map_err(|err| StdError::generic_err(err.to_string()))?;
+
+//     let callback_msg = PostExecutionMsg {
+//         result: result.to_string(),
+//         task_id,
+//         input_hash,
+//     }
+//     .to_cosmos_msg(config.gateway_hash, config.gateway_address, None)?;
+
+//     Ok(HandleResponse {
+//         messages: vec![callback_msg],
+//         log: vec![log("status", "private computation complete")],
+//         data: None,
+//     })
+// }
 
 // fn query_input<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> QueryResult {
 //     let message = "congratulations".to_string();

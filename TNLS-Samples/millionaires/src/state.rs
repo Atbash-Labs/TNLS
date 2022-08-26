@@ -24,11 +24,11 @@ pub struct Input {
     // user ethereum address
     pub address: String,
     // user name
-    pub name: String,
+    pub name: Option<String>,
     // user monies
     pub worth: u64,
     // the expected address to be match with
-    pub other: String,
+    pub match_with: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq)]
