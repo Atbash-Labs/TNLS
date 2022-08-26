@@ -110,7 +110,6 @@ def no_transaction_check_provider(fake_provider, monkeypatch):
     return fake_provider
 
 
-# @pytest.mark.skip(reason='need to get localsecret running on GHA')
 def test_transaction_builder_and_logs_getter_good(provider_privkey_address):
     # Tests that transaction signing and sending works as expected
     local_provider, private_key, address = provider_privkey_address
