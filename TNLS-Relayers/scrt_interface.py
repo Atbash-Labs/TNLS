@@ -1,5 +1,6 @@
 import json
 from logging import getLogger, basicConfig, DEBUG, StreamHandler
+from typing import List
 
 from secret_sdk.client.lcd import LCDClient
 from secret_sdk.core.auth.data import TxLog
@@ -81,6 +82,8 @@ class SCRTContract(BaseContractInterface):
         txn = self.construct_txn(function_schema, function_name, *args)
         return self.interface.sign_and_send_transaction(txn)
 
-    def parse_event_from_txn(self, event_name: str, log: TxLog):
-        task_list = [Task(event) for event in log.events if event['type'] == event_name]
+    def parse_event_from_txn(self, event_name: str, logs: List[TxLog]):
+        task_list = []
+        for log in logs:
+            task_list.extend([Task(event) for event in log.events if event['type'] == event_name])
         return task_list
