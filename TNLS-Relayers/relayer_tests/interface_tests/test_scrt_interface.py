@@ -1,7 +1,12 @@
 import sys
+from json import loads
 from logging import WARNING
 
 import pytest
+from secret_sdk.client.localsecret import LocalSecret, LOCAL_MNEMONICS, LOCAL_DEFAULTS
+from secret_sdk.core.bank import MsgSend
+from secret_sdk.core.coins import Coins
+from secret_sdk.key.mnemonic import MnemonicKey
 
 from base_interface import BaseChainInterface
 from scrt_interface import SCRTInterface, SCRTContract
@@ -26,7 +31,26 @@ def provider_privkey_address(monkeypatch):
     for an account on that backend
 
     """
-    pass
+    # FIGURE OUT LOCALSECRET AND LOCAL WALLETS
+    LOCAL_DEFAULTS['secretdev-1'] = {
+        "url": "http://localhost:1317",
+        "chain_id": 'secretdev-1',
+        "gas_prices": {"uscrt": 0.25},
+        "gas_adjustment": 1.0,
+    }
+    LOCAL_MNEMONICS['secretdev-1'] = {
+        "wallet_a": {
+            "mnemonic": "grant rice replace explain federal release fix clever romance raise"
+                        " often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
+
+        }
+
+    }
+    local_provider = LocalSecret(chain_id='secretdev-1')
+    key = MnemonicKey(mnemonic=LOCAL_MNEMONICS['secretdev-1']['wallet_a']['mnemonic'])
+    private_key = key.private_key
+    address = key.acc_address
+    return local_provider, private_key, address
 
 
 @pytest.fixture
@@ -88,6 +112,18 @@ def no_transaction_check_provider(fake_provider, monkeypatch):
 
 def test_transaction_builder_good(provider_privkey_address):
     # Tests that transaction signing and sending works as expected
+    local_provider, private_key, address = provider_privkey_address
+    interface = SCRTInterface(address=address, provider=local_provider, private_key=private_key)
+    fee = interface.wallet.lcd.custom_fees["send"]
+
+    msg = MsgSend(address, address, Coins.from_str("1000uscrt"))
+    signed_tx = interface.wallet.create_tx([msg], fee=fee)
+    broadcast_rcpt = interface.sign_and_send_transaction(signed_tx)
+    logs = loads(broadcast_rcpt.raw_log)[0]
+    assert 'events' in logs
+    event = [event for event in logs['events'] if event["type"] == "coin_received"][0]
+    attribute = [attribute for attribute in event['attributes'] if attribute['key'] == "amount"][0]
+    assert attribute['value'] == "1000uscrt"
     pass
 
 

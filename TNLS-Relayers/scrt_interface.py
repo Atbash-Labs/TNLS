@@ -11,7 +11,10 @@ from base_interface import BaseChainInterface, BaseContractInterface, Task
 class SCRTInterface(BaseChainInterface):
     def __init__(self, private_key="c2cdf0a8b0a83b35ace53f097b5e6e6a0a1f2d40535eff1cf434f52a43d59d8f",
                  address=None, api_url=None, chain_id=None, provider=None, **kwargs):
-        self.private_key = RawKey.from_hex(private_key)
+        if isinstance(private_key, str):
+            self.private_key = RawKey.from_hex(private_key)
+        else:
+            self.private_key = RawKey(private_key)
         if provider is None:
             self.provider = LCDClient(url=api_url, chain_id=chain_id, **kwargs)
         else:
