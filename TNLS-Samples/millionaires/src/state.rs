@@ -1,10 +1,7 @@
 use std::cmp::Ordering;
 
 use cosmwasm_std::{Binary, HumanAddr};
-use secret_toolkit::{
-    serialization::{Bincode2, Json},
-    storage::{Item, Keymap},
-};
+use secret_toolkit::storage::{Item, Keymap};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -39,8 +36,7 @@ pub struct Millionaire {
 }
 
 impl Millionaire {
-    /// Constructor function. Takes input parameters and initializes a struct containing both
-    /// those items
+    /// Constructor function. Takes input parameters and initializes a struct containing the items
     pub fn new(name: String, worth: u64, other: String) -> Millionaire {
         return Millionaire { name, worth, other };
     }

@@ -21,11 +21,14 @@ pub enum HandleMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    // TBD
     Query {},
 }
 
-// We define a custom struct for each query response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct QueryResponse {
+    pub message: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RicherResponse {
     pub richer: String,
