@@ -38,7 +38,7 @@ pub struct Millionaire {
 impl Millionaire {
     /// Constructor function. Takes input parameters and initializes a struct containing the items
     pub fn new(name: String, worth: u64, other: String) -> Millionaire {
-        return Millionaire { name, worth, other };
+        Millionaire { name, worth, other }
     }
 }
 

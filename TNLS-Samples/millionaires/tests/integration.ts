@@ -405,7 +405,7 @@ async function gatewayTx(
   gatewayPublicKey: string, // base64
   inputArray: [string, number, string],
   mnemonic: string,
-) {
+): Promise<string> {
   const wallet = EthWallet.fromMnemonic(mnemonic); 
   const userPublicAddress: string = wallet.address;
   const userPublicKey: string = new SigningKey(wallet.privateKey).compressedPublicKey;
@@ -539,6 +539,8 @@ async function gatewayTx(
 
   gasTotal += tx.gasUsed;
   console.log(`gatewayTx used \x1b[33m${tx.gasUsed}\x1b[0m gas\n`);
+
+  return logs["result"]
 }
 
 async function queryPubKey(
@@ -569,28 +571,20 @@ async function test_gateway_tx(
   contractAddress: string,
 ) {
   const gatewayPublicKey = await queryPubKey(client, gatewayHash, gatewayAddress);
-  const mnemonic1 = "youth then helmet clutch fresh piece raven demand purity wealth core holiday";
-  // 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7
-  await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["alice", 5, "bob"], mnemonic1);
-  const mnemonic2 = "destroy typical minor artist frame kitchen elegant pond gaze alien farm protect";
-  // 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca
-  await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["bob", 10, "0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7"], mnemonic2);
-  await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["alice", 580, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca"], mnemonic1);
-}
+  
+  const mnemonic1 = "youth then helmet clutch fresh piece raven demand purity wealth core holiday"; // 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7
+  const result1 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["alice", 5, "bob"], mnemonic1);
+  assert(result1 == "{\"status\":\"success\"}");
+  
+  const mnemonic2 = "destroy typical minor artist frame kitchen elegant pond gaze alien farm protect";  // 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca
+  const result2 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["bob", 10, "0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7"], mnemonic2);
+  assert(result2 == "{\"richer\":\"bob\"}");
+  
+  const result3 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["alice", 580, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca"], mnemonic1);
+  assert(result3 == "{\"richer\":\"alice\"}");
 
-async function test_keys_can_only_be_made_once(
-  client: SecretNetworkClient,
-  gatewayHash: string,
-  gatewayAddress: string,
-  contractHash: string,
-  contractAddress: string,
-  scrtRngHash: string,
-  scrtRngAddress: string,
-) {
-  console.log('Trying to create gateway keys a second time...')
-  let error = await generateKeys(client, gatewayHash, gatewayAddress, scrtRngHash, scrtRngAddress);
-  console.log(`Error: {${error}}\n`)
-  assert(error == '"msg":"keys have already been created"');
+  const result4 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["bob", 10, "wrong address"], mnemonic2);
+  assert(result4 == "{\"status\":\"success\"}");
 }
 
 async function runTestFunction(
@@ -621,16 +615,6 @@ async function runTestFunction(
     await initializeAndUploadContract();
     // console.log(`TOTAL GAS USED FOR UPLOAD AND INIT: \x1b[33;1m${gasTotal}\x1b[0m gas\n`)
     
-  // await runTestFunction(
-  //   test_keys_can_only_be_made_once,
-  //   client,
-  //   gatewayHash, 
-  //   gatewayAddress, 
-  //   contractHash, 
-  //   contractAddress,
-  //   scrtRngHash,
-  //   scrtRngAddress,
-  // );
   await runTestFunction(
     test_gateway_tx,
     client,

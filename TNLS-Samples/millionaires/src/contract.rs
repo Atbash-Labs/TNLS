@@ -99,15 +99,14 @@ fn try_store_input<S: Storage, A: Api, Q: Querier>(
 
     MILLIONAIRES.insert(&mut deps.storage, &input.address, player)?;
 
-    let result: String;
-    if MILLIONAIRES.contains(&mut deps.storage, &input.match_with) {
+    let result: String = if MILLIONAIRES.contains(&deps.storage, &input.match_with) {
         let player1 = MILLIONAIRES.get(&deps.storage, &input.address).unwrap();
         let player2 = MILLIONAIRES.get(&deps.storage, &input.match_with).unwrap();
-        result = try_compare(player1, player2);
+        try_compare(player1, player2)
     } else {
-        result = serde_json_wasm::to_string(&InputResponse { status: Success })
-            .map_err(|err| StdError::generic_err(err.to_string()))?;
-    }
+        serde_json_wasm::to_string(&InputResponse { status: Success })
+            .map_err(|err| StdError::generic_err(err.to_string()))?
+    };
     let callback_msg = GatewayMsg::Output {
         outputs: PostExecutionMsg {
             result,
@@ -125,21 +124,18 @@ fn try_store_input<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_compare(player1: Millionaire, player2: Millionaire) -> String {
-    let resp: RicherResponse;
-
-    if player1 == player2 {
-        resp = RicherResponse {
+    let resp: RicherResponse = if player1 == player2 {
+        RicherResponse {
             richer: "It's a tie!".to_string(),
-        };
+        }
     } else {
         let richer = max(player1, player2);
-        resp = RicherResponse {
+        RicherResponse {
             richer: richer.name,
-        };
+        }
     };
 
-    let result = serde_json_wasm::to_string(&resp).unwrap();
-    result
+    serde_json_wasm::to_string(&resp).unwrap()
 }
 
 fn query_input<S: Storage, A: Api, Q: Querier>(_deps: &Extern<S, A, Q>) -> QueryResult {
