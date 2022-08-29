@@ -80,7 +80,7 @@ class FakeContractInterface(BaseContractInterface):
         pass
 
     def call_function(self, _function_name, *args):
-        task_dict = loads(str(args[0]))['task_data']
+        task_dict = loads(str(args[0]))
         task_result = int(task_dict['args']) + self.num_to_add
         task_id = task_dict['task_id']
         self.results[task_id] = task_result

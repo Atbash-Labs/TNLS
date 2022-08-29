@@ -132,6 +132,7 @@ class EthContract(BaseContractInterface):
         """
         See base_interface.py for documentation
         """
+        # TODO:  FIGURE OUT NECESSARY PREPROCESSING HERE?
         function = self.get_function(function_name)
         txn = self.interface.create_transaction(function, *args)
         return self.interface.sign_and_send_transaction(txn)
