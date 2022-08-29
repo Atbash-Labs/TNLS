@@ -35,7 +35,8 @@ class SCRTInterface(BaseChainInterface):
             height = block_info['block']['header']['height']
         txns = self.provider.tx.search(options={'message.sender': address, 'tx.minheight': height}).txs
         logs_list = [txn.logs for txn in txns]
-        return logs_list
+        flattened_log_list = [item for sublist in logs_list for item in sublist]
+        return flattened_log_list
 
 
 class SCRTContract(BaseContractInterface):
@@ -85,5 +86,8 @@ class SCRTContract(BaseContractInterface):
     def parse_event_from_txn(self, event_name: str, logs: List[TxLog]):
         task_list = []
         for log in logs:
-            task_list.extend([Task(event) for event in log.events if event['type'] == event_name])
+            events = [event for event in log.events if event['type'] == event_name]
+            for event in events:
+                attr_dict = {attribute['key']: attribute['value'] for attribute in event['attributes']}
+                task_list.append(Task(attr_dict))
         return task_list

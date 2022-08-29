@@ -127,12 +127,30 @@ def test_transaction_builder_and_logs_getter_good(provider_privkey_address):
     height = broadcast_rcpt.height
     txns = interface.get_transactions(address=address, height=height)
     assert len(txns) == 1
-    logs = txns[0][0]
+    logs = txns[0]
     event = [event for event in logs.events if event["type"] == "coin_received"][0]
     attribute = [attribute for attribute in event['attributes'] if attribute['key'] == "amount"][0]
     assert attribute['value'] == "1000uscrt"
     attribute = [attribute for attribute in event['attributes'] if attribute['key'] == "receiver"][0]
     assert attribute['value'] == address
+
+
+def test_basic_txn_processing(provider_privkey_address):
+    local_provider, private_key, address = provider_privkey_address
+    interface = SCRTInterface(address=address, provider=local_provider, private_key=private_key)
+    fee = interface.wallet.lcd.custom_fees["send"]
+
+    msg = MsgSend(address, address, Coins.from_str("1000uscrt"))
+    signed_tx = interface.wallet.create_tx([msg], fee=fee)
+    broadcast_rcpt = interface.sign_and_send_transaction(signed_tx)
+    height = broadcast_rcpt.height
+    txns = interface.get_transactions(address=address, height=height)
+    contract = SCRTContract(interface, address, "{}")
+    task_list = contract.parse_event_from_txn('coin_received', txns)
+    assert len(task_list) == 1
+    task = task_list[0]
+    assert task.task_destination_network is None
+    assert task.task_data == {"receiver": str(address), "amount": "1000uscrt"}
 
 
 def test_interface_initialization_good(fake_provider):
