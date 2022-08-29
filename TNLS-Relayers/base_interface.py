@@ -38,7 +38,7 @@ class Task:
         self.task_data = task_dict
 
     def __str__(self):
-        return json.dumps(to_dict(self.__dict__))
+        return json.dumps(to_dict(self.task_data))
 
     def __repr__(self):
         return self.__str__()
