@@ -86,7 +86,7 @@ def no_transaction_check_provider(fake_provider, monkeypatch):
 
     class FakeTxn:
         def __init__(self, log):
-            self.logs = log
+            self.logs = [log]
 
     class FakeSearchResults:
         def __init__(self):
@@ -101,7 +101,7 @@ def no_transaction_check_provider(fake_provider, monkeypatch):
             self.txs = []
             txs = FakeSearchResults().txs
             for tx in txs:
-                if tx.logs['from'] == kwargs['options']['message.sender']:
+                if tx.logs[0]['from'] == kwargs['options']['message.sender']:
                     self.txs.append(tx)
             return self
 
