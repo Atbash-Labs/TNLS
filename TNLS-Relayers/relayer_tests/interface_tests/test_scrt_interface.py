@@ -303,18 +303,27 @@ def fake_interface_provider():
 def test_basic_txn_construction(fake_interface_provider, contract_schema_for_construction):
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
-    assert fake_contract.call_function("function_1", 1, 2) == {'contract_address': '0x1',
-                                                               'handle_msg': {'function_1': {'a': 1, 'b': 2}},
-                                                               'sender_address': '0x0'}
+    assert fake_contract.call_function("function_1", [1, 2]) == {'contract_address': '0x1',
+                                                                 'handle_msg': {'function_1': {'a': 1, 'b': 2}},
+                                                                 'sender_address': '0x0'}
+
+
+def test_dict_txn_construction(fake_interface_provider, contract_schema_for_construction):
+    fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
+                                 interface=fake_interface_provider())
+    assert fake_contract.call_function("function_1", {'b': 2, 'a': 1}) == {'contract_address': '0x1',
+                                                                           'handle_msg': {
+                                                                               'function_1': {'a': 1, 'b': 2}},
+                                                                           'sender_address': '0x0'}
 
 
 def test_too_many_args(fake_interface_provider, contract_schema_for_construction, caplog):
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     with caplog.at_level(WARNING):
-        assert fake_contract.call_function("function_1", 1, 2, 3) == {'contract_address': '0x1',
-                                                                      'handle_msg': {'function_1': {'a': 1, 'b': 2}},
-                                                                      'sender_address': '0x0'}
+        assert fake_contract.call_function("function_1", [1, 2, 3]) == {'contract_address': '0x1',
+                                                                        'handle_msg': {'function_1': {'a': 1, 'b': 2}},
+                                                                        'sender_address': '0x0'}
     assert "Expected 2 arguments but got 3" in caplog.text
 
 
@@ -322,8 +331,32 @@ def test_too_few_args(fake_interface_provider, contract_schema_for_construction,
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     with caplog.at_level(WARNING):
-        assert fake_contract.call_function("function_2", 1, 2) == {'contract_address': '0x1',
-                                                                   'handle_msg': {
-                                                                       'function_2': {'a': 1, 'b': 2, 'c': ''}},
-                                                                   'sender_address': '0x0'}
+        assert fake_contract.call_function("function_2", [1, 2]) == {'contract_address': '0x1',
+                                                                     'handle_msg': {
+                                                                         'function_2': {'a': 1, 'b': 2, 'c': ''}},
+                                                                     'sender_address': '0x0'}
     assert "Expected 3 arguments but got 2" in caplog.text
+
+
+def test_dict_args_too_many(fake_interface_provider, contract_schema_for_construction, caplog):
+    fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
+                                 interface=fake_interface_provider())
+    with caplog.at_level(WARNING):
+        assert fake_contract.call_function("function_2", {"a": 1, "b": 2}) == {'contract_address': '0x1',
+                                                                               'handle_msg': {
+                                                                                   'function_2': {'a': 1, 'b': 2,
+                                                                                                  'c': ''}},
+                                                                               'sender_address': '0x0'}
+    assert "Expected ['a', 'b', 'c'] arguments but got ['a', 'b']" in caplog.text
+
+
+def test_dict_args_too_few(fake_interface_provider, contract_schema_for_construction, caplog):
+    fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
+                                 interface=fake_interface_provider())
+    with caplog.at_level(WARNING):
+        assert fake_contract.call_function("function_1", {"a": 1, "b": 2, "c": 3}) == {'contract_address': '0x1',
+                                                                                       'handle_msg': {
+                                                                                           'function_1': {'a': 1,
+                                                                                                          'b': 2, }},
+                                                                                       'sender_address': '0x0'}
+    assert "Expected ['a', 'b'] arguments but got ['a', 'b', 'c']" in caplog.text

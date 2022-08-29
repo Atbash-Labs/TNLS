@@ -57,18 +57,30 @@ class SCRTContract(BaseContractInterface):
         return self.abi[function_name]
         pass
 
-    def construct_txn(self, function_schema, function_name, *args):
+    def construct_txn(self, function_schema, function_name, args):
         # IS THIS CORRECT?
         arg_keys = function_schema['args']
-        arg_values = [arg for arg in args]
-        if len(arg_keys) != len(arg_values):
-            self.logger.warning(f"Arguments do not match schema."
-                                f"  Expected {len(arg_keys)} arguments but got {len(arg_values)}")
-            if len(arg_keys) > len(arg_values):
-                arg_values += [""] * (len(arg_keys) - len(arg_values))
-            else:
-                arg_values = arg_values[:len(arg_keys)]
-        arg_dict = dict(zip(arg_keys, arg_values))
+        arg_dict = dict()
+        if isinstance(args, list):
+            arg_values = [arg for arg in args]
+            if len(arg_keys) != len(arg_values):
+                self.logger.warning(f"Arguments do not match schema."
+                                    f"  Expected {len(arg_keys)} arguments but got {len(arg_values)}")
+                if len(arg_keys) > len(arg_values):
+                    arg_values += [""] * (len(arg_keys) - len(arg_values))
+                else:
+                    arg_values = arg_values[:len(arg_keys)]
+            arg_dict = dict(zip(arg_keys, arg_values))
+        elif isinstance(args, dict):
+            arg_dict = args
+            if set(arg_keys) != set(args.keys()):
+                self.logger.warning(f"Arguments do not match schema."
+                                    f"  Expected {sorted(list(arg_keys))} arguments but got {sorted(list(args.keys()))}")
+                if set(arg_keys) > set(args.keys()):
+                    for key in arg_keys:
+                        if key not in args.keys():
+                            arg_dict[key] = ""
+                arg_dict = {key: arg_dict[key] for key in arg_keys}
         function_schema = {function_name: arg_dict}
         txn = self.interface.wasm.contract_execute_msg(
             sender_address=self.interface.address,
@@ -79,8 +91,12 @@ class SCRTContract(BaseContractInterface):
         return txn
 
     def call_function(self, function_name, *args):
+        # TODO:  FIGURE OUT ARGS PROCESSING HERE
         function_schema = self.get_function(function_name)
-        txn = self.construct_txn(function_schema, function_name, *args)
+        if len(args) == 1:
+            args = args[0]
+        args = json.loads(json.dumps(args))
+        txn = self.construct_txn(function_schema, function_name, args)
         return self.interface.sign_and_send_transaction(txn)
 
     def parse_event_from_txn(self, event_name: str, logs: List[TxLog]):
