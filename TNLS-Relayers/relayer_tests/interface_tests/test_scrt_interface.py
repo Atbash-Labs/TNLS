@@ -1,11 +1,13 @@
-import sys
+import base64
 from json import loads
 from logging import WARNING
 
 import pytest
 from secret_sdk.client.localsecret import LocalSecret, LOCAL_MNEMONICS, LOCAL_DEFAULTS
+from secret_sdk.core.auth.data.tx import StdFee
 from secret_sdk.core.bank import MsgSend
 from secret_sdk.core.coins import Coins
+from secret_sdk.core.wasm import MsgStoreCode, MsgInstantiateContract
 from secret_sdk.key.mnemonic import MnemonicKey
 
 from base_interface import BaseChainInterface
@@ -219,7 +221,7 @@ def test_correct_txn_filtering_many(no_transaction_check_provider, filter_out_ha
 
 
 @pytest.fixture
-def address_and_abi_of_contract(provider_privkey_address):
+def address_and_abi_of_contract(provider_privkey_address, request):
     """
     Creates a contract with the below code (scrtified)
     , deploys it, and returns it, it's address, and ABI, and code_hash.
@@ -243,29 +245,51 @@ def address_and_abi_of_contract(provider_privkey_address):
     #     }
     #
     # }
+    provider, privkey, address = provider_privkey_address
+    contract_file = open(f"{request.path.parent}/test_scrt_contract/contract.wasm", "rb")
+    file_bytes = base64.b64encode(contract_file.read()).decode()
+    store_code = MsgStoreCode(sender=address, wasm_byte_code=file_bytes, source="", builder="", )
+    test_1 = provider.wallets["wallet_a"]
+    print(test_1)
+    store_code_tx = test_1.create_and_sign_tx(msgs=[store_code],
+                                              fee=StdFee(2100000, amount=Coins.from_str("60000uscrt")))
+    store_code_tx_result = provider.tx.broadcast(store_code_tx)
+    print(store_code_tx_result)
 
-    pass
+    code_id = store_code_tx_result.logs[0].events_by_type["store_code"]["code_id"][0]
+    instantiate = MsgInstantiateContract(
+        address,
+        address,
+        code_id,
+        label="test",
+        init_funds=Coins.from_str("100000uscrt"),
+        init_msg={},
+    )
+    instantiate_tx = test_1.create_and_sign_tx(msgs=[instantiate],
+                                               fee=StdFee(2100000, amount=Coins.from_str("60000uscrt")))
+    instantiate_tx_result = provider.tx.broadcast(instantiate_tx)
+    print(instantiate_tx_result)
+    contract_address = instantiate_tx_result.logs[0].events_by_type[
+        "instantiate_contract"
+    ]["contract_address"][0]
+    return contract_address
 
 
-@pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
 def test_basic_contract_init(provider_privkey_address, address_and_abi_of_contract):
     # Confirms that the scrtContract interface initializes correctly
     pass
 
 
-@pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
 def test_event_getter(provider_privkey_address, address_and_abi_of_contract):
     # Confirms that the scrtContract interface correctly retrieves events
     pass
 
 
-@pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
 def test_function_call(provider_privkey_address, address_and_abi_of_contract):
     # Confirms that the scrtContract interface correctly calls functions
     pass
 
 
-@pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
 def test_function_call_bad_addr(provider_privkey_address, address_and_abi_of_contract):
     # Confirms that the scrtContract interface correctly fails when the contract address is bad
     pass

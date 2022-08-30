@@ -33,6 +33,8 @@ class Task:
     def __init__(self, task_dict):
         if 'task_destination_network' in task_dict:
             self.task_destination_network = task_dict['task_destination_network']
+        elif 'routing_info' in task_dict:
+            self.task_destination_network = task_dict['routing_info']
         else:
             self.task_destination_network = None
         self.task_data = task_dict
