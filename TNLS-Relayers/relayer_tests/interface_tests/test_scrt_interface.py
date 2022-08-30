@@ -250,7 +250,7 @@ def address_and_abi_of_contract(provider_privkey_address, request):
     file_bytes = base64.b64encode(contract_file.read()).decode()
     store_code = MsgStoreCode(sender=address, wasm_byte_code=file_bytes, source="", builder="", )
     test_1 = provider.wallets["wallet_a"]
-    print(test_1)
+    print(test_1.account_number(), test_1.sequence())
     store_code_tx = test_1.create_and_sign_tx(msgs=[store_code],
                                               fee=StdFee(2100000, amount=Coins.from_str("60000uscrt")))
     store_code_tx_result = provider.tx.broadcast(store_code_tx)
