@@ -1,13 +1,10 @@
-import base64
-from json import loads
+from json import load, loads
 from logging import WARNING
 
 import pytest
 from secret_sdk.client.localsecret import LocalSecret, LOCAL_MNEMONICS, LOCAL_DEFAULTS
-from secret_sdk.core.auth.data.tx import StdFee
 from secret_sdk.core.bank import MsgSend
 from secret_sdk.core.coins import Coins
-from secret_sdk.core.wasm import MsgStoreCode, MsgInstantiateContract
 from secret_sdk.key.mnemonic import MnemonicKey
 
 from base_interface import BaseChainInterface
@@ -219,60 +216,16 @@ def test_correct_txn_filtering_many(no_transaction_check_provider, filter_out_ha
     assert filter_out_hashes(interface.get_transactions(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag')) == [
         '0x5', '0x6', '0x7']
 
-
 @pytest.fixture
 def address_and_abi_of_contract(provider_privkey_address, request):
     """
     Creates a contract with the below code (scrtified)
     , deploys it, and returns it, it's address, and ABI, and code_hash.
     """
-
-    #
-    # pragma solidity^0.5.3;
-    #
-    # contract Foo {
-    #
-    #     string public bar;
-    #     event barred(string _bar);
-    #
-    #     constructor() public {
-    #         bar = "hello world";
-    #     }
-    #
-    #     function setBar(string memory _bar) public {
-    #         bar = _bar;
-    #         emit barred(_bar);
-    #     }
-    #
-    # }
-    provider, privkey, address = provider_privkey_address
-    contract_file = open(f"{request.path.parent}/test_scrt_contract/contract.wasm", "rb")
-    file_bytes = base64.b64encode(contract_file.read()).decode()
-    store_code = MsgStoreCode(sender=address, wasm_byte_code=file_bytes, source="", builder="", )
-    test_1 = provider.wallets["wallet_a"]
-    print(test_1.account_number(), test_1.sequence())
-    store_code_tx = test_1.create_and_sign_tx(msgs=[store_code],
-                                              fee=StdFee(2100000, amount=Coins.from_str("60000uscrt")))
-    store_code_tx_result = provider.tx.broadcast(store_code_tx)
-    print(store_code_tx_result)
-
-    code_id = store_code_tx_result.logs[0].events_by_type["store_code"]["code_id"][0]
-    instantiate = MsgInstantiateContract(
-        address,
-        address,
-        code_id,
-        label="test",
-        init_funds=Coins.from_str("100000uscrt"),
-        init_msg={},
-    )
-    instantiate_tx = test_1.create_and_sign_tx(msgs=[instantiate],
-                                               fee=StdFee(2100000, amount=Coins.from_str("60000uscrt")))
-    instantiate_tx_result = provider.tx.broadcast(instantiate_tx)
-    print(instantiate_tx_result)
-    contract_address = instantiate_tx_result.logs[0].events_by_type[
-        "instantiate_contract"
-    ]["contract_address"][0]
-    return contract_address
+    contract_address = None  # GET FROM FILE!
+    with open(f'{request.path.parent}/test_scrt_contract/scrt_contract_abi.json') as f:
+        abi = load(f)
+    return contract_address, abi
 
 
 def test_basic_contract_init(provider_privkey_address, address_and_abi_of_contract):

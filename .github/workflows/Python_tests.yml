@@ -37,6 +37,12 @@ jobs:
           docker run -it -d -p 9091:9091 -p 26657:26657 -p 1317:1317 -p 5000:5000 --name localsecret ghcr.io/scrtlabs/localsecret
           sleep 60
 
+      - name: Install secretcli
+        run: |
+          wget https://github.com/scrtlabs/SecretNetwork/releases/download/v1.3.1/secretcli-Linux
+          chmod +x secretcli-Linux
+          sudo mv secretcli-Linux /usr/local/bin/secretcli
+
 
       - name: Test with pytest
         working-directory: ./TNLS-Relayers
