@@ -46,6 +46,7 @@ jobs:
       - name: Configure Secretcli to work with localSecret
         working-directory: ./TNLS-Relayers/relayer_tests/interface_tests
         run: |
+          chmod +x ./configure_secretcli.sh
           ./configure_secretcli.sh
 
 
