@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'TNLS-Relayers/**'
+      - '.github/workflows/Python_tests.yml'
 
 
 jobs:
