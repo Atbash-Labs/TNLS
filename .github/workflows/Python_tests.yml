@@ -43,6 +43,11 @@ jobs:
           chmod +x secretcli-Linux
           sudo mv secretcli-Linux /usr/local/bin/secretcli
 
+      - name: Configure Secretcli to work with localSecret
+        working-directory: ./TNLS-Relayers/relayer_tests/interface_tests
+        run: |
+          ./configure_secretcli.sh
+
 
       - name: Test with pytest
         working-directory: ./TNLS-Relayers
