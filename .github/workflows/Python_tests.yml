@@ -49,6 +49,11 @@ jobs:
         run: |
           chmod +x ./configure_secretcli.sh
           ./configure_secretcli.sh
+      - name: Upload contract to localSecret
+        working-directory: ./TNLS-Relayers/relayer_tests/interface_tests/test_scrt_contract
+        run: |
+          chmod +x ./upload_scrt_contract.sh
+          SGX_MODE=SW ./upload_scrt_contract.sh
 
 
       - name: Test with pytest

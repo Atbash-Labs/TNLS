@@ -82,12 +82,13 @@ class SCRTContract(BaseContractInterface):
                             arg_dict[key] = ""
                 arg_dict = {key: arg_dict[key] for key in arg_keys}
         function_schema = {function_name: arg_dict}
-        txn = self.interface.wasm.contract_execute_msg(
+        txn_msgs = self.interface.provider.wasm.contract_execute_msg(
             sender_address=self.interface.address,
             contract_address=self.address,
             handle_msg=function_schema,
 
         )
+        txn = self.interface.wallet.create_tx(msgs=[txn_msgs])
         return txn
 
     def call_function(self, function_name, *args):

@@ -1,4 +1,4 @@
-from json import load, loads
+from json import loads
 from logging import WARNING
 
 import pytest
@@ -222,30 +222,48 @@ def address_and_abi_of_contract(provider_privkey_address, request):
     Creates a contract with the below code (scrtified)
     , deploys it, and returns it, it's address, and ABI, and code_hash.
     """
-    contract_address = None  # GET FROM FILE!
+    with open(f'{request.path.parent}/test_scrt_contract/contract_address.txt') as f:
+        addr_str = f.read()
+        contract_address = addr_str.split(":")[1].strip()
     with open(f'{request.path.parent}/test_scrt_contract/scrt_contract_abi.json') as f:
-        abi = load(f)
+        abi = f.read()
     return contract_address, abi
 
 
 def test_basic_contract_init(provider_privkey_address, address_and_abi_of_contract):
-    # Confirms that the scrtContract interface initializes correctly
-    pass
+    provider, privkey, address = provider_privkey_address
+    contract_addr, abi = address_and_abi_of_contract
+    interface = SCRTInterface(address=address, provider=provider, private_key=privkey)
+    contract = SCRTContract(address=contract_addr, abi=abi, interface=interface)
+    assert contract.address == contract_addr
+    assert contract.abi['handle']['args'] == ['input']
+    assert set(contract.abi.keys()) == {'handle'}
 
 
-def test_event_getter(provider_privkey_address, address_and_abi_of_contract):
-    # Confirms that the scrtContract interface correctly retrieves events
-    pass
-
-
-def test_function_call(provider_privkey_address, address_and_abi_of_contract):
-    # Confirms that the scrtContract interface correctly calls functions
-    pass
+def test_function_call_and_event_getter(provider_privkey_address, address_and_abi_of_contract):
+    provider, privkey, address = provider_privkey_address
+    contract_addr, abi = address_and_abi_of_contract
+    interface = SCRTInterface(address=address, provider=provider, private_key=privkey)
+    contract = SCRTContract(address=contract_addr, abi=abi, interface=interface)
+    resp = contract.call_function('handle', ['test_call'])
+    height = resp.height
+    txns = interface.get_transactions(address=address, height=height)
+    task_list = contract.parse_event_from_txn('wasm', txns)
+    assert (len(task_list) == 1)
+    task = task_list[0]
+    assert task.task_destination_network == "ethereum"
+    assert task.task_data['result'] == 'test_call'
 
 
 def test_function_call_bad_addr(provider_privkey_address, address_and_abi_of_contract):
     # Confirms that the scrtContract interface correctly fails when the contract address is bad
-    pass
+    provider, privkey, address = provider_privkey_address
+    contract_addr, abi = address_and_abi_of_contract
+    interface = SCRTInterface(address=address, provider=provider, private_key=privkey)
+    contract = SCRTContract(address=address, abi=abi, interface=interface)
+    with pytest.raises(Exception) as e:
+        contract.call_function('handle', ['test_call'])
+    assert 'contract not found' in str(e.value)
 
 
 @pytest.fixture
