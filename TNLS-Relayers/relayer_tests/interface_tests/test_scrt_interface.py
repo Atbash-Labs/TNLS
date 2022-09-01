@@ -279,11 +279,22 @@ def fake_interface_provider():
         def __init__(self):
             self.contract_execute_msg = dict
 
+    class FakeProvider:
+        def __init__(self):
+            self.wasm = FakeWasm()
+
+    class FakeWallet:
+        def create_tx(self, msgs=None):
+            if msgs is None:
+                return 1
+            return msgs[0]
+
     class FakeInterfaceProvider(BaseChainInterface):
         def __init__(self):
             self.address = "0x0"
-            self.wasm = FakeWasm()
-            self.wasm.contract_execute_msg = dict
+            self.provider = FakeProvider()
+            self.provider.wasm.contract_execute_msg = dict
+            self.wallet = FakeWallet()
             pass
 
         def get_transactions(self, _address):
