@@ -108,7 +108,6 @@ class SCRTContract(BaseContractInterface):
                 the given function_schema, function name and args
 
         """
-        # IS THIS CORRECT?
         arg_keys = function_schema['args']
         arg_dict = dict()
         if isinstance(args, list):

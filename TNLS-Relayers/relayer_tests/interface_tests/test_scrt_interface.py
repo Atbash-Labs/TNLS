@@ -134,7 +134,8 @@ def test_transaction_builder_and_logs_getter_good(provider_privkey_address):
     assert attribute['value'] == address
 
 
-def test_basic_txn_processing(provider_privkey_address):
+def test_basic_txn_processing_with_evt_parsing(provider_privkey_address):
+    # Confirms that basic transaction processing works with event parsing
     local_provider, private_key, address = provider_privkey_address
     interface = SCRTInterface(address=address, provider=local_provider, private_key=private_key)
     fee = interface.wallet.lcd.custom_fees["send"]
@@ -219,8 +220,7 @@ def test_correct_txn_filtering_many(no_transaction_check_provider, filter_out_ha
 @pytest.fixture
 def address_and_abi_of_contract(provider_privkey_address, request):
     """
-    Creates a contract with the below code (scrtified)
-    , deploys it, and returns it, it's address, and ABI, and code_hash.
+    Pulls address and ABI info from saved files for testing
     """
     with open(f'{request.path.parent}/test_scrt_contract/contract_address.txt') as f:
         addr_str = f.read()
@@ -231,6 +231,7 @@ def address_and_abi_of_contract(provider_privkey_address, request):
 
 
 def test_basic_contract_init(provider_privkey_address, address_and_abi_of_contract):
+    # Confirms that the contract initialization works
     provider, privkey, address = provider_privkey_address
     contract_addr, abi = address_and_abi_of_contract
     interface = SCRTInterface(address=address, provider=provider, private_key=privkey)
@@ -241,6 +242,7 @@ def test_basic_contract_init(provider_privkey_address, address_and_abi_of_contra
 
 
 def test_function_call_and_event_getter(provider_privkey_address, address_and_abi_of_contract):
+    # Confirms that calling functions on chain and parsing events works
     provider, privkey, address = provider_privkey_address
     contract_addr, abi = address_and_abi_of_contract
     interface = SCRTInterface(address=address, provider=provider, private_key=privkey)
@@ -268,6 +270,10 @@ def test_function_call_bad_addr(provider_privkey_address, address_and_abi_of_con
 
 @pytest.fixture
 def contract_schema_for_construction(request):
+    """
+    Provides a sample contract schema
+
+    """
     sample_abi_path = f'{request.path.parent}/sample_scrt_abi.json'
     with open(sample_abi_path) as f:
         return f.read()
@@ -275,6 +281,7 @@ def contract_schema_for_construction(request):
 
 @pytest.fixture
 def fake_interface_provider():
+    # Fixture providing a fake interface for testing txn construction
     class FakeWasm:
         def __init__(self):
             self.contract_execute_msg = dict
@@ -307,6 +314,7 @@ def fake_interface_provider():
 
 
 def test_basic_txn_construction(fake_interface_provider, contract_schema_for_construction):
+    # Confirms that the list-based transaction construction works
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     assert fake_contract.call_function("function_1", [1, 2]) == {'contract_address': '0x1',
@@ -315,6 +323,7 @@ def test_basic_txn_construction(fake_interface_provider, contract_schema_for_con
 
 
 def test_dict_txn_construction(fake_interface_provider, contract_schema_for_construction):
+    # Confirms that the dict-based transaction construction works
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     assert fake_contract.call_function("function_1", {'b': 2, 'a': 1}) == {'contract_address': '0x1',
@@ -324,6 +333,7 @@ def test_dict_txn_construction(fake_interface_provider, contract_schema_for_cons
 
 
 def test_too_many_args(fake_interface_provider, contract_schema_for_construction, caplog):
+    # Confirms that the list-based transaction construction correctly processes too many args
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     with caplog.at_level(WARNING):
@@ -334,6 +344,7 @@ def test_too_many_args(fake_interface_provider, contract_schema_for_construction
 
 
 def test_too_few_args(fake_interface_provider, contract_schema_for_construction, caplog):
+    # Confirms that the list-based transaction construction correctly processes too few args
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     with caplog.at_level(WARNING):
@@ -345,6 +356,7 @@ def test_too_few_args(fake_interface_provider, contract_schema_for_construction,
 
 
 def test_dict_args_too_many(fake_interface_provider, contract_schema_for_construction, caplog):
+    # Confirms that the dict-based transaction construction correctly processes too many args
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     with caplog.at_level(WARNING):
@@ -357,6 +369,7 @@ def test_dict_args_too_many(fake_interface_provider, contract_schema_for_constru
 
 
 def test_dict_args_too_few(fake_interface_provider, contract_schema_for_construction, caplog):
+    # Confirms that the dict-based transaction construction correctly processes too few args
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     with caplog.at_level(WARNING):
