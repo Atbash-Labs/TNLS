@@ -25,20 +25,20 @@ pub struct Input {
     // user monies
     pub worth: u64,
     // the expected address to be match with
-    pub match_with: String,
+    pub match_addr: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq)]
 pub struct Millionaire {
     pub name: String,
     pub worth: u64,
-    pub other: String,
+    pub match_addr: String,
 }
 
 impl Millionaire {
     /// Constructor function. Takes input parameters and initializes a struct containing the items
-    pub fn new(name: String, worth: u64, other: String) -> Millionaire {
-        Millionaire { name, worth, other }
+    pub fn new(name: String, worth: u64, match_addr: String) -> Millionaire {
+        Millionaire { name, worth, match_addr }
     }
 }
 

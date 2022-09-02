@@ -90,26 +90,24 @@ fn try_store_input<S: Storage, A: Api, Q: Querier>(
     let input: Input = serde_json_wasm::from_str(&input_values)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
-    let input_name = input.name.unwrap_or_else(|| input.address.clone());
-
     let player = Millionaire::new(
         // if no name provided, use player address as name
-        input_name.clone(),
+        input.name.unwrap_or_else(|| input.address.clone()),
         input.worth,
-        input.match_with.clone(),
+        input.match_addr.clone(),
     );
 
     MILLIONAIRES.insert(&mut deps.storage, &input.address, player)?;
 
-    let result: String = if MILLIONAIRES.contains(&deps.storage, &input.match_with)
-        && input_name
+    let result: String = if MILLIONAIRES.contains(&deps.storage, &input.match_addr)
+        && input.address
             == MILLIONAIRES
-                .get(&deps.storage, &input.match_with)
+                .get(&deps.storage, &input.match_addr)
                 .unwrap()
-                .other
+                .match_addr
     {
         let player1 = MILLIONAIRES.get(&deps.storage, &input.address).unwrap();
-        let player2 = MILLIONAIRES.get(&deps.storage, &input.match_with).unwrap();
+        let player2 = MILLIONAIRES.get(&deps.storage, &input.match_addr).unwrap();
         try_compare(player1, player2)
     } else {
         serde_json_wasm::to_string(&InputResponse { status: Success })
@@ -133,18 +131,17 @@ fn try_store_input<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_compare(player1: Millionaire, player2: Millionaire) -> String {
-    // let a = player1.name.clone();
-    // let b = player2.name.clone();
+    let a = player1.name.clone();
+    let b = player2.name.clone();
 
     let resp: RicherResponse = if player1 == player2 {
         RicherResponse {
-            richer: "It's a tie!".to_string(),
+            result: "It's a tie!".to_string(),
         }
     } else {
         let richer = max(player1, player2);
         RicherResponse {
-            richer: richer.name,
-            // richer: format!("The richer of {} and {} is {}", a, b, richer.name),
+            result: format!("The richer of {} and {} is {}", a, b, richer.name),
         }
     };
 
@@ -195,7 +192,7 @@ mod tests {
         init(&mut deps, env.clone(), init_msg).unwrap();
 
         let message = PrivContractHandleMsg {
-            input_values: "{\"address\":\"0x249C8753A9CB2a47d97A11D94b2179023B7aBCca\",\"name\":\"bob\",\"worth\":2000,\"match_with\":\"0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7\"}".to_string(),
+            input_values: "{\"address\":\"0x249C8753A9CB2a47d97A11D94b2179023B7aBCca\",\"name\":\"bob\",\"worth\":2000,\"match_addr\":\"0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7\"}".to_string(),
             handle: "submit_player".to_string(),
             task_id: 1,
             input_hash: to_binary(&"".to_string()).unwrap(),
@@ -210,19 +207,19 @@ mod tests {
 
     #[test]
     fn compare() {
-        let player1 = Millionaire::new("alice".to_string(), 1000000, "bob".to_string());
-        let player2 = Millionaire::new("bob".to_string(), 2000000, "alice".to_string());
+        let player1 = Millionaire::new("Alice".to_string(), 1000000, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca".to_string());
+        let player2 = Millionaire::new("Bob".to_string(), 2000000, "0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7".to_string());
         let response = try_compare(player1, player2);
-        assert_eq!("{\"richer\":\"bob\"}", response);
+        assert_eq!("{\"result\":\"The richer of Alice and Bob is Bob\"}", response);
 
-        let player1 = Millionaire::new("alice".to_string(), 5000000, "bob".to_string());
-        let player2 = Millionaire::new("bob".to_string(), 2000000, "alice".to_string());
+        let player1 = Millionaire::new("Alice".to_string(), 5000000, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca".to_string());
+        let player2 = Millionaire::new("Bob".to_string(), 2000000, "0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7".to_string());
         let response = try_compare(player1, player2);
-        assert_eq!("{\"richer\":\"alice\"}", response);
+        assert_eq!("{\"result\":\"The richer of Alice and Bob is Alice\"}", response);
 
-        let player1 = Millionaire::new("alice".to_string(), 1000000, "bob".to_string());
-        let player2 = Millionaire::new("bob".to_string(), 1000000, "alice".to_string());
+        let player1 = Millionaire::new("Alice".to_string(), 1000000, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca".to_string());
+        let player2 = Millionaire::new("Bob".to_string(), 1000000, "0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7".to_string());
         let response = try_compare(player1, player2);
-        assert_eq!("{\"richer\":\"It's a tie!\"}", response);
+        assert_eq!("{\"result\":\"It's a tie!\"}", response);
     }
 }

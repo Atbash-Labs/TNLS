@@ -31,7 +31,7 @@ pub struct QueryResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RicherResponse {
-    pub richer: String,
+    pub result: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

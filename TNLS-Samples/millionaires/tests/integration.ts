@@ -2,14 +2,13 @@ import axios from "axios";
 import { Wallet, SecretNetworkClient, fromUtf8 } from "secretjs";
 import fs from "fs";
 import assert from "assert";
-import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender, Binary, BroadcastMsg } from "../../../TNLS-Gateways/secret/tests/GatewayContract";
+import { Payload, Contract, Sender, Binary } from "../../../TNLS-Gateways/secret/tests/GatewayContract";
 import { ecdsaSign } from "secp256k1";
 import { Wallet as EthWallet } from "ethers";
 import { arrayify, SigningKey } from "ethers/lib/utils";
 import { createHash, randomBytes } from 'crypto';
 import { encrypt_payload } from '../../../TNLS-Gateways/secret/tests/encrypt-payload/pkg'
 import 'dotenv/config'
-import { blob } from "stream/consumers";
 
 var mnemonic: string;
 var endpoint: string = "http://localhost:9091";
@@ -21,6 +20,7 @@ var chainId: string = "secretdev-1";
 // chainId = process.env.CHAIN_ID!;
 
 var gasTotal: number = 0;
+const BROADCAST_MS = 6000; // 6000 default, 100 if using speedy block times
 
 // Returns a client with which we can interact with secret network
 const initializeClient = async (endpoint: string, chainId: string) => {
@@ -60,6 +60,7 @@ const initializeGateway = async (
       builder: "",
     },
     {
+      broadcastCheckIntervalMs: BROADCAST_MS,
       gasLimit: 5000000,
     }
   );
@@ -99,6 +100,7 @@ const initializeGateway = async (
       label: "My contract" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
     },
     {
+      broadcastCheckIntervalMs: BROADCAST_MS,
       gasLimit: 5000000,
     }
   );
@@ -148,6 +150,7 @@ const initializeScrtRng = async (
       builder: "",
     },
     {
+      broadcastCheckIntervalMs: BROADCAST_MS,
       gasLimit: 5000000,
     }
   );
@@ -183,6 +186,7 @@ const initializeScrtRng = async (
       label: "My contract" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
     },
     {
+      broadcastCheckIntervalMs: BROADCAST_MS,
       gasLimit: 5000000,
     }
   );
@@ -224,6 +228,7 @@ const initializeContract = async (
       builder: "",
     },
     {
+      broadcastCheckIntervalMs: BROADCAST_MS,
       gasLimit: 5000000,
     }
   );
@@ -263,6 +268,7 @@ const initializeContract = async (
       label: "My contract" + Math.ceil(Math.random() * 10000), // The label should be unique for every contract, add random string in order to maintain uniqueness
     },
     {
+      broadcastCheckIntervalMs: BROADCAST_MS,
       gasLimit: 5000000,
     }
   );
@@ -381,6 +387,7 @@ async function generateKeys(
       sentFunds: [],
     },
     {
+      broadcastCheckIntervalMs: BROADCAST_MS,
       gasLimit: 5000000,
     }
   );
@@ -430,7 +437,7 @@ async function gatewayTx(
       address: userPublicAddress,
       name: inputArray[0],
       worth: inputArray[1],
-      match_with: inputArray[2],
+      match_addr: inputArray[2],
     }
   );
   const payload: Payload = {
@@ -485,6 +492,7 @@ async function gatewayTx(
       sentFunds: [],
     },
     {
+      broadcastCheckIntervalMs: BROADCAST_MS,
       gasLimit: 200000,
     }
   );
@@ -574,46 +582,46 @@ async function test_gateway_tx(
   const gatewayPublicKey = await queryPubKey(client, gatewayHash, gatewayAddress);
   
   const mnemonic1 = "youth then helmet clutch fresh piece raven demand purity wealth core holiday"; // 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7
-  const result1 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7", 5, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca"], mnemonic1);
+  const result1 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["Alice", 5, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca"], mnemonic1);
   // this tx stores:
   // key: 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7
   // value: Millionaire {
-  //          name: 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7,
+  //          name: Alice,
   //          worth: 5,
-  //          other: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca,
+  //          match_addr: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca,
   //        }
   assert(result1 == "{\"status\":\"success\"}");
   
   const mnemonic2 = "destroy typical minor artist frame kitchen elegant pond gaze alien farm protect";  // 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca
-  const result2 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["0x249C8753A9CB2a47d97A11D94b2179023B7aBCca", 10, "0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7"], mnemonic2);
+  const result2 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["Bob", 10, "0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7"], mnemonic2);
   // this tx stores:
   // key: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca
   // value: Millionaire {
-  //          name: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca,
+  //          name: Bob,
   //          worth: 10,
-  //          other: 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7,
+  //          match_addr: 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7,
   //        }
-  assert(result2 == "{\"richer\":\"0x249C8753A9CB2a47d97A11D94b2179023B7aBCca\"}");
+  assert(result2 == "{\"result\":\"The richer of Bob and Alice is Bob\"}");
   
-  const result3 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7", 580, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca"], mnemonic1);
+  const result3 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["Alice", 580, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca"], mnemonic1);
   // this tx stores:
   // key: 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7
   // value: Millionaire {
-  //          name: 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7,
+  //          name: Alice,
   //          worth: 580,
-  //          other: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca,
+  //          match_addr: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca,
   //        }
-  assert(result3 == "{\"richer\":\"0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7\"}");
+  assert(result3 == "{\"result\":\"The richer of Alice and Bob is Alice\"}");
 
-  const result4 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["0x249C8753A9CB2a47d97A11D94b2179023B7aBCca", 10, "someone else"], mnemonic2);
+  const result4 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["Bob", 10, "someone else"], mnemonic2);
   // this tx stores:
   // key: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca
   // value: Millionaire {
-  //          name: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca,
+  //          name: Bob,
   //          worth: 580,
-  //          other: someone else,
+  //          match_addr: someone else,
   //        }
-  assert(result4 == "{\"status\":\"success\"}");
+  assert(result4 == "{\"status\":\"success\"}"); // meaning bob's entry has been updated but did not return a match
 }
 
 async function runTestFunction(
