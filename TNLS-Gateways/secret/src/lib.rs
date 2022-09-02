@@ -8,7 +8,8 @@
 //!
 //! ### Cargo Features
 //!
-//! * `library`: disable all init/handle/query exports
+//! * `contract`: enables init/handle/query exports (default)
+//!     - use `default-features: false` to use this package as a dependency instead of a contract
 pub mod contract;
 pub mod msg;
 pub mod state;

@@ -14,7 +14,7 @@ use crate::{
         PublicKeyResponse, QueryMsg, ResponseStatus::Success, SecretMsg,
     },
     state::{
-        config, config_read, creator_address, map2inputs, map2inputs_read, my_address, prng,
+        CONFIG, MY_ADDRESS, CREATOR, PRNG_SEED, TASK_MAP,
         KeyPair, State, TaskInfo,
     },
     PrivContractHandleMsg,
@@ -42,11 +42,11 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 ) -> InitResult {
     // Save this contract's address
     let my_address_raw = &deps.api.canonical_address(&env.contract.address)?;
-    my_address(&mut deps.storage).save(my_address_raw)?;
+    MY_ADDRESS.save(&mut deps.storage, my_address_raw)?;
 
     // Save the address of the contract's creator
     let creator_raw = deps.api.canonical_address(&env.message.sender)?;
-    creator_address(&mut deps.storage).save(&creator_raw)?;
+    CREATOR.save(&mut deps.storage, &creator_raw)?;
 
     // Set admin address if provided, or else use creator address
     let admin_raw = msg
@@ -65,7 +65,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         signing_keys: KeyPair::default(),
     };
 
-    config(&mut deps.storage).save(&state)?;
+    CONFIG.save(&mut deps.storage, &state)?;
 
     let rng_msg = SecretMsg::CreateRn {
         cb_msg: Binary(vec![]),
@@ -123,7 +123,7 @@ fn try_fulfill_rn<S: Storage, A: Api, Q: Querier>(
     rng_addr: HumanAddr,
 ) -> HandleResult {
     // load config
-    let state = config_read(&deps.storage).load()?;
+    let state = CONFIG.load(&deps.storage)?;
 
     // check if the keys have already been created
     if state.keyed {
@@ -152,7 +152,7 @@ fn create_gateway_keys<S: Storage, A: Api, Q: Querier>(
     prng_seed: [u8; 32],
 ) -> HandleResult {
     // load config
-    let state = config_read(&deps.storage).load()?;
+    let state = CONFIG.load(&deps.storage)?;
 
     // check if the keys have already been created
     if state.keyed {
@@ -175,13 +175,14 @@ fn create_gateway_keys<S: Storage, A: Api, Q: Querier>(
         pk: Binary(public.serialize_compressed().to_vec()), // public key is 33 bytes
     };
 
-    config(&mut deps.storage).update(|mut state| {
+    CONFIG.update(&mut deps.storage, |mut state| {
         state.keyed = true;
         state.encryption_keys = encryption_keys;
         state.signing_keys = signing_keys;
         Ok(state)
     })?;
-    prng(&mut deps.storage).save(&new_prng_seed)?;
+
+    PRNG_SEED.save(&mut deps.storage, &new_prng_seed)?; // is there any need to save this?
 
     Ok(HandleResponse {
         messages: vec![],
@@ -202,7 +203,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     msg.verify(deps)?;
 
     // load config
-    let config = config_read(&deps.storage).load()?;
+    let config = CONFIG.load(&deps.storage)?;
 
     // decrypt payload
     let payload = msg.decrypt_payload(config.encryption_keys.sk)?;
@@ -226,7 +227,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     };
 
     // map task ID to inputs hash
-    map2inputs(&mut deps.storage).insert(&msg.task_id.to_le_bytes(), task_info)?;
+    TASK_MAP.insert(&mut deps.storage, &msg.task_id, task_info)?;
 
     // load key and sign(task ID + input values)
     let mut signing_key_bytes = [0u8; 32];
@@ -281,7 +282,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     msg: PostExecutionMsg,
 ) -> HandleResult {
     // load task ID information (remember this is decrypted)
-    let task_info = map2inputs_read(&deps.storage).load(&msg.task_id.to_le_bytes())?;
+    let task_info = TASK_MAP.get(&deps.storage, &msg.task_id).unwrap(); // TODO produce an error if this returns None
 
     // verify that input hash is correct one for Task ID
     if msg.input_hash.as_slice() != task_info.input_hash.to_vec() {
@@ -302,7 +303,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     let result_hash = sha_256(&data);
 
     // load this gateway's signing key
-    let private_key = config_read(&deps.storage).load()?.signing_keys.sk;
+    let private_key = CONFIG.load(&deps.storage)?.signing_keys.sk;
     let mut signing_key_bytes = [0u8; 32];
     signing_key_bytes.copy_from_slice(private_key.as_slice());
 
@@ -444,7 +445,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryM
 }
 
 fn query_public_key<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> QueryResult {
-    let state: State = config_read(&deps.storage).load()?;
+    let state: State = CONFIG.load(&deps.storage)?;
     to_binary(&PublicKeyResponse {
         key: state.encryption_keys.pk,
     })
