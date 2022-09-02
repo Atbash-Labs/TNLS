@@ -90,16 +90,24 @@ fn try_store_input<S: Storage, A: Api, Q: Querier>(
     let input: Input = serde_json_wasm::from_str(&input_values)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
+    let input_name = input.name.unwrap_or_else(|| input.address.clone());
+
     let player = Millionaire::new(
         // if no name provided, use player address as name
-        input.name.unwrap_or_else(|| input.address.clone()),
+        input_name.clone(),
         input.worth,
         input.match_with.clone(),
     );
 
     MILLIONAIRES.insert(&mut deps.storage, &input.address, player)?;
 
-    let result: String = if MILLIONAIRES.contains(&deps.storage, &input.match_with) {
+    let result: String = if MILLIONAIRES.contains(&deps.storage, &input.match_with)
+        && input_name
+            == MILLIONAIRES
+                .get(&deps.storage, &input.match_with)
+                .unwrap()
+                .other
+    {
         let player1 = MILLIONAIRES.get(&deps.storage, &input.address).unwrap();
         let player2 = MILLIONAIRES.get(&deps.storage, &input.match_with).unwrap();
         try_compare(player1, player2)
@@ -107,6 +115,7 @@ fn try_store_input<S: Storage, A: Api, Q: Querier>(
         serde_json_wasm::to_string(&InputResponse { status: Success })
             .map_err(|err| StdError::generic_err(err.to_string()))?
     };
+
     let callback_msg = GatewayMsg::Output {
         outputs: PostExecutionMsg {
             result,
@@ -124,6 +133,9 @@ fn try_store_input<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_compare(player1: Millionaire, player2: Millionaire) -> String {
+    // let a = player1.name.clone();
+    // let b = player2.name.clone();
+
     let resp: RicherResponse = if player1 == player2 {
         RicherResponse {
             richer: "It's a tie!".to_string(),
@@ -132,6 +144,7 @@ pub fn try_compare(player1: Millionaire, player2: Millionaire) -> String {
         let richer = max(player1, player2);
         RicherResponse {
             richer: richer.name,
+            // richer: format!("The richer of {} and {} is {}", a, b, richer.name),
         }
     };
 

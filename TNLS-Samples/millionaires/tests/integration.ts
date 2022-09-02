@@ -9,6 +9,7 @@ import { arrayify, SigningKey } from "ethers/lib/utils";
 import { createHash, randomBytes } from 'crypto';
 import { encrypt_payload } from '../../../TNLS-Gateways/secret/tests/encrypt-payload/pkg'
 import 'dotenv/config'
+import { blob } from "stream/consumers";
 
 var mnemonic: string;
 var endpoint: string = "http://localhost:9091";
@@ -573,17 +574,45 @@ async function test_gateway_tx(
   const gatewayPublicKey = await queryPubKey(client, gatewayHash, gatewayAddress);
   
   const mnemonic1 = "youth then helmet clutch fresh piece raven demand purity wealth core holiday"; // 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7
-  const result1 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["alice", 5, "bob"], mnemonic1);
+  const result1 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7", 5, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca"], mnemonic1);
+  // this tx stores:
+  // key: 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7
+  // value: Millionaire {
+  //          name: 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7,
+  //          worth: 5,
+  //          other: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca,
+  //        }
   assert(result1 == "{\"status\":\"success\"}");
   
   const mnemonic2 = "destroy typical minor artist frame kitchen elegant pond gaze alien farm protect";  // 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca
-  const result2 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["bob", 10, "0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7"], mnemonic2);
-  assert(result2 == "{\"richer\":\"bob\"}");
+  const result2 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["0x249C8753A9CB2a47d97A11D94b2179023B7aBCca", 10, "0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7"], mnemonic2);
+  // this tx stores:
+  // key: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca
+  // value: Millionaire {
+  //          name: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca,
+  //          worth: 10,
+  //          other: 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7,
+  //        }
+  assert(result2 == "{\"richer\":\"0x249C8753A9CB2a47d97A11D94b2179023B7aBCca\"}");
   
-  const result3 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["alice", 580, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca"], mnemonic1);
-  assert(result3 == "{\"richer\":\"alice\"}");
+  const result3 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7", 580, "0x249C8753A9CB2a47d97A11D94b2179023B7aBCca"], mnemonic1);
+  // this tx stores:
+  // key: 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7
+  // value: Millionaire {
+  //          name: 0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7,
+  //          worth: 580,
+  //          other: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca,
+  //        }
+  assert(result3 == "{\"richer\":\"0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7\"}");
 
-  const result4 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["bob", 10, "wrong address"], mnemonic2);
+  const result4 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey, ["0x249C8753A9CB2a47d97A11D94b2179023B7aBCca", 10, "someone else"], mnemonic2);
+  // this tx stores:
+  // key: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca
+  // value: Millionaire {
+  //          name: 0x249C8753A9CB2a47d97A11D94b2179023B7aBCca,
+  //          worth: 580,
+  //          other: someone else,
+  //        }
   assert(result4 == "{\"status\":\"success\"}");
 }
 
