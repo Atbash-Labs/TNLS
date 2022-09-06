@@ -30,7 +30,6 @@ def provider_privkey_address(monkeypatch):
     for an account on that backend
 
     """
-    # FIGURE OUT LOCALSECRET AND LOCAL WALLETS
     LOCAL_DEFAULTS['secretdev-1'] = {
         "url": "http://localhost:1317",
         "chain_id": 'secretdev-1',
