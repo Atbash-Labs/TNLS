@@ -301,7 +301,7 @@ def test_web_app(fake_interface_factory):
 
 def test_dict_translation():
     dict_to_translate = {"test_key_1": "test_value_1", "test_key_2": "test_value_2", "test_key_3": "test_value_3",
-                         "test_key_4": "test_value_4"}
+                         "test_key_4": "test_value_4", "test_key_5": "test_value_5"}
     translation_mechanism = {"test_translated_1": "test_key_1", "test_key_2": "test_key_2",
                              "test_tuple_1": ["test_key_3", "test_key_4"]}
     translated_dict = translate_dict(dict_to_translate, translation_mechanism)
