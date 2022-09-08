@@ -5,7 +5,7 @@ from typing import List
 
 import pytest
 
-from base_interface import BaseChainInterface, BaseContractInterface, Task
+from base_interface import BaseChainInterface, BaseContractInterface, Task, translate_dict
 from relayer import Relayer
 from web_app import app_factory, convert_config_file_to_dict
 
@@ -47,7 +47,6 @@ class FakeChainForConfig(BaseChainInterface):
 
     def get_transactions(self, _):
         pass
-
 
     def sign_and_send_transaction(self, _tx):
         pass
@@ -298,3 +297,13 @@ def test_web_app(fake_interface_factory):
             "Tasks to be handled: [], Status of all tasks: {'1': 'Routed to add1', '2': 'Routed to add2', " \
             "'3': 'Failed to route', '4': 'Failed to route'}" \
             == response.text
+
+
+def test_dict_translation():
+    dict_to_translate = {"test_key_1": "test_value_1", "test_key_2": "test_value_2", "test_key_3": "test_value_3",
+                         "test_key_4": "test_value_4"}
+    translation_mechanism = {"test_translated_1": "test_key_1", "test_key_2": "test_key_2",
+                             "test_tuple_1": ["test_key_3", "test_key_4"]}
+    translated_dict = translate_dict(dict_to_translate, translation_mechanism)
+    assert translated_dict == {"test_translated_1": "test_value_1", "test_key_2": "test_value_2",
+                               "test_tuple_1": ("test_value_3", "test_value_4")}
