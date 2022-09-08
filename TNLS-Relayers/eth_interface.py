@@ -137,6 +137,9 @@ class EthContract(BaseContractInterface):
         kwargs = {}
         if len(args) == 1:
             kwargs = json.loads(args[0])
+            for key, value in kwargs.items():
+                if isinstance(value, list):
+                    kwargs[key] = tuple(value)
             args = []
         function = self.get_function(function_name)
         txn = self.interface.create_transaction(function, *args, **kwargs)
