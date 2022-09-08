@@ -306,4 +306,4 @@ def test_dict_translation():
                              "test_tuple_1": ["test_key_3", "test_key_4"]}
     translated_dict = translate_dict(dict_to_translate, translation_mechanism)
     assert translated_dict == {"test_translated_1": "test_value_1", "test_key_2": "test_value_2",
-                               "test_tuple_1": ("test_value_3", "test_value_4")}
+                               "test_tuple_1": ["test_value_3", "test_value_4"]}

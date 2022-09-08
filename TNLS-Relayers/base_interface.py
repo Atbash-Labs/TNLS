@@ -55,7 +55,7 @@ def translate_dict(dict_to_translate, translation_mechanism):
     translated_dict = {}
     for key, val in translation_mechanism.items():
         if isinstance(val, list):
-            translated_dict[key] = tuple(dict_to_translate[inner_key] for inner_key in val)
+            translated_dict[key] = [dict_to_translate[inner_key] for inner_key in val]
         else:
             translated_dict[key] = dict_to_translate[val]
     return translated_dict
