@@ -42,13 +42,13 @@ class EthInterface(BaseChainInterface):
         self.logger = getLogger()
         pass
 
-    def create_transaction(self, contract_function, data):
+    def create_transaction(self, contract_function, *args, **kwargs):
         """
         See base_interface.py for documentation
         """
         # create task
         nonce = self.provider.eth.get_transaction_count(self.address)
-        tx = contract_function(data).buildTransaction({
+        tx = contract_function(*args, **kwargs).buildTransaction({
             'from': self.address,
             'gas': 200000,
             'nonce': nonce,
