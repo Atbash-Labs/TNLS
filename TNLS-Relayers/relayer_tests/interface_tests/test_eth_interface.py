@@ -342,7 +342,7 @@ def test_function_call(provider_privkey_address, address_and_abi_of_contract):
     contract = EthContract(interface=interface, address=address_and_abi_of_contract[0],
                            abi=address_and_abi_of_contract[1])
     foo_contract = address_and_abi_of_contract[2]
-    tx = contract.call_function('setBar', 'testing contracts is easy')
+    tx = contract.call_function('setBar', '{"_bar":"testing contracts is easy"}')
     # verify that the log's data matches the expected value
     receipt = provider.eth.wait_for_transaction_receipt(tx, 180)
     logs = list(foo_contract.events.barred.getLogs())

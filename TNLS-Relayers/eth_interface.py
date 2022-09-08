@@ -1,3 +1,4 @@
+import json
 import os
 from logging import getLogger, basicConfig, INFO, StreamHandler
 from pprint import pprint
@@ -133,8 +134,11 @@ class EthContract(BaseContractInterface):
         See base_interface.py for documentation
         """
         # TODO:  FIGURE OUT NECESSARY PREPROCESSING HERE?
+        kwargs = {}
+        if len(args) == 1:
+            kwargs = json.loads(args[0])
         function = self.get_function(function_name)
-        txn = self.interface.create_transaction(function, *args)
+        txn = self.interface.create_transaction(function, *args, **kwargs)
         return self.interface.sign_and_send_transaction(txn)
 
     def parse_event_from_txn(self, event_name, txn) -> List[Task]:
