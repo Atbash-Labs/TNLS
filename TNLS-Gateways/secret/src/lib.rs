@@ -16,9 +16,10 @@ pub mod state;
 pub mod types;
 
 pub use crate::msg::{
-    InputResponse, PostExecutionMsg, PrivContractHandleMsg, ResponseStatus::Success,
+    InputResponse, PostExecutionMsg, PreExecutionMsg, PrivContractHandleMsg,
+    ResponseStatus::Success,
 };
-pub use crate::types::{Payload, Sender};
+pub use crate::types::Payload;
 
 #[cfg(feature = "contract")]
 #[cfg(target_arch = "wasm32")]

@@ -13,10 +13,7 @@ use crate::{
         ContractStatus, HandleMsg, InitMsg, InputResponse, PostExecutionMsg, PreExecutionMsg,
         PublicKeyResponse, QueryMsg, ResponseStatus::Success, SecretMsg,
     },
-    state::{
-        CONFIG, MY_ADDRESS, CREATOR, PRNG_SEED, TASK_MAP,
-        KeyPair, State, TaskInfo,
-    },
+    state::{KeyPair, State, TaskInfo, CONFIG, CREATOR, MY_ADDRESS, PRNG_SEED, TASK_MAP},
     PrivContractHandleMsg,
 };
 
@@ -208,10 +205,12 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     // decrypt payload
     let payload = msg.decrypt_payload(config.encryption_keys.sk)?;
     let input_values = payload.data;
-    let input_hash = sha_256(input_values.as_bytes());
+
+    // combine input values and task ID to create verification hash
+    let input_hash = sha_256(&[input_values.as_bytes(), &msg.task_id.to_le_bytes()].concat());
 
     // verify the internal verification key matches the user address
-    if payload.sender != msg.sender_info {
+    if payload.user_key != msg.user_key {
         return Err(StdError::generic_err("verification key mismatch"));
     }
     // verify the routing info matches the internally stored routing info
@@ -260,11 +259,8 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
             signature: Binary(signature),
         },
     };
-    let cosmos_msg = private_contract_msg.to_cosmos_msg(
-        msg.routing_info.hash,
-        msg.routing_info.address,
-        None,
-    )?;
+    let cosmos_msg =
+        private_contract_msg.to_cosmos_msg(msg.routing_code_hash, msg.routing_info, None)?;
 
     Ok(HandleResponse {
         messages: vec![cosmos_msg],
@@ -370,9 +366,12 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     // create hash of entire packet (used to verify the message wasn't modified in transit)
     let data = [
         "secret".as_bytes(),                 // source network
-        task_info.source_network.as_bytes(), // routing info
-        &routing_hash,                       // routing info message
-        &routing_signature,                  // routing info signature
+        task_info.source_network.as_bytes(), // task_destination_network
+        &routing_hash,                       // task_destination_network message
+        &routing_signature,                  // task_destination_network signature
+        &msg.task_id.to_le_bytes(),          // task ID
+        &task_hash,                          // task ID hash
+        &task_signature,                     // task ID signature
         task_info.payload.as_slice(),        // payload (original encrypted payload)
         &payload_hash,                       // payload message
         &payload_signature,                  // payload signature
@@ -410,9 +409,18 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![
             plaintext_log("source_network", "secret"),
-            plaintext_log("routing_info", task_info.source_network),
-            plaintext_log("routing_info_hash", Binary(routing_hash.to_vec())),
-            plaintext_log("routing_info_signature", Binary(routing_signature)),
+            plaintext_log("task_destination_network", task_info.source_network),
+            plaintext_log(
+                "task_destination_network_hash",
+                Binary(routing_hash.to_vec()),
+            ),
+            plaintext_log(
+                "task_destination_network_signature",
+                Binary(routing_signature),
+            ),
+            plaintext_log("task_id", msg.task_id),
+            plaintext_log("task_id_hash", Binary(task_hash.to_vec())),
+            plaintext_log("task_id_signature", Binary(task_signature)),
             plaintext_log("payload", task_info.payload),
             plaintext_log("payload_hash", Binary(payload_hash.to_vec())),
             plaintext_log("payload_signature", Binary(payload_signature)),
@@ -421,9 +429,6 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
             plaintext_log("result_signature", Binary(result_signature)),
             plaintext_log("packet_hash", Binary(packet_hash.to_vec())),
             plaintext_log("packet_signature", Binary(packet_signature)),
-            plaintext_log("task_id", msg.task_id),
-            plaintext_log("task_id_hash", Binary(task_hash.to_vec())),
-            plaintext_log("task_id_signature", Binary(task_signature)),
         ],
         data: None,
     })
@@ -510,7 +515,6 @@ mod tests {
     use crate::types::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
     use cosmwasm_std::{from_binary, Binary, Empty, HumanAddr};
-    use secret_toolkit::utils::types::Contract;
 
     use chacha20poly1305::aead::{Aead, NewAead};
     use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
@@ -608,6 +612,10 @@ mod tests {
         let secret_key = SecretKey::from_slice(secret_key).unwrap();
         let public_key = secp256k1::PublicKey::from_secret_key(&secp, &secret_key);
 
+        let wrong_secret_key = Key::from_slice(b"an example very wrong secret key"); // 32-bytes
+        let wrong_secret_key = SecretKey::from_slice(wrong_secret_key).unwrap();
+        let wrong_public_key = secp256k1::PublicKey::from_secret_key(&secp, &wrong_secret_key);
+
         // create shared key from user private + gateway public
         let gateway_pubkey = secp256k1::PublicKey::from_slice(gateway_pubkey.as_slice()).unwrap();
         let shared_key = SharedSecret::new(&gateway_pubkey, &secret_key);
@@ -615,18 +623,19 @@ mod tests {
         // mock Payload
         let data = "{\"fingerprint\": \"0xF9BA143B95FF6D82\", \"location\": \"Menlo Park, CA\"}"
             .to_string();
-        let routing_info = Contract {
-            address: HumanAddr::from("secret19zpyd046u4swqpksr3n44cej4j8pg6ahw95y85".to_string()),
-            hash: "2a2fbe493ef25b536bbe0baa3917b51e5ba092e14bd76abf50a59526e2789be3".to_string(),
-        };
-        let sender_info = Sender {
-            address: HumanAddr::from("some eth address".to_string()),
-            public_key: Binary(public_key.serialize().to_vec()),
-        };
+        let routing_info =
+            HumanAddr::from("secret19zpyd046u4swqpksr3n44cej4j8pg6ahw95y85".to_string());
+        let routing_code_hash =
+            "2a2fbe493ef25b536bbe0baa3917b51e5ba092e14bd76abf50a59526e2789be3".to_string();
+        let user_address = HumanAddr::from("some eth address".to_string());
+        let user_key = Binary(public_key.serialize().to_vec());
+
         let payload = Payload {
-            data,
+            data: data.clone(),
             routing_info: routing_info.clone(),
-            sender: sender_info.clone(),
+            routing_code_hash: routing_code_hash.clone(),
+            user_address: user_address.clone(),
+            user_key: user_key.clone(),
         };
         let serialized_payload = to_binary(&payload).unwrap();
 
@@ -644,19 +653,33 @@ mod tests {
         let message = Message::from_slice(&payload_hash).unwrap();
         let payload_signature = secp.sign_ecdsa(&message, &secret_key);
 
-        // wrong sender info
-        let wrong_sender_info = Sender {
-            address: HumanAddr::from("wrong eth address".to_string()),
-            public_key: Binary(public_key.serialize().to_vec()),
-        };
+        // mock wrong payload (encrypted with a key that does not match the one inside the payload)
+        let wrong_user_address = HumanAddr::from("wrong eth address".to_string());
+        let wrong_user_key = Binary(wrong_public_key.serialize().to_vec());
 
-        // test internal user address does not match
+        let wrong_payload = Payload {
+            data: data.clone(),
+            routing_info: routing_info.clone(),
+            routing_code_hash: routing_code_hash.clone(),
+            user_address: wrong_user_address.clone(),
+            user_key: wrong_user_key.clone(),
+        };
+        let wrong_serialized_payload = to_binary(&wrong_payload).unwrap();
+
+        // encrypt the mock wrong payload
+        let wrong_encrypted_payload = cipher
+            .encrypt(nonce, wrong_serialized_payload.as_slice())
+            .unwrap();
+
+        // test payload user_key does not match given user_key
         let pre_execution_msg = PreExecutionMsg {
             task_id: 1,
             handle: "test".to_string(),
             routing_info: routing_info.clone(),
-            sender_info: wrong_sender_info,
-            payload: Binary(encrypted_payload.clone()),
+            routing_code_hash: routing_code_hash.clone(),
+            user_address: user_address.clone(),
+            user_key: user_key.clone(),
+            payload: Binary(wrong_encrypted_payload.clone()),
             nonce: Binary(b"unique nonce".to_vec()),
             payload_hash: Binary(payload_hash.to_vec()),
             payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
@@ -669,17 +692,19 @@ mod tests {
         assert_eq!(err, StdError::generic_err("verification key mismatch"));
 
         // wrong routing info
-        let wrong_routing_info = Contract {
-            address: HumanAddr::from("secret13rcx3p8pxf0ttuvxk6czwu73sdccfz4w6e27fd".to_string()),
-            hash: "19438bf0cdf555c6472fb092eae52379c499681b36e47a2ef1c70f5269c8f02f".to_string(),
-        };
+        let wrong_routing_info =
+            HumanAddr::from("secret13rcx3p8pxf0ttuvxk6czwu73sdccfz4w6e27fd".to_string());
+        let routing_code_hash =
+            "19438bf0cdf555c6472fb092eae52379c499681b36e47a2ef1c70f5269c8f02f".to_string();
 
         // test internal routing info does not match
         let pre_execution_msg = PreExecutionMsg {
             task_id: 1,
             handle: "test".to_string(),
             routing_info: wrong_routing_info.clone(),
-            sender_info: sender_info.clone(),
+            routing_code_hash: routing_code_hash.clone(),
+            user_address: user_address.clone(),
+            user_key: user_key.clone(),
             payload: Binary(encrypted_payload.clone()),
             nonce: Binary(b"unique nonce".to_vec()),
             payload_hash: Binary(payload_hash.to_vec()),
@@ -697,7 +722,9 @@ mod tests {
             task_id: 1,
             handle: "test".to_string(),
             routing_info,
-            sender_info,
+            routing_code_hash,
+            user_address,
+            user_key,
             payload: Binary(encrypted_payload),
             nonce: Binary(b"unique nonce".to_vec()),
             payload_hash: Binary(payload_hash.to_vec()),
@@ -751,18 +778,19 @@ mod tests {
         // mock Payload
         let data = "{\"fingerprint\": \"0xF9BA143B95FF6D82\", \"location\": \"Menlo Park, CA\"}"
             .to_string();
-        let routing_info = Contract {
-            address: HumanAddr::from("secret19zpyd046u4swqpksr3n44cej4j8pg6ahw95y85".to_string()),
-            hash: "2a2fbe493ef25b536bbe0baa3917b51e5ba092e14bd76abf50a59526e2789be3".to_string(),
-        };
-        let sender_info = Sender {
-            address: HumanAddr::from("some eth address".to_string()),
-            public_key: Binary(public_key.serialize().to_vec()),
-        };
+        let routing_info =
+            HumanAddr::from("secret19zpyd046u4swqpksr3n44cej4j8pg6ahw95y85".to_string());
+        let routing_code_hash =
+            "2a2fbe493ef25b536bbe0baa3917b51e5ba092e14bd76abf50a59526e2789be3".to_string();
+        let user_address = HumanAddr::from("some eth address".to_string());
+        let user_key = Binary(public_key.serialize().to_vec());
+
         let payload = Payload {
             data: data.clone(),
             routing_info: routing_info.clone(),
-            sender: sender_info.clone(),
+            routing_code_hash: routing_code_hash.clone(),
+            user_address: user_address.clone(),
+            user_key: user_key.clone(),
         };
         let serialized_payload = to_binary(&payload).unwrap();
 
@@ -785,7 +813,9 @@ mod tests {
             task_id: 1,
             handle: "test".to_string(),
             routing_info,
-            sender_info,
+            routing_code_hash,
+            user_address,
+            user_key,
             payload: Binary(encrypted_payload),
             nonce: Binary(b"unique nonce".to_vec()),
             payload_hash: Binary(payload_hash.to_vec()),
@@ -816,7 +846,7 @@ mod tests {
         let post_execution_msg = PostExecutionMsg {
             result: "{\"answer\": 42}".to_string(),
             task_id: 1,
-            input_hash: Binary(sha_256(&data.as_bytes()).to_vec()),
+            input_hash: Binary(sha_256(&[data.as_bytes(), 1u64.to_le_bytes().as_ref()].concat()).to_vec()),
         };
 
         let handle_msg = HandleMsg::Output {
@@ -834,15 +864,15 @@ mod tests {
         assert_eq!(logs[1].value, "ethereum".to_string());
         assert_eq!(base64::decode(logs[2].value.clone()).unwrap().len(), 32);
         assert_eq!(base64::decode(logs[3].value.clone()).unwrap().len(), 64);
-        assert_eq!(logs[4].value, pre_execution_msg.payload.to_base64());
+        assert_eq!(logs[4].value, "1".to_string());
         assert_eq!(base64::decode(logs[5].value.clone()).unwrap().len(), 32);
         assert_eq!(base64::decode(logs[6].value.clone()).unwrap().len(), 64);
-        assert_eq!(logs[7].value, "{\"answer\": 42}".to_string());
+        assert_eq!(logs[7].value, pre_execution_msg.payload.to_base64());
         assert_eq!(base64::decode(logs[8].value.clone()).unwrap().len(), 32);
         assert_eq!(base64::decode(logs[9].value.clone()).unwrap().len(), 64);
-        assert_eq!(base64::decode(logs[10].value.clone()).unwrap().len(), 32);
-        assert_eq!(base64::decode(logs[11].value.clone()).unwrap().len(), 64);
-        assert_eq!(logs[12].value, "1".to_string());
+        assert_eq!(logs[10].value, "{\"answer\": 42}".to_string());
+        assert_eq!(base64::decode(logs[11].value.clone()).unwrap().len(), 32);
+        assert_eq!(base64::decode(logs[12].value.clone()).unwrap().len(), 64);
         assert_eq!(base64::decode(logs[13].value.clone()).unwrap().len(), 32);
         assert_eq!(base64::decode(logs[14].value.clone()).unwrap().len(), 64);
     }
