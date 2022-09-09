@@ -38,6 +38,7 @@ eth_task_keys_to_msg = {
 
 }
 task_keys_to_msg = {'ethereum': eth_task_keys_to_msg}
+task_keys_in_order = {'ethereum': ['_taskId', '_sourceNetwork', '_info']}
 
 
 def translate_dict(dict_to_translate, translation_mechanism):
@@ -87,6 +88,10 @@ class Task:
             new_task_dict = translate_dict(self.task_data, task_translation_mechanism)
             if '_taskId' in new_task_dict:
                 new_task_dict['_taskId'] = int(new_task_dict['_taskId'])
+            if self.task_destination_network in task_keys_in_order:
+                ndict = to_dict(new_task_dict)
+                new_task_list = [ndict[key] for key in task_keys_in_order[self.task_destination_network]]
+                return json.dumps(new_task_list)
             return json.dumps(to_dict(new_task_dict))
         else:
             return json.dumps(to_dict(self.task_data))
