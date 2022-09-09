@@ -352,9 +352,7 @@ def test_function_call(provider_privkey_address, address_and_abi_of_contract):
     assert event.__dict__['args']['_bar'] == 'testing contracts is easy'
 
 
-pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
-
-
+pytest.mark.skip(reason="unimplementes")
 def test_function_call_with_real_interface(provider_privkey_address, address_and_abi_of_contract):
     # Confirms that the ethContract interface correctly calls functions
     provider, private_key, address = provider_privkey_address
@@ -364,8 +362,20 @@ def test_function_call_with_real_interface(provider_privkey_address, address_and
     contract = EthContract(interface=interface, address=address_and_abi_of_contract[0],
                            abi=address_and_abi_of_contract[1])
     foo_contract = address_and_abi_of_contract[2]
-    input = ""
-    tx = contract.call_function('setBar', '{"_bar":"testing contracts is easy"}')
+    input = '{"_taskId": "1",' \
+            ' "_sourceNetwork": "secret",' \
+            ' "_info": ["1C+pS0+JF7v7I+9kx933nGrZZNU6NXXJrumMtFLEN/aEr3EZ2DXJH6/I3W5zkgAlwJh6Mt0Wjl87U7RSIegt' \
+            'rMeehoJKoqlSMlRLSZGJ/l5YKBJhDmlzcZ+nT6VqrW5IuAW9sGhX/be9FSbY/qBgDkzkUck2WaeqFlnXCv3l+ovam9JrT90y' \
+            'G0rrw+WH6g8NPA4C4KeMlATmJc/X53mO3x1lVlBAE4eTQLxtBFtxtva8zr8auNrzOKoqX0nqIq+p0E5vERFjgwPmOZ6IIWzMN' \
+            'oVw/9Grq1acakMPMo6va3OZlY0jghsvrkkcW1AihwmqgJOApsi+aMlVXkdfLz1Cf0l63mWcxIlEC7mPBSGHeOB9bZkvh6aNy+' \
+            '4sdZVdv8KaXQ72ZHo3Fw6Pxpf6zyAXHozFIsqtqE+SR5ygTmz7QMJGmzhymdmIuAySWCaoJA6nG+/m78SnndwMlj9QX7r8GOx' \
+            'JjASY5h2JDbKD5k1O8NrH4GpTWQVgZ/VAPqqwNLaTkcAFIdIfj80LS1fobMErys+MDnAEGeFbRQo6tRIrXBVA9RhAMcDLzSQpl' \
+            'KB21L/4MEagDbMhB34iCxhNeSgY3csgkvsJRw0tyw==", "UkqRIveb4P0KUgAEeNE8/z5OPNSs8QOynkJkA4UpucI=", "QBX' \
+            'H9gS73HijN4VADdfJxMFRPot8Q6pKMTqsmSPeJhxU2xgt8b4LMP9H8xggc4gH95ux4tVaBy/oRgNdPPEYoQ==", "test_call",' \
+            ' "lfYReCYU+mQrsimU8aTf//T8nnGYvX9uaXxOLuCT9C4=", "ugX3ZxusQ7gcyF6h4BGikmp94AWTzi2hF8hLUvKdUW049Bjs7V' \
+            '+Y0kL3Fm/SQr3xRHhuzbinws5YlO1xroo5Mg==", "8nhN0kHYHDgAtsTL/BScyo2sJMtdP2D1Qd/OxcyHcMk=", "53le1sTYJV6' \
+            'YNXKUqsl0gVrNBXFvjha1gqvtXgxfi1wW4LLhRYw80P/gRXpnfxQAecdzuoASmUHHu9/Gjmn0Rw=="]}'
+    tx = contract.call_function('setBar', input)
     # verify that the log's data matches the expected value
     receipt = provider.eth.wait_for_transaction_receipt(tx, 180)
     logs = list(foo_contract.events.barred.getLogs())
