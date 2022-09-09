@@ -350,3 +350,26 @@ def test_function_call(provider_privkey_address, address_and_abi_of_contract):
     event = logs[0]
     assert event.blockHash == receipt.blockHash
     assert event.__dict__['args']['_bar'] == 'testing contracts is easy'
+
+
+pytest.mark.skipif(sys.platform.startswith('win'), reason="does not run on windows")
+
+
+def test_function_call_with_real_interface(provider_privkey_address, address_and_abi_of_contract):
+    # Confirms that the ethContract interface correctly calls functions
+    provider, private_key, address = provider_privkey_address
+    interface = EthInterface(address=address,
+                             private_key=private_key,
+                             provider=provider)
+    contract = EthContract(interface=interface, address=address_and_abi_of_contract[0],
+                           abi=address_and_abi_of_contract[1])
+    foo_contract = address_and_abi_of_contract[2]
+    input = ""
+    tx = contract.call_function('setBar', '{"_bar":"testing contracts is easy"}')
+    # verify that the log's data matches the expected value
+    receipt = provider.eth.wait_for_transaction_receipt(tx, 180)
+    logs = list(foo_contract.events.barred.getLogs())
+    assert len(logs) == 1
+    event = logs[0]
+    assert event.blockHash == receipt.blockHash
+    assert event.__dict__['args']['_bar'] == 'testing contracts is easy'

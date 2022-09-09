@@ -252,7 +252,7 @@ def test_function_call_and_event_getter(provider_privkey_address, address_and_ab
     task_list = contract.parse_event_from_txn('wasm', txns)
     assert (len(task_list) == 1)
     task = task_list[0]
-    print(task)
+    raise Exception(str(task))
     assert task.task_destination_network == "ethereum"
     assert task.task_data['result'] == 'test_call'
 
