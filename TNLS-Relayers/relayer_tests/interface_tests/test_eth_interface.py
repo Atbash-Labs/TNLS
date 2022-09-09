@@ -522,17 +522,16 @@ def test_function_call_with_real_interface(provider_privkey_address, address_and
     foo_contract = address_and_abi_of_contract_full_interface[2]
     input = '[ 1,' \
             ' "secret",' \
-            ' ["1C+pS0+JF7v7I+9kx933nGrZZNU6NXXJrumMtFLEN/aEr3EZ2DXJH6/I3W5zkgAlwJh6Mt0Wjl87U7RSIegt' \
-            'rMeehoJKoqlSMlRLSZGJ/l5YKBJhDmlzcZ+nT6VqrW5IuAW9sGhX/be9FSbY/qBgDkzkUck2WaeqFlnXCv3l+ovam9JrT90y' \
-            'G0rrw+WH6g8NPA4C4KeMlATmJc/X53mO3x1lVlBAE4eTQLxtBFtxtva8zr8auNrzOKoqX0nqIq+p0E5vERFjgwPmOZ6IIWzMN' \
-            'oVw/9Grq1acakMPMo6va3OZlY0jghsvrkkcW1AihwmqgJOApsi+aMlVXkdfLz1Cf0l63mWcxIlEC7mPBSGHeOB9bZkvh6aNy+' \
-            '4sdZVdv8KaXQ72ZHo3Fw6Pxpf6zyAXHozFIsqtqE+SR5ygTmz7QMJGmzhymdmIuAySWCaoJA6nG+/m78SnndwMlj9QX7r8GOx' \
-            'JjASY5h2JDbKD5k1O8NrH4GpTWQVgZ/VAPqqwNLaTkcAFIdIfj80LS1fobMErys+MDnAEGeFbRQo6tRIrXBVA9RhAMcDLzSQpl' \
-            'KB21L/4MEagDbMhB34iCxhNeSgY3csgkvsJRw0tyw==", "UkqRIveb4P0KUgAEeNE8/z5OPNSs8QOynkJkA4UpucI=", "QBX' \
-            'H9gS73HijN4VADdfJxMFRPot8Q6pKMTqsmSPeJhxU2xgt8b4LMP9H8xggc4gH95ux4tVaBy/oRgNdPPEYoQ==", "test_call",' \
-            ' "lfYReCYU+mQrsimU8aTf//T8nnGYvX9uaXxOLuCT9C4=", "ugX3ZxusQ7gcyF6h4BGikmp94AWTzi2hF8hLUvKdUW049Bjs7V' \
-            '+Y0kL3Fm/SQr3xRHhuzbinws5YlO1xroo5Mg==", "8nhN0kHYHDgAtsTL/BScyo2sJMtdP2D1Qd/OxcyHcMk=", "53le1sTYJV6' \
-            'YNXKUqsl0gVrNBXFvjha1gqvtXgxfi1wW4LLhRYw80P/gRXpnfxQAecdzuoASmUHHu9/Gjmn0Rw=="]]'
+            ' ["0x3078363136343634323036313230363237353665363336383230366636363230373337343735363636363030303' \
+            '03030303030303030303030303030303030303030","0x8a5efa54dcbe3378b7910b0bba0c461fbc' \
+            '85a0928ac485730fedf4c3f4158248","0xd4651f38497602c5c287aff4aa79afa7f3b82abe862151b0bcc7' \
+            'c539b2f9f5f24ca54a148aef19b9ed7e7fd2f84c72fc149eabb32c735d704fdbe6928dda8eef1c","0x3078373' \
+            '3366636643635323037323635373337353663373430303030303030303030303030303030303030303030303030' \
+            '3030303030303030303030303030303030","0xe764ca2c3aae5dc9c65410ab1bb6b48aaee607cbdf7a2308091a' \
+            '71b2a9d16ee4","0x8f02e349b0cb8136cc534c46a1fb483fda66456750ac66442155d050154dc84b390212216c6' \
+            '9bd3ec62e6ef4299395c1b2577bec7ce11aea85ac1c62f52b92f21c","0xe764ca2c3aae5dc9c65410ab1bb6b48aa' \
+            'ee607cbdf7a2308091a71b2a9d16ee4","0x8f02e349b0cb8136cc534c46a1fb483fda66456750ac66442155d0501' \
+            '54dc84b390212216c69bd3ec62e6ef4299395c1b2577bec7ce11aea85ac1c62f52b92f21c"]]'
     tx = contract.call_function('postExecution', input)
     # verify that the log's data matches the expected value
     receipt = provider.eth.wait_for_transaction_receipt(tx, 180)
@@ -540,4 +539,4 @@ def test_function_call_with_real_interface(provider_privkey_address, address_and
     assert len(logs) == 1
     event = logs[0]
     assert event.blockHash == receipt.blockHash
-    assert event.__dict__['args']['resukt'] == 'test_call'
+    assert event.__dict__['args']['result'] == 'test_call'
