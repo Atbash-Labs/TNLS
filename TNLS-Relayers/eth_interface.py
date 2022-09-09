@@ -48,12 +48,27 @@ class EthInterface(BaseChainInterface):
         """
         # create task
         nonce = self.provider.eth.get_transaction_count(self.address)
-        tx = contract_function(*args, **kwargs).buildTransaction({
-            'from': self.address,
-            'gas': 200000,
-            'nonce': nonce,
-            'gasPrice': self.provider.eth.gasPrice,
-        })
+        if kwargs is {}:
+            tx = contract_function(*args).buildTransaction({
+                'from': self.address,
+                'gas': 200000,
+                'nonce': nonce,
+                'gasPrice': self.provider.eth.gasPrice,
+            })
+        elif len(args) == 0:
+            tx = contract_function(**kwargs).buildTransaction({
+                'from': self.address,
+                'gas': 200000,
+                'nonce': nonce,
+                'gasPrice': self.provider.eth.gasPrice,
+            })
+        else:
+            tx = contract_function(*args, **kwargs).buildTransaction({
+                'from': self.address,
+                'gas': 200000,
+                'nonce': nonce,
+                'gasPrice': self.provider.eth.gasPrice,
+            })
 
         return tx
 
