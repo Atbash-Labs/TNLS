@@ -520,7 +520,7 @@ def test_function_call_with_real_interface(provider_privkey_address, address_and
     contract = EthContract(interface=interface, address=address_and_abi_of_contract_full_interface[0],
                            abi=address_and_abi_of_contract_full_interface[1])
     foo_contract = address_and_abi_of_contract_full_interface[2]
-    input = '{"_taskId": "1",' \
+    input = '{"_taskId": 1,' \
             ' "_sourceNetwork": "secret",' \
             ' "_info": ["1C+pS0+JF7v7I+9kx933nGrZZNU6NXXJrumMtFLEN/aEr3EZ2DXJH6/I3W5zkgAlwJh6Mt0Wjl87U7RSIegt' \
             'rMeehoJKoqlSMlRLSZGJ/l5YKBJhDmlzcZ+nT6VqrW5IuAW9sGhX/be9FSbY/qBgDkzkUck2WaeqFlnXCv3l+ovam9JrT90y' \
