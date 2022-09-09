@@ -85,6 +85,8 @@ class Task:
         if self.task_destination_network in task_keys_to_msg:
             task_translation_mechanism = task_keys_to_msg[self.task_destination_network]
             new_task_dict = translate_dict(self.task_data, task_translation_mechanism)
+            if '_taskId' in new_task_dict:
+                new_task_dict['_taskId'] = int(new_task_dict['_taskId'])
             return json.dumps(to_dict(new_task_dict))
         else:
             return json.dumps(to_dict(self.task_data))
