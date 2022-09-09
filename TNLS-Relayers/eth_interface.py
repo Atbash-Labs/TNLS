@@ -134,7 +134,8 @@ class EthContract(BaseContractInterface):
         See base_interface.py for documentation
         """
         # TODO:  FIGURE OUT NECESSARY PREPROCESSING HERE?
-        kwargs = {}
+        kwargs = None
+        function = self.get_function(function_name)
         if len(args) == 1:
             args = json.loads(args[0])
             if isinstance(args, dict):
@@ -145,8 +146,12 @@ class EthContract(BaseContractInterface):
                     if isinstance(value, list):
                         args[i] = tuple(value)
                 kwargs = None
-        function = self.get_function(function_name)
-        txn = self.interface.create_transaction(function, *args, **kwargs)
+        if kwargs is None:
+            txn = self.interface.create_transaction(function, *args)
+        elif args is None:
+            txn = self.interface.create_transaction(function, **kwargs)
+        else:
+            txn = self.interface.create_transaction(function, *args, **kwargs)
         return self.interface.sign_and_send_transaction(txn)
 
     def parse_event_from_txn(self, event_name, txn) -> List[Task]:
