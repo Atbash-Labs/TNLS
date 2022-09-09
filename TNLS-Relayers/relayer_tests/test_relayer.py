@@ -9,12 +9,6 @@ from base_interface import BaseChainInterface, BaseContractInterface, Task, tran
 from relayer import Relayer
 from web_app import app_factory, convert_config_file_to_dict
 
-"""
-Figure out something where the fake chain returns a fixed set of transactions,
-and the contract interface handling them just returns the incoming results plus n, where n is the
-specific destination network the contract gets routed to?
-"""
-
 
 class FakeChainInterface(BaseChainInterface):
     """
