@@ -49,9 +49,6 @@ def translate_dict(dict_to_translate, translation_mechanism):
         translation_mechanism: the mechanism to use for translation
 
     Returns: the translated dictionary
-
-    #TODO test carefully
-
     """
     translated_dict = {}
     for key, val in translation_mechanism.items():

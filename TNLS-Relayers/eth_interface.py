@@ -148,7 +148,6 @@ class EthContract(BaseContractInterface):
         """
         See base_interface.py for documentation
         """
-        # TODO:  FIGURE OUT NECESSARY PREPROCESSING HERE?
         kwargs = None
         function = self.get_function(function_name)
         if len(args) == 1:
