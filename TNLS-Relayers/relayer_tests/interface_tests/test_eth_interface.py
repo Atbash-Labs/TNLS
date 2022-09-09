@@ -352,7 +352,7 @@ def test_function_call(provider_privkey_address, address_and_abi_of_contract):
     assert event.__dict__['args']['_bar'] == 'testing contracts is easy'
 
 
-pytest.mark.skip(reason="unimplementes")
+@pytest.mark.skip(reason="unimplemented")
 def test_function_call_with_real_interface(provider_privkey_address, address_and_abi_of_contract):
     # Confirms that the ethContract interface correctly calls functions
     provider, private_key, address = provider_privkey_address
