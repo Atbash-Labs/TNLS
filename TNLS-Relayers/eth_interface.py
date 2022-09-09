@@ -144,6 +144,7 @@ class EthContract(BaseContractInterface):
                 for i, value in enumerate(args):
                     if isinstance(value, list):
                         args[i] = tuple(value)
+                kwargs = None
         function = self.get_function(function_name)
         txn = self.interface.create_transaction(function, *args, **kwargs)
         return self.interface.sign_and_send_transaction(txn)
