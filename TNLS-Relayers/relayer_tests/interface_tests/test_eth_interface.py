@@ -535,8 +535,8 @@ def test_function_call_with_real_interface(provider_privkey_address, address_and
     tx = contract.call_function('postExecution', input)
     # verify that the log's data matches the expected value
     receipt = provider.eth.wait_for_transaction_receipt(tx, 180)
-    logs = list(foo_contract.events.barred.getLogs())
+    logs = list(foo_contract.events.logCompletedTask.getLogs())
     assert len(logs) == 1
     event = logs[0]
     assert event.blockHash == receipt.blockHash
-    assert event.__dict__['args']['result'] == 'test_call'
+    assert event.__dict__['args']['source_network'] == 'secret'
