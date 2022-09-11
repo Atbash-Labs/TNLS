@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Wallet, SecretNetworkClient, fromUtf8 } from "secretjs";
+import { Wallet, SecretNetworkClient, fromUtf8, fromHex } from "secretjs";
 import fs from "fs";
 import assert from "assert";
 import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender, Binary, BroadcastMsg } from "./GatewayContract";
@@ -400,19 +400,19 @@ async function gatewayTx(
   const gatewayPublicKeyBuffer = Buffer.from(gatewayPublicKey, 'base64')
   const gatewayPublicKeyBytes = arrayify(gatewayPublicKeyBuffer)
 
-  const routing_info: Contract = {
-    address: contractAddress,
-    hash: contractHash
-  };
-  const sender: Sender = {
-    address: userPublicAddress,
-    public_key: Buffer.from(userPublicKeyBytes).toString('base64'),
-  };
+  const routing_info = contractAddress;
+  const routing_code_hash = contractHash;
+  
+  const user_address = userPublicAddress;
+  const user_key = Buffer.from(userPublicKeyBytes).toString('base64');
+
   const inputs = JSON.stringify({"my_value": 1});
   const payload: Payload = {
     data: inputs,
     routing_info: routing_info,
-    sender: sender,
+    routing_code_hash: routing_code_hash,
+    user_address: user_address,
+    user_key: user_key
   };
   console.log("Unencrypted Payload:");
   console.log(payload);
@@ -436,7 +436,9 @@ async function gatewayTx(
     task_id: 1,
     handle: "add_one",
     routing_info: routing_info,
-    sender_info: sender,
+    routing_code_hash: routing_code_hash,
+    user_address: user_address,
+    user_key: user_key,
     payload: ciphertext,
     nonce: Buffer.from(nonce).toString('base64'),
     payload_hash: payloadHash64,
@@ -473,10 +475,13 @@ async function gatewayTx(
   let logs: {[index: string]:string} = {};
   const logKeys = [
     "source_network",
-    "routing_info",
-    "routing_info_hash",
-    "routing_info_signature",
-    "payload",
+    "task_destination_network",
+    "task_destination_network_hash",
+    "task_destination_network_signature",
+    "task_id", 
+    "task_id_hash",
+    "task_id_signature",
+    // "payload",
     "payload_hash",
     "payload_signature",
     "result",
@@ -484,9 +489,6 @@ async function gatewayTx(
     "result_signature",
     "packet_hash",
     "packet_signature",
-    "task_id", 
-    "task_id_hash",
-    "task_id_signature",
   ];
 
   logKeys.forEach((key) => logs[key] = tx.arrayLog!.find(
@@ -496,21 +498,22 @@ async function gatewayTx(
   console.log("\nOutput Logs:");
   console.log(logs);
 
+  // TODO strip_prefix "0x" from the hex strings
   assert(logs["source_network"] == "secret");
-  assert(logs["routing_info"] == "ethereum");
-  assert(Buffer.from(logs["routing_info_hash"], 'base64').byteLength == 32);
-  assert(Buffer.from(logs["routing_info_signature"], 'base64').byteLength == 64);
-  assert(logs["payload"] == ciphertext);
-  assert(Buffer.from(logs["payload_hash"], 'base64').byteLength == 32);
-  assert(Buffer.from(logs["payload_signature"], 'base64').byteLength == 64);
-  assert(logs["result"] == "{\"my_value\":2}"); // note that value changed
-  assert(Buffer.from(logs["result_hash"], 'base64').byteLength == 32);
-  assert(Buffer.from(logs["result_signature"], 'base64').byteLength == 64);
-  assert(Buffer.from(logs["packet_hash"], 'base64').byteLength == 32);
-  assert(Buffer.from(logs["packet_signature"], 'base64').byteLength == 64);
+  assert(logs["task_destination_network"] == "ethereum");
+  assert(fromHex(logs["task_destination_network_hash"].substring(2)).byteLength == 32);
+  assert(fromHex(logs["task_destination_network_signature"].substring(2)).byteLength == 65);
   assert(logs["task_id"] == "1");
-  assert(Buffer.from(logs["task_id_hash"], 'base64').byteLength == 32);
-  assert(Buffer.from(logs["task_id_signature"], 'base64').byteLength == 64);
+  assert(fromHex(logs["task_id_hash"].substring(2)).byteLength == 32);
+  assert(fromHex(logs["task_id_signature"].substring(2)).byteLength == 65);
+  // assert(logs["payload"] == ciphertext);
+  assert(fromHex(logs["payload_hash"].substring(2)).byteLength == 32);
+  assert(fromHex(logs["payload_signature"].substring(2)).byteLength == 65);
+  assert(logs["result"] == "{\"my_value\":2}"); // note that value changed
+  assert(fromHex(logs["result_hash"].substring(2)).byteLength == 32);
+  assert(fromHex(logs["result_signature"].substring(2)).byteLength == 65);
+  assert(fromHex(logs["packet_hash"].substring(2)).byteLength == 32);
+  assert(fromHex(logs["packet_signature"].substring(2)).byteLength == 65);
 
   console.log(`inputTx used \x1b[33m${tx.gasUsed}\x1b[0m gas`);
 }

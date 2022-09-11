@@ -31,11 +31,11 @@ pub struct State {
     pub signing_keys: KeyPair,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
 pub struct TaskInfo {
     /// Encryption of (data, routing info, and user address/verifying key).
     pub payload: Binary,
-    /// sha256(decrypted input_values)
+    /// sha256(decrypted input_values + task_id)
     pub input_hash: [u8; 32],
     /// Source network (where to go once pulled into the next gateway).
     pub source_network: String,

@@ -17,6 +17,10 @@ use crate::{
     PrivContractHandleMsg,
 };
 
+use hex::ToHex;
+use sha3::{Digest, Keccak256};
+// use ethers::signers::{Signer, LocalWallet};
+
 /// pad handle responses and log attributes to blocks of 256 bytes to prevent leaking info based on
 /// response size
 pub const BLOCK_SIZE: usize = 256;
@@ -277,17 +281,42 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     _env: Env,
     msg: PostExecutionMsg,
 ) -> HandleResult {
-    // load task ID information (remember this is decrypted)
-    let task_info = TASK_MAP.get(&deps.storage, &msg.task_id).unwrap(); // TODO produce an error if this returns None
-
+    // load task info and remove task ID from map
+    let task_info = TASK_MAP
+        .get(&deps.storage, &msg.task_id)
+        .ok_or_else(|| StdError::generic_err("task id not found"))?;
+        
+    // this panics in unit tests
+    #[cfg(target_arch = "wasm32")]
+    TASK_MAP.remove(&mut deps.storage, &msg.task_id)?;
+    
     // verify that input hash is correct one for Task ID
     if msg.input_hash.as_slice() != task_info.input_hash.to_vec() {
         return Err(StdError::generic_err("input hash does not match task id"));
     }
 
-    let routing_hash = sha_256(task_info.source_network.as_bytes());
-    let payload_hash = sha_256(task_info.payload.as_slice());
-    let task_hash = sha_256(&msg.task_id.to_le_bytes());
+    let routing_info = task_info.source_network;
+
+    let mut hasher = Keccak256::new();
+    let prefix = "\x19Ethereum Signed Message:\n32".as_bytes();
+
+    hasher.update(routing_info.as_bytes());
+    let routing_hash = hasher.finalize_reset();
+    hasher.update([prefix, &routing_hash].concat());
+    let routing_hash = hasher.finalize_reset();
+    // let routing_hash = sha_256(task_info.source_network.as_bytes());
+
+    hasher.update(task_info.payload.as_slice());
+    let payload_hash = hasher.finalize_reset();
+    hasher.update([prefix, &payload_hash].concat());
+    let payload_hash = hasher.finalize_reset();
+    // let payload_hash = sha_256(task_info.payload.as_slice());
+
+    hasher.update(&msg.task_id.to_le_bytes());
+    let task_hash = hasher.finalize_reset();
+    hasher.update([prefix, &task_hash].concat());
+    let task_hash = hasher.finalize_reset();
+    // let task_hash = sha_256(&msg.task_id.to_le_bytes());
 
     // create message hash of (result + payload + inputs)
     let data = [
@@ -296,7 +325,11 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
         &task_info.input_hash,
     ]
     .concat();
-    let result_hash = sha_256(&data);
+    hasher.update(&data);
+    let result_hash = hasher.finalize_reset();
+    hasher.update([prefix, &result_hash].concat());
+    let result_hash = hasher.finalize_reset();
+    // let result_hash = sha_256(&data);
 
     // load this gateway's signing key
     let private_key = CONFIG.load(&deps.storage)?.signing_keys.sk;
@@ -366,7 +399,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     // create hash of entire packet (used to verify the message wasn't modified in transit)
     let data = [
         "secret".as_bytes(),                 // source network
-        task_info.source_network.as_bytes(), // task_destination_network
+        &routing_info.as_bytes(),            // task_destination_network
         &routing_hash,                       // task_destination_network message
         &routing_signature,                  // task_destination_network signature
         &msg.task_id.to_le_bytes(),          // task ID
@@ -380,7 +413,11 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
         &result_signature,                   // result signature
     ]
     .concat();
-    let packet_hash = sha_256(&data);
+    hasher.update(&data);
+    let packet_hash = hasher.finalize_reset();
+    hasher.update([prefix, &packet_hash].concat());
+    let packet_hash = hasher.finalize();
+    // let packet_hash = sha_256(&data);
 
     // used in production
     #[cfg(target_arch = "wasm32")]
@@ -390,6 +427,11 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
             .serialize()
             .to_vec()
     };
+
+    // let wallet = "dcf2cbdd171a21c480aa7f53d77f31bb102282b3ff099c78e3118b37348c72f7"
+    //     .parse::<LocalWallet>().map_err(|err| StdError::generic_err(err.to_string()))?;
+
+    // let signature = wallet.sign_message("hello world");
 
     // used in unit testing
     #[cfg(not(target_arch = "wasm32"))]
@@ -409,26 +451,50 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
         messages: vec![],
         log: vec![
             plaintext_log("source_network", "secret"),
-            plaintext_log("task_destination_network", task_info.source_network),
+            plaintext_log("task_destination_network", &routing_info),
             plaintext_log(
                 "task_destination_network_hash",
-                Binary(routing_hash.to_vec()),
+                format!("0x{}", &routing_hash.encode_hex::<String>()),
             ),
             plaintext_log(
                 "task_destination_network_signature",
-                Binary(routing_signature),
+                format!("0x{}1c", &routing_signature.encode_hex::<String>()),
             ),
             plaintext_log("task_id", msg.task_id),
-            plaintext_log("task_id_hash", Binary(task_hash.to_vec())),
-            plaintext_log("task_id_signature", Binary(task_signature)),
-            plaintext_log("payload", task_info.payload),
-            plaintext_log("payload_hash", Binary(payload_hash.to_vec())),
-            plaintext_log("payload_signature", Binary(payload_signature)),
+            plaintext_log(
+                "task_id_hash",
+                format!("0x{}", &task_hash.encode_hex::<String>()),
+            ),
+            plaintext_log(
+                "task_id_signature",
+                format!("0x{}1c", &task_signature.encode_hex::<String>()),
+            ),
+            // plaintext_log("payload", task_info.payload),
+            plaintext_log(
+                "payload_hash",
+                format!("0x{}", &payload_hash.encode_hex::<String>()),
+            ),
+            plaintext_log(
+                "payload_signature",
+                format!("0x{}1c", &payload_signature.encode_hex::<String>()),
+            ),
             plaintext_log("result", msg.result),
-            plaintext_log("result_hash", Binary(result_hash.to_vec())),
-            plaintext_log("result_signature", Binary(result_signature)),
-            plaintext_log("packet_hash", Binary(packet_hash.to_vec())),
-            plaintext_log("packet_signature", Binary(packet_signature)),
+            plaintext_log(
+                "result_hash",
+                format!("0x{}", &result_hash.encode_hex::<String>()),
+            ),
+            plaintext_log(
+                "result_signature",
+                format!("0x{}1c", &result_signature.encode_hex::<String>()),
+            ),
+            plaintext_log(
+                "packet_hash",
+                format!("0x{}", &packet_hash.encode_hex::<String>()),
+            ),
+            plaintext_log(
+                "packet_signature",
+                format!("0x{}1c", &packet_signature.encode_hex::<String>()),
+            ),
         ],
         data: None,
     })
@@ -699,17 +765,17 @@ mod tests {
 
         // test internal routing info does not match
         let pre_execution_msg = PreExecutionMsg {
-            task_id: 1,
-            handle: "test".to_string(),
+            task_id: 1u64,
+            source_network: "ethereum".to_string(),
             routing_info: wrong_routing_info.clone(),
             routing_code_hash: routing_code_hash.clone(),
-            user_address: user_address.clone(),
-            user_key: user_key.clone(),
             payload: Binary(encrypted_payload.clone()),
-            nonce: Binary(b"unique nonce".to_vec()),
             payload_hash: Binary(payload_hash.to_vec()),
             payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
-            source_network: "ethereum".to_string(),
+            user_address: user_address.clone(),
+            user_key: user_key.clone(),
+            handle: "test".to_string(),
+            nonce: Binary(b"unique nonce".to_vec()),
         };
         let handle_msg = HandleMsg::Input {
             inputs: pre_execution_msg,
@@ -719,7 +785,7 @@ mod tests {
 
         // test proper input handle
         let pre_execution_msg = PreExecutionMsg {
-            task_id: 1,
+            task_id: 1u64,
             handle: "test".to_string(),
             routing_info,
             routing_code_hash,
@@ -810,17 +876,17 @@ mod tests {
 
         // execute input handle
         let pre_execution_msg = PreExecutionMsg {
-            task_id: 1,
-            handle: "test".to_string(),
+            task_id: 1u64,
+            source_network: "ethereum".to_string(),
             routing_info,
             routing_code_hash,
-            user_address,
-            user_key,
             payload: Binary(encrypted_payload),
-            nonce: Binary(b"unique nonce".to_vec()),
             payload_hash: Binary(payload_hash.to_vec()),
             payload_signature: Binary(payload_signature.serialize_compact().to_vec()),
-            source_network: "ethereum".to_string(),
+            user_address,
+            user_key,
+            handle: "test".to_string(),
+            nonce: Binary(b"unique nonce".to_vec()),
         };
         let handle_msg = HandleMsg::Input {
             inputs: pre_execution_msg.clone(),
@@ -830,7 +896,7 @@ mod tests {
         // test incorrect input_hash
         let wrong_post_execution_msg = PostExecutionMsg {
             result: "{\"answer\": 42}".to_string(),
-            task_id: 1,
+            task_id: 1u64,
             input_hash: Binary(sha_256("wrong data".as_bytes()).to_vec()),
         };
         let handle_msg = HandleMsg::Output {
@@ -846,7 +912,9 @@ mod tests {
         let post_execution_msg = PostExecutionMsg {
             result: "{\"answer\": 42}".to_string(),
             task_id: 1,
-            input_hash: Binary(sha_256(&[data.as_bytes(), 1u64.to_le_bytes().as_ref()].concat()).to_vec()),
+            input_hash: Binary(
+                sha_256(&[data.as_bytes(), 1u64.to_le_bytes().as_ref()].concat()).to_vec(),
+            ),
         };
 
         let handle_msg = HandleMsg::Output {
@@ -862,18 +930,68 @@ mod tests {
 
         assert_eq!(logs[0].value, "secret".to_string());
         assert_eq!(logs[1].value, "ethereum".to_string());
-        assert_eq!(base64::decode(logs[2].value.clone()).unwrap().len(), 32);
-        assert_eq!(base64::decode(logs[3].value.clone()).unwrap().len(), 64);
+        assert_eq!(
+            hex::decode(logs[2].value.clone().strip_prefix("0x").unwrap())
+                .unwrap()
+                .len(),
+            32
+        );
+        assert_eq!(
+            hex::decode(logs[3].value.clone().strip_prefix("0x").unwrap())
+                .unwrap()
+                .len(),
+            64
+        );
         assert_eq!(logs[4].value, "1".to_string());
-        assert_eq!(base64::decode(logs[5].value.clone()).unwrap().len(), 32);
-        assert_eq!(base64::decode(logs[6].value.clone()).unwrap().len(), 64);
+        assert_eq!(
+            hex::decode(logs[5].value.clone().strip_prefix("0x").unwrap())
+                .unwrap()
+                .len(),
+            32
+        );
+        assert_eq!(
+            hex::decode(logs[6].value.clone().strip_prefix("0x").unwrap())
+                .unwrap()
+                .len(),
+            64
+        );
         assert_eq!(logs[7].value, pre_execution_msg.payload.to_base64());
-        assert_eq!(base64::decode(logs[8].value.clone()).unwrap().len(), 32);
-        assert_eq!(base64::decode(logs[9].value.clone()).unwrap().len(), 64);
+        assert_eq!(
+            hex::decode(logs[8].value.clone().strip_prefix("0x").unwrap())
+                .unwrap()
+                .len(),
+            32
+        );
+        assert_eq!(
+            hex::decode(logs[9].value.clone().strip_prefix("0x").unwrap())
+                .unwrap()
+                .len(),
+            64
+        );
         assert_eq!(logs[10].value, "{\"answer\": 42}".to_string());
-        assert_eq!(base64::decode(logs[11].value.clone()).unwrap().len(), 32);
-        assert_eq!(base64::decode(logs[12].value.clone()).unwrap().len(), 64);
-        assert_eq!(base64::decode(logs[13].value.clone()).unwrap().len(), 32);
-        assert_eq!(base64::decode(logs[14].value.clone()).unwrap().len(), 64);
+        assert_eq!(
+            hex::decode(logs[11].value.clone().strip_prefix("0x").unwrap())
+                .unwrap()
+                .len(),
+            32
+        );
+        assert_eq!(
+            hex::decode(logs[12].value.clone().strip_prefix("0x").unwrap())
+                .unwrap()
+                .len(),
+            64
+        );
+        assert_eq!(
+            hex::decode(logs[13].value.clone().strip_prefix("0x").unwrap())
+                .unwrap()
+                .len(),
+            32
+        );
+        assert_eq!(
+            hex::decode(logs[14].value.clone().strip_prefix("0x").unwrap())
+                .unwrap()
+                .len(),
+            64
+        );
     }
 }
