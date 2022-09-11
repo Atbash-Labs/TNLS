@@ -940,7 +940,7 @@ mod tests {
             hex::decode(logs[3].value.clone().strip_prefix("0x").unwrap())
                 .unwrap()
                 .len(),
-            64
+            65
         );
         assert_eq!(logs[4].value, "1".to_string());
         assert_eq!(
@@ -953,45 +953,45 @@ mod tests {
             hex::decode(logs[6].value.clone().strip_prefix("0x").unwrap())
                 .unwrap()
                 .len(),
-            64
+            65
         );
-        assert_eq!(logs[7].value, pre_execution_msg.payload.to_base64());
+        // assert_eq!(logs[7].value, pre_execution_msg.payload.to_base64());
+        assert_eq!(
+            hex::decode(logs[7].value.clone().strip_prefix("0x").unwrap())
+                .unwrap()
+                .len(),
+            32
+        );
         assert_eq!(
             hex::decode(logs[8].value.clone().strip_prefix("0x").unwrap())
                 .unwrap()
                 .len(),
-            32
+            65
         );
+        assert_eq!(logs[9].value, "{\"answer\": 42}".to_string());
         assert_eq!(
-            hex::decode(logs[9].value.clone().strip_prefix("0x").unwrap())
+            hex::decode(logs[10].value.clone().strip_prefix("0x").unwrap())
                 .unwrap()
                 .len(),
-            64
+            32
         );
-        assert_eq!(logs[10].value, "{\"answer\": 42}".to_string());
         assert_eq!(
             hex::decode(logs[11].value.clone().strip_prefix("0x").unwrap())
                 .unwrap()
                 .len(),
-            32
+            65
         );
         assert_eq!(
             hex::decode(logs[12].value.clone().strip_prefix("0x").unwrap())
                 .unwrap()
                 .len(),
-            64
+            32
         );
         assert_eq!(
             hex::decode(logs[13].value.clone().strip_prefix("0x").unwrap())
                 .unwrap()
                 .len(),
-            32
-        );
-        assert_eq!(
-            hex::decode(logs[14].value.clone().strip_prefix("0x").unwrap())
-                .unwrap()
-                .len(),
-            64
+            65
         );
     }
 }
