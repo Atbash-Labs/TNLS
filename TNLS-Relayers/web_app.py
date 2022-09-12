@@ -32,15 +32,15 @@ def generate_scrt_config(config_dict):
     priv_key = os.environ['secret-private-key']
     address = config_dict['wallet_address']
     contract_address = config_dict['contract_address']
-    with open('secret_abi.json') as f:
+    with open(f'{__file__}/../secret_abi.json') as f:
         contract_schema = f.read()
     event_name = 'wasm'
     function_name = list(json.loads(contract_schema).keys())[0]
     initialized_chain = SCRTInterface(private_key=priv_key, address=address, )
     initialized_contract = SCRTContract(interface=initialized_chain, address=contract_address,
                                         abi=contract_schema)
-    eth_tuple = (initialized_chain, initialized_contract, event_name, function_name)
-    return eth_tuple
+    scrt_tuple = (initialized_chain, initialized_contract, event_name, function_name)
+    return scrt_tuple
 
 
 def generate_full_config(config_file):

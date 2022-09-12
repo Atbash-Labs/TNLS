@@ -1,13 +1,88 @@
+import os
 import time
 from json import loads
 from logging import WARNING
 from typing import List
 
 import pytest
+from eth_tester import EthereumTester, PyEVMBackend
+from secret_sdk.client.localsecret import LocalSecret, LOCAL_MNEMONICS, LOCAL_DEFAULTS
+from secret_sdk.key.mnemonic import MnemonicKey
+from web3 import Web3
 
 from base_interface import BaseChainInterface, BaseContractInterface, Task, translate_dict
 from relayer import Relayer
-from web_app import app_factory, convert_config_file_to_dict
+from web_app import app_factory, convert_config_file_to_dict, generate_scrt_config
+
+
+@pytest.fixture
+def provider_privkey_address_eth(monkeypatch):
+    """
+    Fixture that provides a mock eth backend as well as a private key and address
+    for an account on that backend
+
+    """
+    base_provider = Web3.EthereumTesterProvider(EthereumTester(backend=PyEVMBackend()))
+    base_priv_key = base_provider.ethereum_tester.backend.account_keys[0]
+    base_addr = base_provider.ethereum_tester.get_accounts()[0]
+    web3provider = Web3(base_provider)
+    yield web3provider, base_priv_key, base_addr
+
+
+@pytest.fixture
+def provider_privkey_address_scrt(monkeypatch):
+    """
+    Fixture that provides a mock scrt backend as well as a private key and address
+    for an account on that backend
+
+    """
+    LOCAL_DEFAULTS['secretdev-1'] = {
+        "url": "http://localhost:1317",
+        "chain_id": 'secretdev-1',
+        "gas_prices": {"uscrt": 0.25},
+        "gas_adjustment": 1.0,
+    }
+    LOCAL_MNEMONICS['secretdev-1'] = {
+        "wallet_a": {
+            "mnemonic": "grant rice replace explain federal release fix clever romance raise"
+                        " often wild taxi quarter soccer fiber love must tape steak together observe swap guitar"
+
+        }
+
+    }
+    local_provider = LocalSecret(chain_id='secretdev-1')
+    key = MnemonicKey(mnemonic=LOCAL_MNEMONICS['secretdev-1']['wallet_a']['mnemonic'])
+    private_key = key.private_key
+    address = key.acc_address
+    return local_provider, private_key, address
+
+
+@pytest.fixture
+def set_os_env_vars(provider_privkey_address_eth, provider_privkey_address_scrt):
+    curr_scrt = os.environ.get('secret-private-key', None)
+    curr_eth = os.environ.get('eth-private-key', None)
+    scrt_key = provider_privkey_address_scrt[1]
+    eth_key = provider_privkey_address_eth[1]
+    os.environ['secret-private-key'] = scrt_key
+    os.environ['eth-private-key'] = eth_key
+    yield
+    if curr_scrt is None:
+        del os.environ['secret-private-key']
+    else:
+        os.environ['secret-private-key'] = curr_scrt
+    if curr_eth is None:
+        del os.environ['eth-private-key']
+    else:
+        os.environ['eth-private-key'] = curr_eth
+
+
+def test_scrt_config(set_os_env_vars, provider_privkey_address_scrt):
+    config_dict = generate_scrt_config({'wallet_address': provider_privkey_address_scrt[1], 'contract_address': '0x0'})
+    chain_interface, contract_interface, evt_name, function_name = generate_scrt_config(config_dict)
+    assert evt_name == 'wasm'
+    assert function_name == 'PreExecutionMsg'
+    assert contract_interface.address == '0x0'
+    assert contract_interface.interface == chain_interface
 
 
 class FakeChainInterface(BaseChainInterface):
@@ -362,3 +437,6 @@ def test_dict_translation():
     translated_dict = translate_dict(dict_to_translate, translation_mechanism)
     assert translated_dict == {"test_translated_1": "test_value_1", "test_key_2": "test_value_2",
                                "test_tuple_1": ["test_value_3", "test_value_4"]}
+
+
+def test_scrt_config():

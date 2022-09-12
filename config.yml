@@ -1,0 +1,8 @@
+ethereum:
+  contract_address: "INSERT_CONTRACT_ADDRESS_HERE"
+  contract_schema: "INSERT_CONTRACT_SCHEMA_HERE"
+  wallet_address: "INSERT_WALLET_ADDRESS_HERE"
+
+secret:
+  contract_address: "INSERT_CONTRACT_ADDRESS_HERE"
+  wallet_address: "INSERT_WALLET_ADDRESS_HERE"
