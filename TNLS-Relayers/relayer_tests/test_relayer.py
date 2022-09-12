@@ -438,5 +438,3 @@ def test_dict_translation():
     assert translated_dict == {"test_translated_1": "test_value_1", "test_key_2": "test_value_2",
                                "test_tuple_1": ["test_value_3", "test_value_4"]}
 
-
-def test_scrt_config():
