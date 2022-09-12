@@ -43,6 +43,11 @@ class SCRTInterface(BaseChainInterface):
         return self.provider.tx.broadcast(signed_tx)
 
     def get_last_block(self):
+        """
+        Returns the most recent block height
+        Returns:  the height of the current block
+
+        """
         block_info = self.provider.tendermint.block_info()
         return int(block_info['block']['header']['height'])
 
