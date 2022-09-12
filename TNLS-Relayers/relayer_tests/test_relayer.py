@@ -62,7 +62,7 @@ def set_os_env_vars(provider_privkey_address_eth, provider_privkey_address_scrt)
     curr_scrt = os.environ.get('secret-private-key', None)
     curr_eth = os.environ.get('eth-private-key', None)
     scrt_key = provider_privkey_address_scrt[1]
-    eth_key = provider_privkey_address_eth[1]
+    eth_key = provider_privkey_address_eth[1]._raw_key
     os.environ['secret-private-key'] = scrt_key.hex()
     os.environ['eth-private-key'] = eth_key.hex()
     yield
