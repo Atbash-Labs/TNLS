@@ -173,7 +173,7 @@ fn create_gateway_keys<S: Storage, A: Api, Q: Querier>(
     let (secret, public, new_prng_seed) = generate_keypair(&env, new_prng_seed, None)?;
     let signing_keys = KeyPair {
         sk: Binary(secret.serialize().to_vec()), // private key is 32 bytes,
-        pk: Binary(public.serialize_compressed().to_vec()), // public key is 33 bytes
+        pk: Binary(public.serialize().to_vec()), // public key is 65 bytes
     };
 
     CONFIG.update(&mut deps.storage, |mut state| {
@@ -246,7 +246,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
     // this signature is only used during unit testing
     #[cfg(not(target_arch = "wasm32"))]
     let signature = {
-        let secp = secp256k1::Secp256k1::new();
+        let secp = secp256k1::Secp256k1::signing_only();
         let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
         let message = secp256k1::Message::from_slice(&input_hash)
             .map_err(|err| StdError::generic_err(err.to_string()))?;
@@ -285,11 +285,11 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     let task_info = TASK_MAP
         .get(&deps.storage, &msg.task_id)
         .ok_or_else(|| StdError::generic_err("task id not found"))?;
-        
+
     // this panics in unit tests
     #[cfg(target_arch = "wasm32")]
     TASK_MAP.remove(&mut deps.storage, &msg.task_id)?;
-    
+
     // verify that input hash is correct one for Task ID
     if msg.input_hash.as_slice() != task_info.input_hash.to_vec() {
         return Err(StdError::generic_err("input hash does not match task id"));
@@ -304,19 +304,16 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     let routing_hash = hasher.finalize_reset();
     hasher.update([prefix, &routing_hash].concat());
     let routing_hash = hasher.finalize_reset();
-    // let routing_hash = sha_256(task_info.source_network.as_bytes());
 
     hasher.update(task_info.payload.as_slice());
     let payload_hash = hasher.finalize_reset();
     hasher.update([prefix, &payload_hash].concat());
     let payload_hash = hasher.finalize_reset();
-    // let payload_hash = sha_256(task_info.payload.as_slice());
 
     hasher.update(&msg.task_id.to_le_bytes());
     let task_hash = hasher.finalize_reset();
     hasher.update([prefix, &task_hash].concat());
     let task_hash = hasher.finalize_reset();
-    // let task_hash = sha_256(&msg.task_id.to_le_bytes());
 
     // create message hash of (result + payload + inputs)
     let data = [
@@ -329,7 +326,6 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     let result_hash = hasher.finalize_reset();
     hasher.update([prefix, &result_hash].concat());
     let result_hash = hasher.finalize_reset();
-    // let result_hash = sha_256(&data);
 
     // load this gateway's signing key
     let private_key = CONFIG.load(&deps.storage)?.signing_keys.sk;
@@ -357,7 +353,7 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
     // used in unit testing
     #[cfg(not(target_arch = "wasm32"))]
     let (routing_signature, payload_signature, result_signature, task_signature) = {
-        let secp = secp256k1::Secp256k1::new();
+        let secp = secp256k1::Secp256k1::signing_only();
         let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
 
         let routing_message = secp256k1::Message::from_slice(&routing_hash)
@@ -398,26 +394,25 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
 
     // create hash of entire packet (used to verify the message wasn't modified in transit)
     let data = [
-        "secret".as_bytes(),                 // source network
-        &routing_info.as_bytes(),            // task_destination_network
-        &routing_hash,                       // task_destination_network message
-        &routing_signature,                  // task_destination_network signature
-        &msg.task_id.to_le_bytes(),          // task ID
-        &task_hash,                          // task ID hash
-        &task_signature,                     // task ID signature
-        task_info.payload.as_slice(),        // payload (original encrypted payload)
-        &payload_hash,                       // payload message
-        &payload_signature,                  // payload signature
-        msg.result.as_bytes(),               // result
-        &result_hash,                        // result message
-        &result_signature,                   // result signature
+        "secret".as_bytes(),          // source network
+        routing_info.as_bytes(),      // task_destination_network
+        &routing_hash,                // task_destination_network message
+        &routing_signature,           // task_destination_network signature
+        &msg.task_id.to_le_bytes(),   // task ID
+        &task_hash,                   // task ID hash
+        &task_signature,              // task ID signature
+        task_info.payload.as_slice(), // payload (original encrypted payload)
+        &payload_hash,                // payload message
+        &payload_signature,           // payload signature
+        msg.result.as_bytes(),        // result
+        &result_hash,                 // result message
+        &result_signature,            // result signature
     ]
     .concat();
     hasher.update(&data);
     let packet_hash = hasher.finalize_reset();
     hasher.update([prefix, &packet_hash].concat());
     let packet_hash = hasher.finalize();
-    // let packet_hash = sha_256(&data);
 
     // used in production
     #[cfg(target_arch = "wasm32")]
@@ -428,15 +423,10 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
             .to_vec()
     };
 
-    // let wallet = "dcf2cbdd171a21c480aa7f53d77f31bb102282b3ff099c78e3118b37348c72f7"
-    //     .parse::<LocalWallet>().map_err(|err| StdError::generic_err(err.to_string()))?;
-
-    // let signature = wallet.sign_message("hello world");
-
     // used in unit testing
     #[cfg(not(target_arch = "wasm32"))]
     let packet_signature = {
-        let secp = secp256k1::Secp256k1::new();
+        let secp = secp256k1::Secp256k1::signing_only();
         let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
 
         let packet_message = secp256k1::Message::from_slice(&packet_hash)
@@ -510,15 +500,16 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
 /// * `msg` - QueryMsg passed in with the query call
 pub fn query<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, msg: QueryMsg) -> QueryResult {
     let response = match msg {
-        QueryMsg::GetPublicKey {} => query_public_key(deps),
+        QueryMsg::GetPublicKey {} => query_public_keys(deps),
     };
     pad_query_result(response, BLOCK_SIZE)
 }
 
-fn query_public_key<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> QueryResult {
+fn query_public_keys<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> QueryResult {
     let state: State = CONFIG.load(&deps.storage)?;
     to_binary(&PublicKeyResponse {
-        key: state.encryption_keys.pk,
+        encryption_key: state.encryption_keys.pk,
+        verification_key: format!("0x{}", state.signing_keys.pk.as_slice().encode_hex::<String>()),
     })
 }
 
@@ -613,7 +604,7 @@ mod tests {
         let query_msg = QueryMsg::GetPublicKey {};
         let query_result = query(&deps, query_msg);
         let query_answer: PublicKeyResponse = from_binary(&query_result.unwrap()).unwrap();
-        let gateway_pubkey = query_answer.key;
+        let gateway_pubkey = query_answer.encryption_key;
         gateway_pubkey
     }
 
@@ -649,7 +640,7 @@ mod tests {
         let res = query(&deps, msg);
         assert!(res.is_ok(), "query failed: {}", res.err().unwrap());
         let value: PublicKeyResponse = from_binary(&res.unwrap()).unwrap();
-        assert_eq!(value.key.as_slice().len(), 33);
+        assert_eq!(value.encryption_key.as_slice().len(), 33);
     }
 
     #[test]

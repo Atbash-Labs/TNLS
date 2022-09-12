@@ -6,6 +6,7 @@ import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender, Binary, B
 import { ecdsaSign } from "secp256k1";
 import { Wallet as EthWallet } from "ethers";
 import { arrayify, SigningKey } from "ethers/lib/utils";
+import { ecrecover, toBuffer, bufferToHex, bufferToBigInt, isValidPublic, stripHexPrefix} from '@ethereumjs/util'
 import { createHash, randomBytes } from 'crypto';
 import { encrypt_payload } from './encrypt-payload/pkg'
 import 'dotenv/config'
@@ -47,7 +48,7 @@ const initializeGateway = async (
   scrtRngAddress: string,
 ) => {
   const wasmCode = fs.readFileSync(contractPath);
-  console.log("\nUploading contract");
+  console.log("\nUploading gateway contract");
 
   const uploadReceipt = await client.tx.compute.storeCode(
     {
@@ -118,11 +119,7 @@ const initializeGateway = async (
   )!.value;
 
   console.log(`Contract address: ${contractAddress}\n`);
-
-  console.log(`\x1b[32mEncryption key: ${encryption_pubkey}\x1b[0m`);
-  console.log(`\x1b[32mVerification key: ${signing_pubkey}\x1b[0m\n`);
-
-  console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas`);
+  console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas\n`);
 
   var gatewayInfo: [string, string, string] = [contractCodeHash, contractAddress, encryption_pubkey];
   return gatewayInfo;
@@ -379,7 +376,7 @@ async function rngTx(
     );
   };
 
-  console.log(`"key_gen" used \x1b[33m${tx.gasUsed}\x1b[0m gas`);
+  console.log(`"key_gen" used \x1b[33m${tx.gasUsed}\x1b[0m gas\n`);
 }
 
 async function gatewayTx(
@@ -462,7 +459,7 @@ async function gatewayTx(
       gasLimit: 200000,
     }
   );
-  console.log(tx);
+  // console.log(tx);
 
   if (tx.code !== 0) {
     throw new Error(
@@ -498,7 +495,11 @@ async function gatewayTx(
   console.log("\nOutput Logs:");
   console.log(logs);
 
-  // TODO strip_prefix "0x" from the hex strings
+  try_ecrecover(logs["task_destination_network_hash"], logs["task_destination_network_signature"]);
+  try_ecrecover(logs["payload_hash"], logs["payload_signature"]);
+  try_ecrecover(logs["result_hash"], logs["result_signature"]);
+  try_ecrecover(logs["packet_hash"], logs["packet_signature"]);
+
   assert(logs["source_network"] == "secret");
   assert(logs["task_destination_network"] == "ethereum");
   assert(fromHex(logs["task_destination_network_hash"].substring(2)).byteLength == 32);
@@ -523,7 +524,7 @@ async function queryPubKey(
   gatewayHash: string,
   gatewayAddress: string,
 ): Promise<string> {
-  type PublicKeyResponse = { key: Binary };
+  type PublicKeyResponse = { encryption_key: Binary, verification_key: Binary };
 
   const response = (await client.query.compute.queryContract({
     contractAddress: gatewayAddress,
@@ -531,8 +532,21 @@ async function queryPubKey(
     query: { get_public_key: {} },
   })) as PublicKeyResponse;
 
-  console.log(`Gateway Public Key: ${response.key}`);
-  return response.key
+  console.log(`\x1b[32mEncryption key: ${response.encryption_key}\x1b[0m`);
+  console.log(`\x1b[32mVerification key: ${response.verification_key}\x1b[0m`);
+
+  return response.encryption_key
+}
+
+function try_ecrecover(msg: string, sgn: string) {
+  const r = toBuffer(sgn.slice(0,66))
+  const s = toBuffer('0x' + sgn.slice(66,130))
+  const v = bufferToBigInt(toBuffer('0x' + sgn.slice(130,132)))
+
+  const pubKey = ecrecover(toBuffer(msg), v, r, s)
+  console.log(bufferToHex(pubKey))
+  console.log(isValidPublic(pubKey))
+  assert(isValidPublic(pubKey))
 }
 
 async function test_gateway_tx(

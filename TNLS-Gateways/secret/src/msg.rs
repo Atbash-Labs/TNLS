@@ -89,7 +89,8 @@ pub enum QueryMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PublicKeyResponse {
-    pub key: Binary,
+    pub encryption_key: Binary,
+    pub verification_key: String,
 }
 
 /// Message received from the relayer.
