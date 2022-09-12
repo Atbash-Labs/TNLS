@@ -14,11 +14,11 @@ from scrt_interface import SCRTInterface, SCRTContract
 base_map = {'Ethereum': (EthInterface, EthContract), 'Secret': (SCRTInterface, SCRTContract)}
 
 
-def generate_eth_config():
+def generate_eth_config(config_dict):
     priv_key = os.environ['ethereum-private-key']
-    address = os.environ['ethereum-wallet-address']
-    contract_address = os.environ['ethereum-contract-address']
-    contract_schema = os.environ['ethereum-contract-schema']
+    address = config_dict['wallet_address']
+    contract_address = config_dict['contract_address']
+    contract_schema = config_dict['contract_schema']
     event_name = 'logNewTask'
     function_name = 'postExecution'
     initialized_chain = EthInterface(private_key=priv_key, address=address, )
@@ -28,10 +28,10 @@ def generate_eth_config():
     return eth_tuple
 
 
-def generate_scrt_config():
+def generate_scrt_config(config_dict):
     priv_key = os.environ['secret-private-key']
-    address = os.environ['secret-wallet-address']
-    contract_address = os.environ['secret-contract-address']
+    address = config_dict['wallet_address']
+    contract_address = config_dict['contract_address']
     with open('secret_abi.json') as f:
         contract_schema = f.read()
     event_name = 'wasm'
@@ -43,8 +43,12 @@ def generate_scrt_config():
     return eth_tuple
 
 
-def generate_full_config(_):
-    return {'ethereum': generate_eth_config(), 'secret': generate_scrt_config()}
+def generate_full_config(config_file):
+    with open(config_file) as f:
+        config_dict = safe_load(f)
+    eth_config = generate_eth_config(config_dict['ethereum'])
+    scrt_config = generate_scrt_config(config_dict['secret'])
+    return {'ethereum': eth_config, 'secret': scrt_config}
 
 
 def convert_config_file_to_dict(config_file, map_of_names_to_interfaces=None) -> \
