@@ -78,7 +78,7 @@ def set_os_env_vars(provider_privkey_address_eth, provider_privkey_address_scrt)
 
 def test_scrt_config(set_os_env_vars, provider_privkey_address_scrt):
     provider = provider_privkey_address_scrt[0]
-    config_dict = {'wallet_address': provider_privkey_address_scrt[1], 'contract_address': '0x0'}
+    config_dict = {'wallet_address': provider_privkey_address_scrt[2], 'contract_address': '0x0'}
     chain_interface, contract_interface, evt_name, function_name = generate_scrt_config(config_dict, provider=provider)
     assert evt_name == 'wasm'
     assert function_name == 'PreExecutionMsg'
