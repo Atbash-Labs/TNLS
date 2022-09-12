@@ -77,6 +77,7 @@ def set_os_env_vars(provider_privkey_address_eth, provider_privkey_address_scrt)
 
 
 def test_scrt_config(set_os_env_vars, provider_privkey_address_scrt):
+    provider = provider_privkey_address_scrt[0]
     config_dict = generate_scrt_config({'wallet_address': provider_privkey_address_scrt[1], 'contract_address': '0x0'})
     chain_interface, contract_interface, evt_name, function_name = generate_scrt_config(config_dict)
     assert evt_name == 'wasm'

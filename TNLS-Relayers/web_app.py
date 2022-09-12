@@ -29,6 +29,9 @@ def generate_eth_config(config_dict):
     return eth_tuple
 
 
+provider = None
+
+
 def generate_scrt_config(config_dict):
     priv_key = bytes.fromhex(os.environ['secret-private-key'])
     address = config_dict['wallet_address']
@@ -37,7 +40,7 @@ def generate_scrt_config(config_dict):
         contract_schema = f.read()
     event_name = 'wasm'
     function_name = list(json.loads(contract_schema).keys())[0]
-    initialized_chain = SCRTInterface(private_key=priv_key, address=address, )
+    initialized_chain = SCRTInterface(private_key=priv_key, address=address, provider=provider)
     initialized_contract = SCRTContract(interface=initialized_chain, address=contract_address,
                                         abi=contract_schema)
     scrt_tuple = (initialized_chain, initialized_contract, event_name, function_name)
