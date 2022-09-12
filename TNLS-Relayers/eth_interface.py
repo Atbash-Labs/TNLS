@@ -82,7 +82,7 @@ class EthInterface(BaseChainInterface):
         tx_hash = self.provider.eth.send_raw_transaction(signed_tx.rawTransaction)
         return tx_hash
 
-    def get_transactions(self, address):
+    def get_transactions(self, address, height=None):
         """
         See base_interface.py for documentation
         """
