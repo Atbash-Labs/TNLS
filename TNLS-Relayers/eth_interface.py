@@ -23,9 +23,6 @@ class EthInterface(BaseChainInterface):
                 infura_endpoint = file.read()
 
             API_MODE = "dev"
-            if address == "":
-                address = "0xce1dfc3F67B028Ed19a97974F8cD2bAF6fba1672" \
-                    if API_MODE != "dev" else "0xae050f76654B1Cf264A203545371F1575119530C"
             API_URL = infura_endpoint.replace("{ENDPOINT}",
                                               "mainnet") if API_MODE != "dev" else infura_endpoint.replace(
                 "{ENDPOINT}", "ropsten")
