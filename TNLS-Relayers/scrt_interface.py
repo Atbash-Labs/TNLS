@@ -15,7 +15,8 @@ class SCRTInterface(BaseChainInterface):
     """
 
     def __init__(self, private_key="c2cdf0a8b0a83b35ace53f097b5e6e6a0a1f2d40535eff1cf434f52a43d59d8f",
-                 address=None, api_url=None, chain_id=None, provider=None, **kwargs):
+                 address=None, api_url="http://testnet.securesecrets.org:1317", chain_id="pulsar-2", provider=None,
+                 **kwargs):
         if isinstance(private_key, str):
             self.private_key = RawKey.from_hex(private_key)
         else:
