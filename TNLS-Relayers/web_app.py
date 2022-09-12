@@ -15,7 +15,7 @@ base_map = {'Ethereum': (EthInterface, EthContract), 'Secret': (SCRTInterface, S
 
 
 def generate_eth_config(config_dict):
-    priv_key = os.environ['ethereum-private-key']
+    priv_key = bytes.fromhex(os.environ['ethereum-private-key'])
     address = config_dict['wallet_address']
     contract_address = config_dict['contract_address']
     contract_schema = config_dict['contract_schema']
@@ -29,7 +29,7 @@ def generate_eth_config(config_dict):
 
 
 def generate_scrt_config(config_dict):
-    priv_key = os.environ['secret-private-key']
+    priv_key = bytes.fromhex(os.environ['secret-private-key'])
     address = config_dict['wallet_address']
     contract_address = config_dict['contract_address']
     with open(f'{__file__}/../secret_abi.json') as f:
