@@ -51,6 +51,9 @@ class FakeChainForConfig(BaseChainInterface):
     def sign_and_send_transaction(self, _tx):
         pass
 
+    def get_last_block(self):
+        pass
+
 
 class FakeContractForConfig(BaseContractInterface):
     """
