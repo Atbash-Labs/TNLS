@@ -29,10 +29,9 @@ def generate_eth_config(config_dict):
     return eth_tuple
 
 
-provider = None
 
 
-def generate_scrt_config(config_dict):
+def generate_scrt_config(config_dict, provider=None):
     priv_key = bytes.fromhex(os.environ['secret-private-key'])
     address = config_dict['wallet_address']
     contract_address = config_dict['contract_address']
