@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 import "forge-std/Script.sol";
-import "../src/Contract.sol";
+import "../src/Gateway.sol";
 
 contract ContractScript is Script {
     function setUp() public {}

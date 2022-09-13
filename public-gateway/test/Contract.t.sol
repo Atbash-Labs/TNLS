@@ -4,7 +4,8 @@ pragma solidity ^0.8.10;
 import "forge-std/Test.sol";
 import "forge-std/Vm.sol";
 import "forge-std/console2.sol";
-import {Gateway, Util} from "../src/Contract.sol";
+import {Gateway} from "../src/Gateway.sol";
+import {Util} from "../src/Util.sol";
 
 contract client {}
 
@@ -70,8 +71,8 @@ contract ContractTest is Test {
         string memory sampleRoute = "secret";
 
         // Update the route with with masterVerificationKey signature
-        bytes32 routeHash = gateway.getRouteHash(sampleRoute, SampleVerificationAddress);
-        bytes32 ethSignedMessageHash = gateway.getEthSignedMessageHash(routeHash);
+        bytes32 routeHash = Util.getRouteHash(sampleRoute, SampleVerificationAddress);
+        bytes32 ethSignedMessageHash = Util.getEthSignedMessageHash(routeHash);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(2, ethSignedMessageHash);
         bytes memory sig = abi.encodePacked(r, s, v);
@@ -93,8 +94,8 @@ contract ContractTest is Test {
         string memory sampleRoute = "secret";
 
         // Update the route with wrong masterVerificationKey signature
-        bytes32 routeHash = gateway.getRouteHash(sampleRoute, SampleVerificationAddress);
-        bytes32 ethSignedMessageHash = gateway.getEthSignedMessageHash(routeHash);
+        bytes32 routeHash = Util.getRouteHash(sampleRoute, SampleVerificationAddress);
+        bytes32 ethSignedMessageHash = Util.getEthSignedMessageHash(routeHash);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(7, ethSignedMessageHash);
         bytes memory sig = abi.encodePacked(r, s, v);
@@ -116,8 +117,8 @@ contract ContractTest is Test {
         string memory sampleRoute = "secret";
 
         // Update the route with  masterVerificationKey signature
-        bytes32 routeHash = gateway.getRouteHash(sampleRoute, SampleVerificationAddress);
-        bytes32 ethSignedMessageHash = gateway.getEthSignedMessageHash(routeHash);
+        bytes32 routeHash = Util.getRouteHash(sampleRoute, SampleVerificationAddress);
+        bytes32 ethSignedMessageHash = Util.getEthSignedMessageHash(routeHash);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(5, ethSignedMessageHash);
         bytes memory sig = abi.encodePacked(r, s, v);
@@ -136,8 +137,8 @@ contract ContractTest is Test {
         string memory sampleRoute = "secret";
 
         // Update the route with  wrong masterVerificationKey signature
-        bytes32 routeHash = gateway.getRouteHash(sampleRoute, SampleVerificationAddress);
-        bytes32 ethSignedMessageHash = gateway.getEthSignedMessageHash(routeHash);
+        bytes32 routeHash = Util.getRouteHash(sampleRoute, SampleVerificationAddress);
+        bytes32 ethSignedMessageHash = Util.getEthSignedMessageHash(routeHash);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(7, ethSignedMessageHash);
         bytes memory sig = abi.encodePacked(r, s, v);
@@ -159,7 +160,7 @@ contract ContractTest is Test {
 
     function getRoutingInfoSignature(string memory _routingInfo, uint256 _foundryPkey) public returns (bytes memory) {
         bytes32 routeHash = getRouteInfoHash(_routingInfo);
-        bytes32 routeEthSignedMessageHash = gateway.getEthSignedMessageHash(routeHash);
+        bytes32 routeEthSignedMessageHash = Util.getEthSignedMessageHash(routeHash);
         (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(_foundryPkey, routeEthSignedMessageHash);
         bytes memory routingInfoSig = abi.encodePacked(r1, s1, v1);
 
@@ -168,7 +169,7 @@ contract ContractTest is Test {
 
     function getPayloadSignature(bytes memory _payload, uint256 _foundryPkey) public returns (bytes memory) {
         bytes32 payloadHash = getPayloadHash(_payload);
-        bytes32 payloadEthSignedMessageHash = gateway.getEthSignedMessageHash(payloadHash);
+        bytes32 payloadEthSignedMessageHash = Util.getEthSignedMessageHash(payloadHash);
         (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(_foundryPkey, payloadEthSignedMessageHash);
         bytes memory payloadSig = abi.encodePacked(r2, s2, v2);
 
@@ -176,7 +177,7 @@ contract ContractTest is Test {
     }
 
     function getPacketSignature(bytes32 _packetHash, uint256 _foundryPkey) public returns (bytes memory) {
-        bytes32 packetEthSignedMessageHash = gateway.getEthSignedMessageHash(_packetHash);
+        bytes32 packetEthSignedMessageHash = Util.getEthSignedMessageHash(_packetHash);
         (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(_foundryPkey, packetEthSignedMessageHash);
         bytes memory packetSig = abi.encodePacked(r3, s3, v3);
 
@@ -185,7 +186,7 @@ contract ContractTest is Test {
 
     function getResultSignature(bytes memory _result, uint256 _foundryPkey) public returns (bytes memory) {
         bytes32 resultHash = getResultHash(_result);
-        bytes32 resultEthSignedMessageHash = gateway.getEthSignedMessageHash(resultHash);
+        bytes32 resultEthSignedMessageHash = Util.getEthSignedMessageHash(resultHash);
         (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(_foundryPkey, resultEthSignedMessageHash);
         bytes memory resultSig = abi.encodePacked(r2, s2, v2);
 
@@ -204,7 +205,7 @@ contract ContractTest is Test {
         // bytes32 string encoding of "add a bunch of stuff"
         bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
         bytes32 payloadHash = getPayloadHash(payload);
-        payloadHash = gateway.getEthSignedMessageHash(payloadHash);
+        payloadHash = Util.getEthSignedMessageHash(payloadHash);
 
         // encoding bytes of "some public key"
         bytes memory userPublicKey = "0x736f6d65207075626c6963206b65790000000000000000000000000000000000";
@@ -278,7 +279,7 @@ contract ContractTest is Test {
         // bytes32 string encoding of "add a bunch of stuff"
         bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
         bytes32 payloadHash = getPayloadHash(payload);
-        payloadHash = gateway.getEthSignedMessageHash(payloadHash);
+        payloadHash = Util.getEthSignedMessageHash(payloadHash);
 
         // encoding bytes of "some public key"
         bytes memory userPublicKey = "0x736f6d65207075626c6963206b65790000000000000000000000000000000000";
@@ -331,12 +332,12 @@ contract ContractTest is Test {
         // bytes32 string encoding of "add a bunch of stuff"
         bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
         bytes32 payloadHash = getPayloadHash(payload);
-        payloadHash = gateway.getEthSignedMessageHash(payloadHash);
+        payloadHash = Util.getEthSignedMessageHash(payloadHash);
 
         // bytes32 string encoding of "some result"
         bytes memory result = "0x736f6d6520726573756c74000000000000000000000000000000000000000000";
         bytes32 resultHash = getResultHash(result);
-        resultHash = gateway.getEthSignedMessageHash(resultHash);
+        resultHash = Util.getEthSignedMessageHash(resultHash);
 
         Util.PostExecutionInfo memory assembledInfo = Util.PostExecutionInfo({
             payload: payload,
@@ -368,12 +369,12 @@ contract ContractTest is Test {
         // bytes32 string encoding of "add a bunch of stuff"
         bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
         bytes32 payloadHash = getPayloadHash(payload);
-        payloadHash = gateway.getEthSignedMessageHash(payloadHash);
+        payloadHash = Util.getEthSignedMessageHash(payloadHash);
 
         // bytes32 string encoding of "some result"
         bytes memory result = "0x736f6d6520726573756c74000000000000000000000000000000000000000000";
         bytes32 resultHash = getResultHash(result);
-        resultHash = gateway.getEthSignedMessageHash(resultHash);
+        resultHash = Util.getEthSignedMessageHash(resultHash);
 
         Util.PostExecutionInfo memory assembledInfo = Util.PostExecutionInfo({
             payload: payload,
