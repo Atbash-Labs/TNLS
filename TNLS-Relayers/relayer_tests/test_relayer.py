@@ -178,7 +178,7 @@ def test_eth_config(set_os_env_vars, provider_privkey_address_eth, address_and_a
 def rewrite_yaml(address_and_abi_of_contract, provider_privkey_address_eth, provider_privkey_address_scrt,
                  set_os_env_vars, request):
     yml_file = f'{request.path.parent}/../../config.yml'
-    tempfile = f'{request.path.parent}/sample_config.yml'
+    tempfile = f'{request.path.parent}/sample_config_full.yml'
 
     with open(yml_file, 'r') as f:
         config_dict = safe_load(f)
@@ -198,7 +198,7 @@ def rewrite_yaml(address_and_abi_of_contract, provider_privkey_address_eth, prov
 
 
 def test_gen_full_config(rewrite_yaml, request, provider_privkey_address_scrt, provider_privkey_address_eth):
-    config = generate_full_config(f'{request.path.parent}/sample_config.yml',
+    config = generate_full_config(f'{request.path.parent}/sample_config_full.yml',
                                   provider_pair=(provider_privkey_address_eth[0], provider_privkey_address_scrt[0]))
     eth_config = config['ethereum']
     scrt_config = config['secret']
