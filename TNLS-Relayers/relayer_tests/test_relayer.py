@@ -11,10 +11,12 @@ from secret_sdk.core.bank import MsgSend
 from secret_sdk.core.coins import Coins
 from secret_sdk.key.mnemonic import MnemonicKey
 from web3 import Web3
+from yaml import safe_load, safe_dump
 
 from base_interface import BaseChainInterface, BaseContractInterface, Task, translate_dict
 from relayer import Relayer
-from web_app import app_factory, convert_config_file_to_dict, generate_scrt_config, generate_eth_config
+from web_app import app_factory, convert_config_file_to_dict, generate_scrt_config, generate_eth_config, \
+    generate_full_config
 
 
 @pytest.fixture
@@ -170,6 +172,45 @@ def test_eth_config(set_os_env_vars, provider_privkey_address_eth, address_and_a
     # string is saved tx_hash
     assert str(Web3.toInt(chain_interface.sign_and_send_transaction(
         transaction))) == '18798041108694988948920655944567079244253059705561626119739063556193487749726'
+
+
+@pytest.fixture
+def rewrite_yaml(address_and_abi_of_contract, provider_privkey_address_eth, provider_privkey_address_scrt,
+                 set_os_env_vars, request):
+    yml_file = f'{request.path.parent}/../../config.yml'
+    tempfile = f'{request.path.parent}/sample_config.yml'
+
+    with open(yml_file, 'r') as f:
+        config_dict = safe_load(f)
+
+    eth_wallet_address = provider_privkey_address_eth[2]
+    scrt_wallet_address = provider_privkey_address_scrt[2]
+    eth_contract_address = address_and_abi_of_contract[0]
+    scrt_contract_address = '0x0'
+    eth_contract_schema = address_and_abi_of_contract[1]
+    config_dict['ethereum']['wallet_address'] = eth_wallet_address
+    config_dict['ethereum']['contract_address'] = eth_contract_address
+    config_dict['ethereum']['contract_schema'] = eth_contract_schema
+    config_dict['secret']['wallet_address'] = scrt_wallet_address
+    config_dict['secret']['contract_address'] = scrt_contract_address
+    with open(tempfile, 'w') as f:
+        safe_dump(config_dict, f, default_flow_style=False)
+
+
+def test_gen_full_config(rewrite_yaml, request, provider_privkey_address_scrt, provider_privkey_address_eth):
+    config = generate_full_config(f'{request.path.parent}/sample_config.yml',
+                                  provider_pair=(provider_privkey_address_eth[0], provider_privkey_address_scrt[0]))
+    eth_config = config['ethereum']
+    scrt_config = config['secret']
+    interface, contract_interface, evt_name, function_name = scrt_config
+    assert evt_name == 'wasm'
+    assert function_name == 'PreExecutionMsg'
+    assert contract_interface.address == '0x0'
+    assert contract_interface.interface == interface
+    interface, contract_interface, evt_name, function_name = eth_config
+    assert evt_name == 'logNewTask'
+    assert function_name == 'postExecution'
+    assert contract_interface.interface == interface
 
 
 class FakeChainInterface(BaseChainInterface):

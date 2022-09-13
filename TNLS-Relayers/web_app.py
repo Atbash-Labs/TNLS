@@ -46,11 +46,15 @@ def generate_scrt_config(config_dict, provider=None):
     return scrt_tuple
 
 
-def generate_full_config(config_file):
+def generate_full_config(config_file, provider_pair=None):
     with open(config_file) as f:
         config_dict = safe_load(f)
-    eth_config = generate_eth_config(config_dict['ethereum'])
-    scrt_config = generate_scrt_config(config_dict['secret'])
+    if provider_pair is None:
+        provider_eth, provider_scrt = None, None
+    else:
+        provider_eth, provider_scrt = provider_pair
+    eth_config = generate_eth_config(config_dict['ethereum'], provider=provider_eth)
+    scrt_config = generate_scrt_config(config_dict['secret'], provider=provider_scrt)
     return {'ethereum': eth_config, 'secret': scrt_config}
 
 
