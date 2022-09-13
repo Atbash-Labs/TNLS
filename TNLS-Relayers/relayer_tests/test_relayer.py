@@ -7,6 +7,8 @@ from typing import List
 import pytest
 from eth_tester import EthereumTester, PyEVMBackend
 from secret_sdk.client.localsecret import LocalSecret, LOCAL_MNEMONICS, LOCAL_DEFAULTS
+from secret_sdk.core.bank import MsgSend
+from secret_sdk.core.coins import Coins
 from secret_sdk.key.mnemonic import MnemonicKey
 from web3 import Web3
 
@@ -125,12 +127,32 @@ def address_and_abi_of_contract(provider_privkey_address_eth):
 
 def test_scrt_config(set_os_env_vars, provider_privkey_address_scrt):
     provider = provider_privkey_address_scrt[0]
+    address = provider_privkey_address_scrt[2]
     config_dict = {'wallet_address': provider_privkey_address_scrt[2], 'contract_address': '0x0'}
-    chain_interface, contract_interface, evt_name, function_name = generate_scrt_config(config_dict, provider=provider)
+    interface, contract_interface, evt_name, function_name = generate_scrt_config(config_dict, provider=provider)
     assert evt_name == 'wasm'
     assert function_name == 'PreExecutionMsg'
     assert contract_interface.address == '0x0'
-    assert contract_interface.interface == chain_interface
+    assert contract_interface.interface == interface
+    fee = interface.wallet.lcd.custom_fees["send"]
+
+    msg = MsgSend(address, address, Coins.from_str("1000uscrt"))
+    signed_tx = interface.wallet.create_tx([msg], fee=fee)
+    broadcast_rcpt = interface.sign_and_send_transaction(signed_tx)
+    logs = loads(broadcast_rcpt.raw_log)[0]
+    assert 'events' in logs
+    event = [event for event in logs['events'] if event["type"] == "coin_received"][0]
+    attribute = [attribute for attribute in event['attributes'] if attribute['key'] == "amount"][0]
+    assert attribute['value'] == "1000uscrt"
+    height = broadcast_rcpt.height
+    txns = interface.get_transactions(address=address, height=height)
+    assert len(txns) == 1
+    logs = txns[0]
+    event = [event for event in logs.events if event["type"] == "coin_received"][0]
+    attribute = [attribute for attribute in event['attributes'] if attribute['key'] == "amount"][0]
+    assert attribute['value'] == "1000uscrt"
+    attribute = [attribute for attribute in event['attributes'] if attribute['key'] == "receiver"][0]
+    assert attribute['value'] == address
 
 
 def test_eth_config(set_os_env_vars, provider_privkey_address_eth, address_and_abi_of_contract):
@@ -142,6 +164,11 @@ def test_eth_config(set_os_env_vars, provider_privkey_address_eth, address_and_a
     assert function_name == 'postExecution'
     assert contract_interface.address == address
     assert contract_interface.interface == chain_interface
+    transaction = {'data': '0x123', 'from': provider_privkey_address_eth[2], 'nonce': 0, 'gas': 200000,
+                   'to': provider_privkey_address_eth[2], 'gasPrice': 1000000000000}
+    # string is saved tx_hash
+    assert str(Web3.toInt(chain_interface.sign_and_send_transaction(
+        transaction))) == '65179427771983584748417465488745607597763943977140432452056461044412680211905'
 
 
 class FakeChainInterface(BaseChainInterface):
@@ -496,4 +523,3 @@ def test_dict_translation():
     translated_dict = translate_dict(dict_to_translate, translation_mechanism)
     assert translated_dict == {"test_translated_1": "test_value_1", "test_key_2": "test_value_2",
                                "test_tuple_1": ["test_value_3", "test_value_4"]}
-
