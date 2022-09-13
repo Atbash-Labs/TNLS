@@ -108,8 +108,6 @@ def app_factory(config_filename, config_file_converter=generate_full_config, num
     Returns: a flask app
 
     """
-    # TODO:  FIGURE OUT CONFIG CONVERSION HERE
-    # Maybe configure eth, then configure scrt, with 2 diff functions?
     app = Flask(__name__)
     relayer = Relayer(config_file_converter(config_filename), num_loops=num_loops)
     thread = Thread(target=relayer.run)
