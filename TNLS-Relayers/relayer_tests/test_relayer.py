@@ -63,6 +63,10 @@ def provider_privkey_address_scrt(monkeypatch):
 
 @pytest.fixture
 def set_os_env_vars(provider_privkey_address_eth, provider_privkey_address_scrt):
+    """
+    Fixture that sets the environment variables for the relayer to run
+    and then unsets them afterwards
+    """
     curr_scrt = os.environ.get('secret-private-key', None)
     curr_eth = os.environ.get('eth-private-key', None)
     scrt_key = provider_privkey_address_scrt[1]
@@ -128,6 +132,7 @@ def address_and_abi_of_contract(provider_privkey_address_eth):
 
 
 def test_scrt_config(set_os_env_vars, provider_privkey_address_scrt):
+    # Tests that scrt config generates properly from config dict
     provider = provider_privkey_address_scrt[0]
     address = provider_privkey_address_scrt[2]
     config_dict = {'wallet_address': provider_privkey_address_scrt[2], 'contract_address': '0x0'}
@@ -158,6 +163,7 @@ def test_scrt_config(set_os_env_vars, provider_privkey_address_scrt):
 
 
 def test_eth_config(set_os_env_vars, provider_privkey_address_eth, address_and_abi_of_contract):
+    # Tests that eth config generates properly from config dict
     address, abi, _ = address_and_abi_of_contract
     config_dict = {'wallet_address': provider_privkey_address_eth[2], 'contract_address': address,
                    'contract_schema': abi}
@@ -177,6 +183,10 @@ def test_eth_config(set_os_env_vars, provider_privkey_address_eth, address_and_a
 @pytest.fixture
 def rewrite_yaml(address_and_abi_of_contract, provider_privkey_address_eth, provider_privkey_address_scrt,
                  set_os_env_vars, request):
+    """
+    Fixture that correctly generates a full relayer config file for testing from test provider vars
+
+    """
     yml_file = f'{request.path.parent}/../../config.yml'
     tempfile = f'{request.path.parent}/sample_config_full.yml'
 
@@ -198,6 +208,7 @@ def rewrite_yaml(address_and_abi_of_contract, provider_privkey_address_eth, prov
 
 
 def test_gen_full_config(rewrite_yaml, request, provider_privkey_address_scrt, provider_privkey_address_eth):
+    # Tests that config correctly populates from config file
     config = generate_full_config(f'{request.path.parent}/sample_config_full.yml',
                                   provider_pair=(provider_privkey_address_eth[0], provider_privkey_address_scrt[0]))
     eth_config = config['ethereum']
