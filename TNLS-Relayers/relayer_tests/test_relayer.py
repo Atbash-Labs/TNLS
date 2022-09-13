@@ -159,7 +159,8 @@ def test_eth_config(set_os_env_vars, provider_privkey_address_eth, address_and_a
     address, abi, _ = address_and_abi_of_contract
     config_dict = {'wallet_address': provider_privkey_address_eth[2], 'contract_address': address,
                    'contract_schema': abi}
-    chain_interface, contract_interface, evt_name, function_name = generate_eth_config(config_dict)
+    chain_interface, contract_interface, evt_name, function_name = generate_eth_config(config_dict, provider=
+    provider_privkey_address_eth[0])
     assert evt_name == 'logNewTask'
     assert function_name == 'postExecution'
     assert contract_interface.address == address
