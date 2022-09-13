@@ -7,6 +7,18 @@ contract Client {
     event FinalResultWithInputs(uint256 _taskId, bytes _result, bytes _resultSig);
 
 
+    function send() internal {
+      
+      // address _callbackAddress;
+      // bytes4 _callbackSelector;
+
+
+      // take in the task struct and executioninfo struct as arguments
+
+      // call with address and callbackselector
+
+    }
+
 
     /// @param _taskId  Task Id of the computation
     /// @param _result computed result
