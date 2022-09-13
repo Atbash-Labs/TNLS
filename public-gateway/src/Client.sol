@@ -3,6 +3,11 @@ pragma solidity ^0.8.10;
 
 contract Client {
     
+    /// @notice Emitted when we recieve callback for our result of the computation
+    event FinalResultWithInputs(uint256 _taskId, bytes _result, bytes _resultSig);
+
+
+
     /// @param _taskId  Task Id of the computation
     /// @param _result computed result
     /// @param _result The second stored number input
@@ -12,6 +17,6 @@ contract Client {
 
 
 
-      
+
     }
 }
