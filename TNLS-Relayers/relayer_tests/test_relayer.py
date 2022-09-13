@@ -169,7 +169,7 @@ def test_eth_config(set_os_env_vars, provider_privkey_address_eth, address_and_a
                    'to': provider_privkey_address_eth[2], 'gasPrice': 1000000000000}
     # string is saved tx_hash
     assert str(Web3.toInt(chain_interface.sign_and_send_transaction(
-        transaction))) == '65179427771983584748417465488745607597763943977140432452056461044412680211905'
+        transaction))) == '18798041108694988948920655944567079244253059705561626119739063556193487749726'
 
 
 class FakeChainInterface(BaseChainInterface):
