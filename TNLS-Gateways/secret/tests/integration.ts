@@ -5,7 +5,7 @@ import assert from "assert";
 import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender, Binary, BroadcastMsg } from "./GatewayContract";
 import { ecdsaSign } from "secp256k1";
 import { Wallet as EthWallet } from "ethers";
-import { arrayify, SigningKey } from "ethers/lib/utils";
+import { arrayify, SigningKey, computeAddress, recoverAddress, recoverPublicKey } from "ethers/lib/utils";
 import { ecrecover, toBuffer, bufferToHex, bufferToBigInt, isValidPublic, stripHexPrefix} from '@ethereumjs/util'
 import { createHash, randomBytes } from 'crypto';
 import { encrypt_payload } from './encrypt-payload/pkg'
@@ -323,7 +323,9 @@ async function initializeAndUploadContract() {
   console.log(`Retrieving random number...`);
   await rngTx(client, gatewayHash, gatewayAddress, scrtRngHash, scrtRngAddress);
   console.log(`Sending query: {"get_public_key": {} }`);
-  const gatewayKey = await queryPubKey(client, gatewayHash, gatewayAddress);
+  const gatewayKeys = await queryPubKey(client, gatewayHash, gatewayAddress);
+
+  const gatewayKey = Buffer.from(gatewayKeys.verification_key.substring(2), 'hex').toString('base64')
 
   const [contractHash, contractAddress] = await initializeContract(
     client,
@@ -390,7 +392,7 @@ async function gatewayTx(
   const wallet = EthWallet.createRandom(); 
   const userPublicAddress: string = wallet.address;
   const userPublicKey: string = new SigningKey(wallet.privateKey).compressedPublicKey;
-  console.log(`\n\x1b[34mEthereum Address: ${wallet.address}\n\x1b[34mPublic Key: ${userPublicKey}\n\x1b[34mPrivate Key: ${wallet.privateKey}\x1b[0m\n`);
+  // console.log(`\n\x1b[34mEthereum Address: ${wallet.address}\n\x1b[34mPublic Key: ${userPublicKey}\n\x1b[34mPrivate Key: ${wallet.privateKey}\x1b[0m\n`);
 
   const userPrivateKeyBytes = arrayify(wallet.privateKey)
   const userPublicKeyBytes = arrayify(userPublicKey)
@@ -456,7 +458,7 @@ async function gatewayTx(
       sentFunds: [],
     },
     {
-      gasLimit: 200000,
+      gasLimit: 5000000,
     }
   );
   // console.log(tx);
@@ -495,22 +497,23 @@ async function gatewayTx(
   console.log("\nOutput Logs:");
   console.log(logs);
 
-  try_ecrecover(logs["task_destination_network_hash"], logs["task_destination_network_signature"]);
-  try_ecrecover(logs["payload_hash"], logs["payload_signature"]);
-  try_ecrecover(logs["result_hash"], logs["result_signature"]);
-  try_ecrecover(logs["packet_hash"], logs["packet_signature"]);
+  console.log(recoverAddress(logs["task_destination_network_hash"], logs["task_destination_network_signature"]));
+  console.log(recoverAddress(logs["task_id_hash"], logs["task_id_signature"]));
+  console.log(recoverAddress(logs["payload_hash"], logs["payload_signature"]));
+  console.log(recoverAddress(logs["result_hash"], logs["result_signature"]));
+  console.log(recoverAddress(logs["packet_hash"], logs["packet_signature"]));
 
   assert(logs["source_network"] == "secret");
   assert(logs["task_destination_network"] == "ethereum");
   assert(fromHex(logs["task_destination_network_hash"].substring(2)).byteLength == 32);
   assert(fromHex(logs["task_destination_network_signature"].substring(2)).byteLength == 65);
-  assert(logs["task_id"] == "1");
+  assert(logs["task_id"] == "0x1");
   assert(fromHex(logs["task_id_hash"].substring(2)).byteLength == 32);
   assert(fromHex(logs["task_id_signature"].substring(2)).byteLength == 65);
   // assert(logs["payload"] == ciphertext);
   assert(fromHex(logs["payload_hash"].substring(2)).byteLength == 32);
   assert(fromHex(logs["payload_signature"].substring(2)).byteLength == 65);
-  assert(logs["result"] == "{\"my_value\":2}"); // note that value changed
+  assert(logs["result"] == "0x7b226d795f76616c7565223a327d");
   assert(fromHex(logs["result_hash"].substring(2)).byteLength == 32);
   assert(fromHex(logs["result_signature"].substring(2)).byteLength == 65);
   assert(fromHex(logs["packet_hash"].substring(2)).byteLength == 32);
@@ -519,12 +522,13 @@ async function gatewayTx(
   console.log(`inputTx used \x1b[33m${tx.gasUsed}\x1b[0m gas`);
 }
 
+type PublicKeyResponse = { encryption_key: Binary, verification_key: Binary };
+
 async function queryPubKey(
   client: SecretNetworkClient,
   gatewayHash: string,
   gatewayAddress: string,
-): Promise<string> {
-  type PublicKeyResponse = { encryption_key: Binary, verification_key: Binary };
+): Promise<PublicKeyResponse> {
 
   const response = (await client.query.compute.queryContract({
     contractAddress: gatewayAddress,
@@ -533,20 +537,23 @@ async function queryPubKey(
   })) as PublicKeyResponse;
 
   console.log(`\x1b[32mEncryption key: ${response.encryption_key}\x1b[0m`);
-  console.log(`\x1b[32mVerification key: ${response.verification_key}\x1b[0m`);
+  console.log(`\x1b[32mPublic key: ${response.verification_key}\x1b[0m`);
+  console.log(`\x1b[34;1mEth Address: ${computeAddress(response.verification_key)}\x1b[0m`);
 
-  return response.encryption_key
+  return response
 }
 
 function try_ecrecover(msg: string, sgn: string) {
-  const r = toBuffer(sgn.slice(0,66))
-  const s = toBuffer('0x' + sgn.slice(66,130))
-  const v = bufferToBigInt(toBuffer('0x' + sgn.slice(130,132)))
+  // const r = toBuffer(sgn.slice(0,66))
+  // const s = toBuffer('0x' + sgn.slice(66,130))
+  // const v = bufferToBigInt(toBuffer('0x' + sgn.slice(130,132)))
 
-  const pubKey = ecrecover(toBuffer(msg), v, r, s)
-  console.log(bufferToHex(pubKey))
-  console.log(isValidPublic(pubKey))
-  assert(isValidPublic(pubKey))
+  // const pubKey = ecrecover(toBuffer(msg), v, r, s)
+  // console.log(bufferToHex(pubKey))
+  // console.log(isValidPublic(pubKey))
+  
+  console.log(recoverAddress(msg, sgn))
+  console.log(recoverPublicKey(msg, sgn))
 }
 
 async function test_gateway_tx(
@@ -560,7 +567,7 @@ async function test_gateway_tx(
 ) {
   console.log(`Sending query: {"get_public_key": {} }`);
   const gatewayPublicKey = await queryPubKey(client, gatewayHash, gatewayAddress);
-  await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey);
+  await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey.encryption_key);
 }
 
 async function runTestFunction(

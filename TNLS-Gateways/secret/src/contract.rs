@@ -2,6 +2,7 @@ use cosmwasm_std::{
     log, plaintext_log, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult,
     HumanAddr, InitResponse, InitResult, Querier, QueryResult, StdError, Storage,
 };
+use secp256k1::{ecdsa::{RecoverableSignature, RecoveryId}, Message, Verification};
 use secret_toolkit::{
     crypto::secp256k1::{PrivateKey, PublicKey},
     crypto::{sha_256, Prng},
@@ -188,8 +189,8 @@ fn create_gateway_keys<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![],
         log: vec![
-            log("encryption_pubkey", &state.encryption_keys.pk),
-            log("signing_pubkey", &state.signing_keys.pk),
+            plaintext_log("encryption_pubkey", &state.encryption_keys.pk),
+            plaintext_log("signing_pubkey", &state.signing_keys.pk),
         ],
         data: None,
     })
@@ -359,30 +360,30 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
         let routing_message = secp256k1::Message::from_slice(&routing_hash)
             .map_err(|err| StdError::generic_err(err.to_string()))?;
         let routing_signature = secp
-            .sign_ecdsa(&routing_message, &sk)
-            .serialize_compact()
-            .to_vec();
+            .sign_ecdsa_recoverable(&routing_message, &sk)
+            .serialize_compact();
+        let routing_signature = routing_signature.1;
 
         let payload_message = secp256k1::Message::from_slice(&payload_hash)
             .map_err(|err| StdError::generic_err(err.to_string()))?;
         let payload_signature = secp
-            .sign_ecdsa(&payload_message, &sk)
-            .serialize_compact()
-            .to_vec();
+            .sign_ecdsa_recoverable(&payload_message, &sk)
+            .serialize_compact();
+        let payload_signature = payload_signature.1;
 
         let result_message = secp256k1::Message::from_slice(&result_hash)
             .map_err(|err| StdError::generic_err(err.to_string()))?;
         let result_signature = secp
-            .sign_ecdsa(&result_message, &sk)
-            .serialize_compact()
-            .to_vec();
+            .sign_ecdsa_recoverable(&result_message, &sk)
+            .serialize_compact();
+        let result_signature = result_signature.1;
 
         let task_message = secp256k1::Message::from_slice(&task_hash)
             .map_err(|err| StdError::generic_err(err.to_string()))?;
         let task_signature = secp
-            .sign_ecdsa(&task_message, &sk)
-            .serialize_compact()
-            .to_vec();
+            .sign_ecdsa_recoverable(&task_message, &sk)
+            .serialize_compact();
+        let task_signature = task_signature.1;
 
         (
             routing_signature,
@@ -429,62 +430,65 @@ fn post_execution<S: Storage, A: Api, Q: Querier>(
         let secp = secp256k1::Secp256k1::signing_only();
         let sk = secp256k1::SecretKey::from_slice(&signing_key_bytes).unwrap();
 
-        let packet_message = secp256k1::Message::from_slice(&packet_hash)
+        let packet_message = secp256k1::Message::from_slice(&sha_256(&packet_hash))
             .map_err(|err| StdError::generic_err(err.to_string()))?;
 
         secp.sign_ecdsa(&packet_message, &sk)
             .serialize_compact()
-            .to_vec()
     };
 
-    Ok(HandleResponse {
+      Ok(HandleResponse {
         messages: vec![],
         log: vec![
             plaintext_log("source_network", "secret"),
             plaintext_log("task_destination_network", &routing_info),
             plaintext_log(
                 "task_destination_network_hash",
-                format!("0x{}", &routing_hash.encode_hex::<String>()),
+                format!("0x{}", sha_256(&routing_hash).encode_hex::<String>()),
             ),
             plaintext_log(
                 "task_destination_network_signature",
-                format!("0x{}1c", &routing_signature.encode_hex::<String>()),
+                format!("0x{}{:x}", &routing_signature.encode_hex::<String>(), 27) //  &routing_signature.0.to_i32() + 27),
             ),
-            plaintext_log("task_id", msg.task_id),
+            plaintext_log("task_id", format!("{:#x}", &msg.task_id)),
             plaintext_log(
                 "task_id_hash",
-                format!("0x{}", &task_hash.encode_hex::<String>()),
+                format!("0x{}", sha_256(&task_hash).encode_hex::<String>()),
             ),
             plaintext_log(
                 "task_id_signature",
-                format!("0x{}1c", &task_signature.encode_hex::<String>()),
+                format!("0x{}{:x}", &task_signature.encode_hex::<String>(), 27) //  &task_signature.0.to_i32() + 27),
             ),
             // plaintext_log("payload", task_info.payload),
             plaintext_log(
                 "payload_hash",
-                format!("0x{}", &payload_hash.encode_hex::<String>()),
+                format!("0x{}", sha_256(&payload_hash).encode_hex::<String>()),
             ),
             plaintext_log(
                 "payload_signature",
-                format!("0x{}1c", &payload_signature.encode_hex::<String>()),
+                format!("0x{}{:x}", &payload_signature.encode_hex::<String>(), 27) //  &payload_signature.0.to_i32() + 27),
             ),
-            plaintext_log("result", msg.result),
+            plaintext_log("result", format!("0x{}", msg.result.encode_hex::<String>())),
             plaintext_log(
                 "result_hash",
-                format!("0x{}", &result_hash.encode_hex::<String>()),
+                format!("0x{}", sha_256(&result_hash).encode_hex::<String>()),
             ),
             plaintext_log(
                 "result_signature",
-                format!("0x{}1c", &result_signature.encode_hex::<String>()),
+                format!("0x{}{:x}", &result_signature.encode_hex::<String>(), 27) //  &result_signature.0.to_i32() + 27),
             ),
             plaintext_log(
                 "packet_hash",
-                format!("0x{}", &packet_hash.encode_hex::<String>()),
+                format!("0x{}", sha_256(&packet_hash).encode_hex::<String>()),
             ),
             plaintext_log(
                 "packet_signature",
-                format!("0x{}1c", &packet_signature.encode_hex::<String>()),
+                format!("0x{}{:x}", &packet_signature.encode_hex::<String>(), 27) // &packet_signature.0.to_i32() + 27),
             ),
+            // plaintext_log(
+            //     "recovered public key",
+            //     format!("0x{}", &packet_rec_pub_key.serialize_uncompressed().encode_hex::<String>())
+            // ),
         ],
         data: None,
     })
@@ -509,7 +513,10 @@ fn query_public_keys<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> 
     let state: State = CONFIG.load(&deps.storage)?;
     to_binary(&PublicKeyResponse {
         encryption_key: state.encryption_keys.pk,
-        verification_key: format!("0x{}", state.signing_keys.pk.as_slice().encode_hex::<String>()),
+        verification_key: format!(
+            "0x{}",
+            state.signing_keys.pk.as_slice().encode_hex::<String>()
+        ),
     })
 }
 
@@ -575,6 +582,7 @@ mod tests {
 
     use chacha20poly1305::aead::{Aead, NewAead};
     use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+    use ethers::types::Signature;
     use secp256k1::{ecdh::SharedSecret, Message, Secp256k1, SecretKey};
 
     const OWNER: &str = "admin0001";
@@ -605,6 +613,15 @@ mod tests {
         let query_result = query(&deps, query_msg);
         let query_answer: PublicKeyResponse = from_binary(&query_result.unwrap()).unwrap();
         let gateway_pubkey = query_answer.encryption_key;
+        gateway_pubkey
+    }
+
+    #[track_caller]
+    fn get_gateway_verification_key<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -> String {
+        let query_msg = QueryMsg::GetPublicKey {};
+        let query_result = query(&deps, query_msg);
+        let query_answer: PublicKeyResponse = from_binary(&query_result.unwrap()).unwrap();
+        let gateway_pubkey = query_answer.verification_key;
         gateway_pubkey
     }
 
@@ -919,6 +936,13 @@ mod tests {
         );
         let logs = handle_result.unwrap().log;
 
+        let gateway_pubkey = get_gateway_verification_key(&deps);
+        println!("Gateway public key: {:?}", gateway_pubkey);
+
+        for log in logs.clone() {
+            println!("{:?}, {:?}", log.key, log.value)
+        }
+
         assert_eq!(logs[0].value, "secret".to_string());
         assert_eq!(logs[1].value, "ethereum".to_string());
         assert_eq!(
@@ -933,7 +957,7 @@ mod tests {
                 .len(),
             65
         );
-        assert_eq!(logs[4].value, "1".to_string());
+        assert_eq!(logs[4].value, "0x1".to_string());
         assert_eq!(
             hex::decode(logs[5].value.clone().strip_prefix("0x").unwrap())
                 .unwrap()
@@ -959,7 +983,7 @@ mod tests {
                 .len(),
             65
         );
-        assert_eq!(logs[9].value, "{\"answer\": 42}".to_string());
+        assert_eq!(logs[9].value, "0x7b22616e73776572223a2034327d".to_string());
         assert_eq!(
             hex::decode(logs[10].value.clone().strip_prefix("0x").unwrap())
                 .unwrap()
