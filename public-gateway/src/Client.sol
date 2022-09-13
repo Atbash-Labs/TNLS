@@ -1,11 +1,32 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
+import {Gateway, Util} from "../src/Contract.sol";
+
 
 contract Client {
-    
+
+    using Util for Util.Task;
+    using Util for Util.ExecutionInfo;
+
+
     /// @notice Emitted when we recieve callback for our result of the computation
     event FinalResultWithInputs(uint256 _taskId, bytes _result, bytes _resultSig);
 
+
+    function newTask(
+        address _callbackAddress,
+        bytes4 _callbackSelector,
+        address _userAddress,
+        string memory _sourceNetwork,
+        string memory _routingInfo,
+        bytes32 _payloadHash
+    )
+        public
+        pure
+        returns (Util.Task memory)
+    {
+        return Util.Task(_callbackAddress, _callbackSelector, _userAddress, _sourceNetwork, _routingInfo, _payloadHash, false);
+    }
 
     function send() internal {
       
