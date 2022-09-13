@@ -15,7 +15,7 @@ from yaml import safe_load, safe_dump
 
 from base_interface import BaseChainInterface, BaseContractInterface, Task, translate_dict
 from relayer import Relayer
-from web_app import app_factory, convert_config_file_to_dict, generate_scrt_config, generate_eth_config, \
+from web_app import app_factory, generate_scrt_config, generate_eth_config, \
     generate_full_config
 
 
@@ -239,41 +239,6 @@ class FakeChainInterface(BaseChainInterface):
         return self.start_height
 
 
-class FakeChainForConfig(BaseChainInterface):
-    """
-    A testing chain interface that saves its config
-    """
-
-    def __init__(self, **kwargs):
-        self.__dict__ = kwargs
-        pass
-
-    def get_transactions(self, _, **_kwargs):
-        pass
-
-    def sign_and_send_transaction(self, _tx):
-        pass
-
-    def get_last_block(self):
-        pass
-
-
-class FakeContractForConfig(BaseContractInterface):
-    """
-    A testing contract interface that saves its config
-    """
-
-    def __init__(self, **kwargs):
-        self.__dict__ = kwargs
-        pass
-
-    def call_function(self, *args):
-        pass
-
-    def parse_event_from_txn(self, _evt_name, _txn):
-        pass
-
-
 class FakeContractInterface(BaseContractInterface):
     """
     A fake contract interface that adds some value to its incoming arguments and saves the results
@@ -308,46 +273,6 @@ def fake_interface_factory():
         return FakeChainInterface(task_dict_list), FakeContractInterface(num_to_add)
 
     return _factory_fn
-
-
-@pytest.fixture
-def fake_map_names_to_interfaces():
-    """
-
-    Returns: a fake initial map of names to interfaces to test the config generator
-
-    """
-    return {'fake_contract': (FakeChainForConfig, FakeContractForConfig)}
-
-
-def test_config_file_parsing(fake_map_names_to_interfaces, request):
-    # Tests that basic config parsing works
-    config_file = f'{request.path.parent}/sample_config.yml'
-    config_dict = convert_config_file_to_dict(config_file, map_of_names_to_interfaces=fake_map_names_to_interfaces)
-    assert config_dict.keys() == {'fake_contract'}
-    assert config_dict['fake_contract'][0].__dict__ == {'address': 'Fake_wallet', 'private_key': 'Fake_key'}
-    assert config_dict['fake_contract'][1].__dict__ == {'abi': 'Fake_schema',
-                                                        'address': 'Fake_address',
-                                                        'interface': config_dict['fake_contract'][0]}
-    assert config_dict['fake_contract'][2] == 'Fake_event'
-    assert config_dict['fake_contract'][3] == 'Fake_function'
-
-
-def test_config_file_parsing_missing(fake_map_names_to_interfaces, request):
-    # Tests that the right error is raised if config files have missing keys
-    config_file = f'{request.path.parent}/sample_config_missing_keys.yml'
-    with pytest.raises(ValueError) as e:
-        convert_config_file_to_dict(config_file, map_of_names_to_interfaces=fake_map_names_to_interfaces)
-    for string in ['event_name', 'wallet_address', 'function_name', 'private_key']:
-        assert string in str(e.value)
-
-
-def test_config_file_parsing_bad_name(fake_map_names_to_interfaces, request):
-    # Tests that the right error is raised if the config file is for a missing interface
-    config_file = f'{request.path.parent}/sample_config_bad_name.yml'
-    with pytest.raises(ValueError) as e:
-        convert_config_file_to_dict(config_file, map_of_names_to_interfaces=fake_map_names_to_interfaces)
-    assert str(e.value) == "fake_contract_bad not in map of names to interfaces"
 
 
 def test_basic_relayer_poll_height_none(fake_interface_factory):

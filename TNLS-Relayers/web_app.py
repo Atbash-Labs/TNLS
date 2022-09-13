@@ -2,12 +2,10 @@ import json
 import os
 from pathlib import Path
 from threading import Thread
-from typing import Dict, Tuple
 
 from flask import Flask, current_app, Blueprint
 from yaml import safe_load
 
-from base_interface import BaseChainInterface, BaseContractInterface
 from eth_interface import EthInterface, EthContract
 from relayer import Relayer
 from scrt_interface import SCRTInterface, SCRTContract
@@ -16,6 +14,16 @@ base_map = {'Ethereum': (EthInterface, EthContract), 'Secret': (SCRTInterface, S
 
 
 def generate_eth_config(config_dict, provider=None):
+    """
+    Converts a config dict into a tuple of (chain_interface, contract_interface, event_name, function_name)
+    for ethereum
+    Args:
+        config_dict: a dict containing contract address, contract schema, and wallet address
+        provider: an optional API client
+
+    Returns: the relevant tuple of chain, contract, event, and function
+
+    """
     priv_key = bytes.fromhex(os.environ['ethereum-private-key'])
     address = config_dict['wallet_address']
     contract_address = config_dict['contract_address']
@@ -29,9 +37,17 @@ def generate_eth_config(config_dict, provider=None):
     return eth_tuple
 
 
-
-
 def generate_scrt_config(config_dict, provider=None):
+    """
+        Converts a config dict into a tuple of (chain_interface, contract_interface, event_name, function_name)
+        for secret
+        Args:
+            config_dict: a dict containing contract address, contract schema, and wallet address
+            provider: an optional API client
+
+        Returns: the relevant tuple of chain, contract, event, and function
+
+    """
     priv_key = bytes.fromhex(os.environ['secret-private-key'])
     address = config_dict['wallet_address']
     contract_address = config_dict['contract_address']
@@ -47,6 +63,16 @@ def generate_scrt_config(config_dict, provider=None):
 
 
 def generate_full_config(config_file, provider_pair=None):
+    """
+    Takes in a yaml filepath and generates a config dict for eth and scrt relays
+    Args:
+        config_file: the path to the relevant config file
+        provider_pair: a pair of scrt and eth providers, optional
+
+    Returns:
+            a dict mapping scrt and eth to their respective configs
+
+    """
     with open(config_file) as f:
         config_dict = safe_load(f)
     if provider_pair is None:
@@ -56,38 +82,6 @@ def generate_full_config(config_file, provider_pair=None):
     eth_config = generate_eth_config(config_dict['ethereum'], provider=provider_eth)
     scrt_config = generate_scrt_config(config_dict['secret'], provider=provider_scrt)
     return {'ethereum': eth_config, 'secret': scrt_config}
-
-
-def convert_config_file_to_dict(config_file, map_of_names_to_interfaces=None) -> \
-        Dict[str, Tuple[BaseChainInterface, BaseContractInterface, str, str]]:
-    """
-    Converts a yml config file into a dict of names to interfaces for the relayer
-    Args:
-        config_file: the config file to pull from
-        map_of_names_to_interfaces: an initial map of names to the classes they should be instantiated as
-
-    Returns: a dict mapping names to interfaces as the relayer expects
-
-    """
-    if map_of_names_to_interfaces is None:
-        map_of_names_to_interfaces = base_map
-    with open(config_file) as f:
-        config_dict = safe_load(f)
-    necessary_keys = ['contract_address', 'contract_schema', 'private_key', 'wallet_address',
-                      'event_name', 'function_name']
-    for key, val in config_dict.items():
-        if not all(val_key in val for val_key in necessary_keys):
-            raise ValueError(f'{key} is missing necessary keys: {set(necessary_keys) - set(val.keys())}')
-        if key not in map_of_names_to_interfaces:
-            raise ValueError(f'{key} not in map of names to interfaces')
-        chain_interface, contract_interface = map_of_names_to_interfaces[key]
-        remaining_kwargs = {key: val[key] for key in val if key not in necessary_keys}
-        initialized_chain = chain_interface(private_key=val['private_key'], address=val['wallet_address'],
-                                            **remaining_kwargs)
-        initialized_contract = contract_interface(interface=initialized_chain, address=val['contract_address'],
-                                                  abi=val['contract_schema'])
-        config_dict[key] = (initialized_chain, initialized_contract, val['event_name'], val['function_name'])
-    return config_dict
 
 
 route_blueprint = Blueprint('route_blueprint', __name__)

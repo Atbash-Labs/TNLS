@@ -14,7 +14,7 @@ class SCRTInterface(BaseChainInterface):
     Implementation of the BaseChainInterface standard for the Secret Network
     """
 
-    def __init__(self, private_key="c2cdf0a8b0a83b35ace53f097b5e6e6a0a1f2d40535eff1cf434f52a43d59d8f",
+    def __init__(self, private_key="",
                  address=None, api_url="https://api.pulsar.scrttestnet.com", chain_id="pulsar-2", provider=None,
                  **kwargs):
         if isinstance(private_key, str):
