@@ -165,7 +165,7 @@ def test_eth_config(set_os_env_vars, provider_privkey_address_eth, address_and_a
     assert function_name == 'postExecution'
     assert contract_interface.address == address
     assert contract_interface.interface == chain_interface
-    transaction = {'data': '0x123', 'from': provider_privkey_address_eth[2], 'nonce': 0, 'gas': 200000,
+    transaction = {'data': '0x123', 'from': provider_privkey_address_eth[2], 'nonce': 1, 'gas': 200000,
                    'to': provider_privkey_address_eth[2], 'gasPrice': 1000000000000}
     # string is saved tx_hash
     assert str(Web3.toInt(chain_interface.sign_and_send_transaction(
