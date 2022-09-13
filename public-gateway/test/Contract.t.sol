@@ -64,7 +64,7 @@ contract ContractTest is Test {
         vm.prank(deployer);
         address masterVerificationKey = vm.addr(2);
 
-        gateway.initialize(vm.addr(3));
+        gateway.initialize(masterVerificationKey);
 
         address SampleVerificationAddress = vm.addr(6);
         string memory sampleRoute = "secret";
