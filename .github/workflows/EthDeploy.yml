@@ -1,0 +1,37 @@
+name: Ethereum Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+
+jobs:
+  deploy:
+    name: Deploy Gateway and Client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install forge dependencies
+        working-directory: ./public-gateway
+        run: forge install
+
+      - name: Run tests
+        working-directory: ./public-gateway
+        run: forge test -vvv
+
+      - name: Deploy Procedure
+        working-directory: ./public-gateway
+        env:
+          INFURA_ENDPOINT: ${{ secrets.INFURA_ENDPOINT }}
+          PRIVATE_KEY: ${{ secrets.ETH_PRIVATE_KEY }}
+          ETHERSCAN_KEY: ${{ secrets.ETHERSCAN_KEY }}
+        run: forge script script/DeployScript.s.sol:DeployScript --rpc-url INFURA_ENDPOINT --private-key PRIVATE_KEY --etherscan-api-key ETHERSCAN_KEY --verify -vvvv
