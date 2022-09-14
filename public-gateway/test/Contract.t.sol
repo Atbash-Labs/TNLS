@@ -389,4 +389,150 @@ contract ContractTest is Test {
 
         vm.expectRevert(abi.encodeWithSignature("InvalidSignature()"));
     }
+
+    /*//////////////////////////////////////////////////////////////
+                      Stubbed Value Case Setup
+    //////////////////////////////////////////////////////////////*/
+
+    function test_PreExecutionSetupForExplicitCase() public {
+        // USER ADDRESS       ----->   vm.addr(5);
+        // CALLBACK ADDRESS   ----->   vm.addr(7);
+
+        bytes4 callbackSelector = bytes4(abi.encodeWithSignature("callback(uint256 _taskId,bytes memory _result)"));
+        string memory sourceNetwork = "ethereum";
+        address userAddress = 0x49F7552065228e5abF44e144cc750aEA4F711Dc3;
+
+        string memory routingInfo = "secret";
+
+        // bytes32 string encoding of "add a bunch of stuff"
+        bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
+        bytes32 payloadHash = hex"ea57f8cfce0dca7528ff349328b9a524dbbd49fe724026da575aed40cd3ac2c4";
+        // payloadHash = Util.getEthSignedMessageHash(payloadHash);
+        bytes memory payloadSignature =
+            hex"293fb5fe48d81aadd26574aca54509804f628a851d7df4e3356b0e191ef5b11c33f07e7eeb0494384df6f3f636e2fc0fcf64ee3fb0d5e3d6f3302a81325bd06f1c";
+
+        // encoding bytes of "some public key"
+        bytes memory userPublicKey = "0x736f6d65207075626c6963206b65790000000000000000000000000000000000";
+
+        Util.Task memory assembledTask = Util.Task({
+            callback_address: vm.addr(7),
+            callback_selector: callbackSelector,
+            user_address: userAddress,
+            source_network: sourceNetwork,
+            routing_info: routingInfo,
+            payload_hash: payloadHash,
+            completed: false
+        });
+
+        Util.ExecutionInfo memory assembledInfo = Util.ExecutionInfo({
+            user_key: userPublicKey,
+            routing_code_hash: "some RoutingCodeHash",
+            handle: "some kinda handle",
+            nonce: "ssssssssssss",
+            payload: payload,
+            payload_signature: payloadSignature
+        });
+
+        vm.expectEmit(true, true, true, true);
+        emit logNewTask(
+            1,
+            sourceNetwork,
+            userAddress,
+            routingInfo,
+            "some RoutingCodeHash",
+            payload,
+            payloadHash,
+            payloadSignature,
+            userPublicKey,
+            "some kinda handle",
+            "ssssssssssss"
+            );
+        gateway.preExecution(assembledTask, assembledInfo);
+
+        (address tempCallbackAddress,,,,,,) = gateway.tasks(1);
+        assertEq(tempCallbackAddress, vm.addr(7));
+
+        (, bytes4 tempCallbackSelector,,,,,) = gateway.tasks(1);
+        assertEq(tempCallbackSelector, callbackSelector);
+
+        (,, address tempUserAddress,,,,) = gateway.tasks(1);
+        assertEq(tempUserAddress, userAddress);
+
+        (,,, string memory tempSourceNetwork,,,) = gateway.tasks(1);
+        assertEq(tempSourceNetwork, sourceNetwork);
+
+        (,,,, string memory tempRoutingInfo,,) = gateway.tasks(1);
+        assertEq(tempRoutingInfo, routingInfo);
+
+        (,,,,, bytes32 tempPayloadHash,) = gateway.tasks(1);
+        assertEq(tempPayloadHash, payloadHash);
+
+        (,,,,,, bool tempCompleted) = gateway.tasks(1);
+        assertEq(tempCompleted, false);
+    }
+
+    function test_addressKeySetupForPostExecutionExplicitValues() public {
+        // Set the Master Verrification Key below
+        vm.prank(deployer);
+        address masterVerificationKey = vm.addr(2);
+
+        gateway.initialize(masterVerificationKey);
+
+        address SampleVerificationAddress = 0x49F7552065228e5abF44e144cc750aEA4F711Dc3;
+        string memory sampleRoute = "secret";
+
+        // Update the route with with masterVerificationKey signature
+        bytes32 routeHash = Util.getRouteHash(sampleRoute, SampleVerificationAddress);
+        bytes32 ethSignedMessageHash = Util.getEthSignedMessageHash(routeHash);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(2, ethSignedMessageHash);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        vm.prank(deployer);
+        gateway.updateRoute(sampleRoute, SampleVerificationAddress, sig);
+
+        assertEq(gateway.route("secret"), SampleVerificationAddress);
+    }
+
+    function test_PostExecutionExplicitValues() public {
+        test_addressKeySetupForPostExecutionExplicitValues();
+        test_PreExecutionSetupForExplicitCase();
+
+        string memory sourceNetwork = "secret";
+        uint256 taskId = 1;
+
+        // payload
+        bytes32 payloadHash = hex"ea57f8cfce0dca7528ff349328b9a524dbbd49fe724026da575aed40cd3ac2c4";
+        bytes memory payloadSignature =
+            hex"293fb5fe48d81aadd26574aca54509804f628a851d7df4e3356b0e191ef5b11c33f07e7eeb0494384df6f3f636e2fc0fcf64ee3fb0d5e3d6f3302a81325bd06f1b";
+
+        // result
+        bytes memory result = hex"7b226d795f76616c7565223a327d";
+        bytes32 resultHash = hex"faef40ffa988468a70a21929200a40f1c8ea9f56fcf79a206ef9713032c4e28b";
+        bytes memory resultSignature =
+            hex"faad4e82fe9a6a05ef2a4387fca5471fe3bc7b53e81a3c08d4a5514ac7c6fddf2a266cf1c638654c156612a1943dbaf278105f138c5be67ab1eca4253c57ca7f1b";
+
+        // packet
+        bytes32 packetHash = hex"923b23c023d0e5e66ac122d9804414f4f9cab06d7a6ce6c4b8c586a1fa57264c";
+        bytes memory packetSignature =
+            hex"2db95ebb82b81f8240d952e1c6edf021e098de63d32f1f0d3bbbb7daf0e9edbd3378fc42e31d1041467c76388a35078968f1f6f2eb781b5b83054a1d90ba41ff1b";
+
+        Util.PostExecutionInfo memory assembledInfo = Util.PostExecutionInfo({
+            payload_hash: payloadHash,
+            payload_signature: payloadSignature,
+            result: result,
+            result_hash: resultHash,
+            result_signature: resultSignature,
+            packet_hash: packetHash,
+            packet_signature: packetSignature
+        });
+
+        vm.expectEmit(true, true, true, true);
+        emit logCompletedTask(taskId, payloadHash, resultHash);
+
+        gateway.postExecution(taskId, sourceNetwork, assembledInfo);
+
+        (,,,,,, bool tempCompleted) = gateway.tasks(1);
+        assertEq(tempCompleted, true);
+    }
 }

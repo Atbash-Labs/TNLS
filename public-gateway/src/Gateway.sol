@@ -5,10 +5,9 @@ import "openzeppelin-contracts/contracts/utils/Counters.sol";
 import {Util} from "../src/Util.sol";
 import "../src/interfaces/IGateway.sol";
 
-
-contract Gateway is IGateway{
+contract Gateway is IGateway {
     using Counters for Counters.Counter;
-    using Util for * ;
+    using Util for *;
 
     /// @notice thrown when the signature is invalid
     error InvalidSignature();
@@ -36,7 +35,6 @@ contract Gateway is IGateway{
 
     event logCompletedTask(uint256 indexed task_id, bytes32 payload_hash, bytes32 result_hash);
 
-    
     /*//////////////////////////////////////////////////////////////
                              Constructor
     //////////////////////////////////////////////////////////////*/
@@ -89,7 +87,6 @@ contract Gateway is IGateway{
         route[_route] = _verificationAddress;
     }
 
-    
     /*//////////////////////////////////////////////////////////////
                              Pre Execution
     //////////////////////////////////////////////////////////////*/
@@ -178,7 +175,7 @@ contract Gateway is IGateway{
             revert InvalidSignature();
         }
 
-        (bool val,) = address(tasks[_taskId].callback_address).call(abi.encodeWithSelector(tasks[_taskId].callback_selector,_taskId, _info.result));
+        (bool val,) = address(tasks[_taskId].callback_address).call(abi.encodeWithSelector(tasks[_taskId].callback_selector, _taskId, _info.result));
         require(val == true, "Callback error");
 
         tasks[_taskId].completed = true;

@@ -73,19 +73,18 @@ library Util {
     /// @notice Recover the signer from message hash
     /// @param _ethSignedMessageHash The message hash from getEthSignedMessageHash()
     /// @param _signature The signature that needs to be verified
-    /// @param _checkingAddress address for trial/error for v value 
-    function modifiedRecoverSigner(bytes32 _ethSignedMessageHash, bytes memory _signature,address _checkingAddress) public pure returns (address) {
+    /// @param _checkingAddress address for trial/error for v value
+    function modifiedRecoverSigner(bytes32 _ethSignedMessageHash, bytes memory _signature, address _checkingAddress) public pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
         v = 27;
-        if(ecrecover(_ethSignedMessageHash, v, r, s) == _checkingAddress){
-          return ecrecover(_ethSignedMessageHash, v, r, s);
+        if (ecrecover(_ethSignedMessageHash, v, r, s) == _checkingAddress) {
+            return ecrecover(_ethSignedMessageHash, v, r, s);
         }
         v = 28;
-        if(ecrecover(_ethSignedMessageHash, v, r, s) == _checkingAddress){
-          return ecrecover(_ethSignedMessageHash, v, r, s);
-        }
-        else{
-          return address(0);
+        if (ecrecover(_ethSignedMessageHash, v, r, s) == _checkingAddress) {
+            return ecrecover(_ethSignedMessageHash, v, r, s);
+        } else {
+            return address(0);
         }
     }
 
@@ -105,5 +104,4 @@ library Util {
     function getRouteHash(string memory _routeInput, address _verificationAddressInput) public pure returns (bytes32) {
         return keccak256(abi.encode(_routeInput, _verificationAddressInput));
     }
-
 }
