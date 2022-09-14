@@ -23,8 +23,6 @@ pub struct State {
     pub keyed: bool,
     /// Count of tx.
     pub tx_cnt: u64,
-    /// Contract status.
-    pub status: u8,
     /// Private gateway encryption key pair.
     pub encryption_keys: KeyPair,
     /// Private gateway signing key pair.

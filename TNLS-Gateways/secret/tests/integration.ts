@@ -110,18 +110,10 @@ const initializeGateway = async (
     (log) => log.type === "message" && log.key === "contract_address"
   )!.value;
 
-  const encryption_pubkey = contract.arrayLog!.find(
-    (log) => log.type === "wasm" && log.key === "encryption_pubkey"
-  )!.value;
-
-  const signing_pubkey = contract.arrayLog!.find(
-    (log) => log.type === "wasm" && log.key === "signing_pubkey"
-  )!.value;
-
   console.log(`Contract address: ${contractAddress}\n`);
   console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas\n`);
 
-  var gatewayInfo: [string, string, string] = [contractCodeHash, contractAddress, encryption_pubkey];
+  var gatewayInfo: [string, string] = [contractCodeHash, contractAddress];
   return gatewayInfo;
 };
 
@@ -322,7 +314,7 @@ async function initializeAndUploadContract() {
 
   console.log(`Retrieving random number...`);
   await rngTx(client, gatewayHash, gatewayAddress, scrtRngHash, scrtRngAddress);
-  console.log(`Sending query: {"get_public_key": {} }`);
+  console.log(`Sending query: {"get_public_keys": {} }`);
   const gatewayKeys = await queryPubKey(client, gatewayHash, gatewayAddress);
 
   const gatewayKey = Buffer.from(gatewayKeys.verification_key.substring(2), 'hex').toString('base64')
@@ -475,12 +467,7 @@ async function gatewayTx(
   const logKeys = [
     "source_network",
     "task_destination_network",
-    "task_destination_network_hash",
-    "task_destination_network_signature",
     "task_id", 
-    "task_id_hash",
-    "task_id_signature",
-    // "payload",
     "payload_hash",
     "payload_signature",
     "result",
@@ -497,20 +484,13 @@ async function gatewayTx(
   console.log("\nOutput Logs:");
   console.log(logs);
 
-  console.log(recoverAddress(logs["task_destination_network_hash"], logs["task_destination_network_signature"]));
-  console.log(recoverAddress(logs["task_id_hash"], logs["task_id_signature"]));
   console.log(recoverAddress(logs["payload_hash"], logs["payload_signature"]));
   console.log(recoverAddress(logs["result_hash"], logs["result_signature"]));
   console.log(recoverAddress(logs["packet_hash"], logs["packet_signature"]));
 
   assert(logs["source_network"] == "secret");
   assert(logs["task_destination_network"] == "ethereum");
-  assert(fromHex(logs["task_destination_network_hash"].substring(2)).byteLength == 32);
-  assert(fromHex(logs["task_destination_network_signature"].substring(2)).byteLength == 65);
-  assert(logs["task_id"] == "0x1");
-  assert(fromHex(logs["task_id_hash"].substring(2)).byteLength == 32);
-  assert(fromHex(logs["task_id_signature"].substring(2)).byteLength == 65);
-  // assert(logs["payload"] == ciphertext);
+  assert(logs["task_id"] == "1");
   assert(fromHex(logs["payload_hash"].substring(2)).byteLength == 32);
   assert(fromHex(logs["payload_signature"].substring(2)).byteLength == 65);
   assert(logs["result"] == "0x7b226d795f76616c7565223a327d");
@@ -533,7 +513,7 @@ async function queryPubKey(
   const response = (await client.query.compute.queryContract({
     contractAddress: gatewayAddress,
     codeHash: gatewayHash,
-    query: { get_public_key: {} },
+    query: { get_public_keys: {} },
   })) as PublicKeyResponse;
 
   console.log(`\x1b[32mEncryption key: ${response.encryption_key}\x1b[0m`);
@@ -565,7 +545,7 @@ async function test_gateway_tx(
   scrtRngHash: string,
   scrtRngAddress: string,
 ) {
-  console.log(`Sending query: {"get_public_key": {} }`);
+  console.log(`Sending query: {"get_public_keys": {} }`);
   const gatewayPublicKey = await queryPubKey(client, gatewayHash, gatewayAddress);
   await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKey.encryption_key);
 }

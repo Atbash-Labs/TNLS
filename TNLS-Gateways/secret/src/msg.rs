@@ -25,18 +25,22 @@ pub struct InitMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
+    /// Triggers the scrt-rng contract to send back previously requested randomness.
     KeyGen {
         rng_hash: String,
         rng_addr: HumanAddr,
     },
+    /// Receives the callback message from scrt-rng. Actual key generation happens at this step.
     ReceiveFRn {
         cb_msg: Binary,
         purpose: Option<String>,
         rn: [u8; 32],
     },
+    /// Process an interchain message through the private gateway.
     Input {
         inputs: PreExecutionMsg,
     },
+    /// Receive results from private contract and broadcast logs for Relayer.
     Output {
         outputs: PostExecutionMsg,
     },
@@ -49,47 +53,24 @@ pub enum ResponseStatus {
     Failure,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum ContractStatus {
-    Normal,
-    StopInputs,
-    StopAll,
-}
-
-impl ContractStatus {
-    /// Returns u8 representation of the ContractStatus
-    pub fn to_u8(&self) -> u8 {
-        match self {
-            ContractStatus::Normal => 0,
-            ContractStatus::StopInputs => 1,
-            ContractStatus::StopAll => 2,
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InputResponse {
     pub status: ResponseStatus,
 }
 
-// #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-// #[serde(rename_all = "snake_case")]
-// pub struct OutputResponse {
-//     pub status: ResponseStatus
-// }
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    /// Returns the gateway's public encryption key.
-    GetPublicKey {},
+    /// Query the gateway's public keys.
+    GetPublicKeys {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PublicKeyResponse {
+    /// Base64 encoded string.
     pub encryption_key: Binary,
+    /// '0x' prefixed hex encoded byte string.
     pub verification_key: String,
 }
 
@@ -195,7 +176,7 @@ pub struct PostExecutionMsg {
     pub result: String,
     /// Task ID from private contract for verification.
     pub task_id: u64,
-    /// SHA256 hash of decrypted inputs for verification.
+    /// SHA256 of decrypted (inputs + task ID) for verification.
     pub input_hash: Binary,
 }
 
