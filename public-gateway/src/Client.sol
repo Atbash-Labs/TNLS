@@ -22,6 +22,11 @@ contract Client is IClient {
         GatewayAddress = _gatewayAddress;
     }
 
+    modifier onlyGateway(){
+      require(msg.sender==GatewayAddress,"Only Gateway contract can call this method");
+      _;
+    }
+
     /*//////////////////////////////////////////////////////////////
                         New Task and Send Call
     //////////////////////////////////////////////////////////////*/
@@ -69,7 +74,7 @@ contract Client is IClient {
     /// @param _taskId  Task Id of the computation
     /// @param _result computed result
     /// @param _result The second stored number input
-    function callback(uint256 _taskId, bytes memory _result) external {
+    function callback(uint256 _taskId, bytes memory _result) external onlyGateway {
         emit ComputedResult(_taskId, _result);
     }
 }
