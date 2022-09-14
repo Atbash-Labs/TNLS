@@ -10,6 +10,10 @@ import {Util} from "../src/Util.sol";
 contract client {}
 
 contract ContractTest is Test {
+    /*//////////////////////////////////////////////////////////////
+                                SETUP
+    //////////////////////////////////////////////////////////////*/
+
     client internal userClient;
     Gateway internal gateway;
     address deployer;
@@ -38,6 +42,61 @@ contract ContractTest is Test {
         vm.prank(deployer);
         gateway = new Gateway();
     }
+
+    /*//////////////////////////////////////////////////////////////
+                           Helper Functions
+    //////////////////////////////////////////////////////////////*/
+
+    function getPayloadHash(bytes memory _payload) public pure returns (bytes32) {
+        return keccak256(abi.encode(_payload));
+    }
+
+    function getResultHash(bytes memory _result) public pure returns (bytes32) {
+        return keccak256(abi.encode(_result));
+    }
+
+    function getRouteInfoHash(string memory _routingInfo) public pure returns (bytes32) {
+        return keccak256(abi.encode(_routingInfo));
+    }
+
+    function getRoutingInfoSignature(string memory _routingInfo, uint256 _foundryPkey) public returns (bytes memory) {
+        bytes32 routeHash = getRouteInfoHash(_routingInfo);
+        bytes32 routeEthSignedMessageHash = Util.getEthSignedMessageHash(routeHash);
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(_foundryPkey, routeEthSignedMessageHash);
+        bytes memory routingInfoSig = abi.encodePacked(r1, s1, v1);
+
+        return routingInfoSig;
+    }
+
+    function getPayloadSignature(bytes memory _payload, uint256 _foundryPkey) public returns (bytes memory) {
+        bytes32 payloadHash = getPayloadHash(_payload);
+        bytes32 payloadEthSignedMessageHash = Util.getEthSignedMessageHash(payloadHash);
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(_foundryPkey, payloadEthSignedMessageHash);
+        bytes memory payloadSig = abi.encodePacked(r2, s2, v2);
+
+        return payloadSig;
+    }
+
+    function getPacketSignature(bytes32 _packetHash, uint256 _foundryPkey) public returns (bytes memory) {
+        bytes32 packetEthSignedMessageHash = Util.getEthSignedMessageHash(_packetHash);
+        (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(_foundryPkey, packetEthSignedMessageHash);
+        bytes memory packetSig = abi.encodePacked(r3, s3, v3);
+
+        return packetSig;
+    }
+
+    function getResultSignature(bytes memory _result, uint256 _foundryPkey) public returns (bytes memory) {
+        bytes32 resultHash = getResultHash(_result);
+        bytes32 resultEthSignedMessageHash = Util.getEthSignedMessageHash(resultHash);
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(_foundryPkey, resultEthSignedMessageHash);
+        bytes memory resultSig = abi.encodePacked(r2, s2, v2);
+
+        return resultSig;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                           Test Cases
+    //////////////////////////////////////////////////////////////*/
 
     function test_CheckTheOwnerOfTheContract() public {
         address owner = gateway.owner();
@@ -144,53 +203,6 @@ contract ContractTest is Test {
         bytes memory sig = abi.encodePacked(r, s, v);
 
         gateway.updateRoute(sampleRoute, SampleVerificationAddress, sig);
-    }
-
-    function getPayloadHash(bytes memory _payload) public pure returns (bytes32) {
-        return keccak256(abi.encode(_payload));
-    }
-
-    function getResultHash(bytes memory _result) public pure returns (bytes32) {
-        return keccak256(abi.encode(_result));
-    }
-
-    function getRouteInfoHash(string memory _routingInfo) public pure returns (bytes32) {
-        return keccak256(abi.encode(_routingInfo));
-    }
-
-    function getRoutingInfoSignature(string memory _routingInfo, uint256 _foundryPkey) public returns (bytes memory) {
-        bytes32 routeHash = getRouteInfoHash(_routingInfo);
-        bytes32 routeEthSignedMessageHash = Util.getEthSignedMessageHash(routeHash);
-        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(_foundryPkey, routeEthSignedMessageHash);
-        bytes memory routingInfoSig = abi.encodePacked(r1, s1, v1);
-
-        return routingInfoSig;
-    }
-
-    function getPayloadSignature(bytes memory _payload, uint256 _foundryPkey) public returns (bytes memory) {
-        bytes32 payloadHash = getPayloadHash(_payload);
-        bytes32 payloadEthSignedMessageHash = Util.getEthSignedMessageHash(payloadHash);
-        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(_foundryPkey, payloadEthSignedMessageHash);
-        bytes memory payloadSig = abi.encodePacked(r2, s2, v2);
-
-        return payloadSig;
-    }
-
-    function getPacketSignature(bytes32 _packetHash, uint256 _foundryPkey) public returns (bytes memory) {
-        bytes32 packetEthSignedMessageHash = Util.getEthSignedMessageHash(_packetHash);
-        (uint8 v3, bytes32 r3, bytes32 s3) = vm.sign(_foundryPkey, packetEthSignedMessageHash);
-        bytes memory packetSig = abi.encodePacked(r3, s3, v3);
-
-        return packetSig;
-    }
-
-    function getResultSignature(bytes memory _result, uint256 _foundryPkey) public returns (bytes memory) {
-        bytes32 resultHash = getResultHash(_result);
-        bytes32 resultEthSignedMessageHash = Util.getEthSignedMessageHash(resultHash);
-        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(_foundryPkey, resultEthSignedMessageHash);
-        bytes memory resultSig = abi.encodePacked(r2, s2, v2);
-
-        return resultSig;
     }
 
     function test_PreExecution() public {
@@ -395,7 +407,6 @@ contract ContractTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_PreExecutionSetupForExplicitCase() public {
-        // USER ADDRESS       ----->   vm.addr(5);
         // CALLBACK ADDRESS   ----->   vm.addr(7);
 
         bytes4 callbackSelector = bytes4(abi.encodeWithSignature("callback(uint256 _taskId,bytes memory _result)"));
