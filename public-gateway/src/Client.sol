@@ -3,13 +3,18 @@ pragma solidity ^0.8.10;
 
 import {Util} from "../src/Util.sol";
 import {IGateway} from "../src/interfaces/IGateway.sol";
+import "../src/interfaces/IClient.sol";
 
-contract Client {
+contract Client is IClient {
     using Util for Util.Task;
     using Util for Util.ExecutionInfo;
 
     /// @notice Emitted when we recieve callback for our result of the computation
-    event FinalResultWithInputs(uint256 _taskId, bytes _result);
+    event ComputedResult(uint256 indexed taskId, bytes indexed result);
+
+    /*//////////////////////////////////////////////////////////////
+                             Constructor
+    //////////////////////////////////////////////////////////////*/
 
     address public GatewayAddress;
 
@@ -18,7 +23,7 @@ contract Client {
     }
 
     /*//////////////////////////////////////////////////////////////
-                              Task
+                        New Task and Send Call
     //////////////////////////////////////////////////////////////*/
 
     function newTask(
@@ -30,6 +35,7 @@ contract Client {
         bytes32 _payloadHash
     )
         internal
+        pure
         returns (Util.Task memory)
     {
         return Util.Task(_callbackAddress, _callbackSelector, _userAddress, _sourceNetwork, _routingInfo, _payloadHash, false);
@@ -49,9 +55,6 @@ contract Client {
     )
         public
     {
-        // address _callbackAddress;
-        // bytes4 _callbackSelector;
-
         Util.Task memory newtask;
 
         newtask = newTask(address(this), this.callback.selector, _userAddress, _sourceNetwork, _routingInfo, _payloadHash);
@@ -59,8 +62,14 @@ contract Client {
         IGateway(GatewayAddress).preExecution(newtask, _info);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                               Callback
+    //////////////////////////////////////////////////////////////*/
+
     /// @param _taskId  Task Id of the computation
     /// @param _result computed result
     /// @param _result The second stored number input
-    function callback(uint256 _taskId, bytes memory _result) external {}
+    function callback(uint256 _taskId, bytes memory _result) external {
+        emit ComputedResult(_taskId, _result);
+    }
 }
