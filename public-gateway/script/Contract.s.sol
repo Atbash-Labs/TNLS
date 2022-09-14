@@ -2,17 +2,18 @@
 pragma solidity ^0.8.10;
 
 import "forge-std/Script.sol";
-import "../src/Gateway.sol";
+import {Gateway} from "../src/Gateway.sol";
+import {Client} from "../src/Client.sol";
 
 contract ContractScript is Script {
     function setUp() public {}
 
-    Gateway gateway;
+    Gateway gatewayAddress;
 
     function run() public {
         vm.startBroadcast();
 
-        gateway = new Gateway();
+        gatewayAddress = new Gateway();
 
         vm.stopBroadcast();
     }

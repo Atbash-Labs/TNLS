@@ -11,6 +11,12 @@ contract Client {
     /// @notice Emitted when we recieve callback for our result of the computation
     event FinalResultWithInputs(uint256 _taskId, bytes _result);
 
+    address public GatewayAddress;
+
+    constructor(address _gatewayAddress) {
+        GatewayAddress = _gatewayAddress;
+    }
+
     /*//////////////////////////////////////////////////////////////
                               Task
     //////////////////////////////////////////////////////////////*/
@@ -23,8 +29,7 @@ contract Client {
         string memory _routingInfo,
         bytes32 _payloadHash
     )
-        public
-        pure
+        internal
         returns (Util.Task memory)
     {
         return Util.Task(_callbackAddress, _callbackSelector, _userAddress, _sourceNetwork, _routingInfo, _payloadHash, false);
@@ -42,7 +47,7 @@ contract Client {
         bytes32 _payloadHash,
         Util.ExecutionInfo memory _info
     )
-        internal
+        public
     {
         // address _callbackAddress;
         // bytes4 _callbackSelector;
@@ -51,12 +56,7 @@ contract Client {
 
         newtask = newTask(address(this), this.callback.selector, _userAddress, _sourceNetwork, _routingInfo, _payloadHash);
 
-        // need to find a way to fix the calling
-        // IGateway.preExecution(newtask, _info);
-
-        // take in the task struct and executioninfo struct as arguments
-
-        // call with address and callbackselector
+        IGateway(GatewayAddress).preExecution(newtask, _info);
     }
 
     /// @param _taskId  Task Id of the computation
