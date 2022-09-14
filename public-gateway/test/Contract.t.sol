@@ -197,7 +197,7 @@ contract ContractTest is Test {
         // USER ADDRESS       ----->   vm.addr(5);
         // CALLBACK ADDRESS   ----->   vm.addr(7);
 
-        bytes4 callbackSelector = bytes4(abi.encodeWithSignature("callback(uint256 _taskId,bytes memory _result,bytes memory _resultSig)"));
+        bytes4 callbackSelector = bytes4(abi.encodeWithSignature("callback(uint256 _taskId,bytes memory _result)"));
         string memory sourceNetwork = "ethereum";
 
         string memory routingInfo = "secret";
@@ -271,7 +271,7 @@ contract ContractTest is Test {
         // USER ADDRESS       ----->   vm.addr(5);
         // CALLBACK ADDRESS   ----->   vm.addr(6);
 
-        bytes4 callbackSelector = bytes4(abi.encodeWithSignature("callback(uint256 _taskId,bytes memory _result,bytes memory _resultSig)"));
+        bytes4 callbackSelector = bytes4(abi.encodeWithSignature("callback(uint256 _taskId,bytes memory _result)"));
         string memory sourceNetwork = "ethereum";
 
         string memory routingInfo = "secret";
@@ -340,7 +340,6 @@ contract ContractTest is Test {
         resultHash = Util.getEthSignedMessageHash(resultHash);
 
         Util.PostExecutionInfo memory assembledInfo = Util.PostExecutionInfo({
-            payload: payload,
             payload_hash: payloadHash,
             payload_signature: getPayloadSignature(payload, 6),
             result: result,
@@ -377,7 +376,6 @@ contract ContractTest is Test {
         resultHash = Util.getEthSignedMessageHash(resultHash);
 
         Util.PostExecutionInfo memory assembledInfo = Util.PostExecutionInfo({
-            payload: payload,
             payload_hash: payloadHash,
             payload_signature: getPayloadSignature(payload, 8),
             result: result,

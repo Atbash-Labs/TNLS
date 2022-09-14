@@ -143,12 +143,14 @@ contract Gateway is IGateway{
     /// @param _info PostExecutionInfo struct
     function postExecution(uint256 _taskId, string memory _sourceNetwork, Util.PostExecutionInfo memory _info) public {
         bool verifySig;
+        address recoveredSigner;
 
         address checkerAddress = route[_sourceNetwork];
 
         // Payload signature verification
         verifySig = true;
-        verifySig = Util.recoverSigner(_info.payload_hash, _info.payload_signature) == checkerAddress;
+        recoveredSigner = Util.modifiedRecoverSigner(_info.payload_hash, _info.payload_signature, checkerAddress);
+        verifySig = recoveredSigner == checkerAddress;
         if (!verifySig) {
             revert InvalidSignature();
         }
@@ -162,19 +164,21 @@ contract Gateway is IGateway{
 
         // Result signature verification
         verifySig = true;
-        verifySig = Util.recoverSigner(_info.result_hash, _info.result_signature) == checkerAddress;
+        recoveredSigner = Util.modifiedRecoverSigner(_info.result_hash, _info.result_signature, checkerAddress);
+        verifySig = recoveredSigner == checkerAddress;
         if (!verifySig) {
             revert InvalidSignature();
         }
 
         // Packet signature verification
         verifySig = true;
-        verifySig = Util.recoverSigner(_info.packet_hash, _info.packet_signature) == checkerAddress;
+        recoveredSigner = Util.modifiedRecoverSigner(_info.packet_hash, _info.packet_signature, checkerAddress);
+        verifySig = recoveredSigner == checkerAddress;
         if (!verifySig) {
             revert InvalidSignature();
         }
 
-        (bool val,) = address(tasks[_taskId].callback_address).call(abi.encodeWithSelector(tasks[_taskId].callback_selector, _info.result));
+        (bool val,) = address(tasks[_taskId].callback_address).call(abi.encodeWithSelector(tasks[_taskId].callback_selector,_taskId, _info.result));
         require(val == true, "Callback error");
 
         tasks[_taskId].completed = true;

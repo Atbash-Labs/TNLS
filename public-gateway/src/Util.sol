@@ -22,7 +22,6 @@ library Util {
     }
 
     struct PostExecutionInfo {
-        bytes payload;
         bytes32 payload_hash;
         bytes payload_signature;
         bytes result;
