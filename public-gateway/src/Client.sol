@@ -6,8 +6,7 @@ import {IGateway} from "../src/interfaces/IGateway.sol";
 import "../src/interfaces/IClient.sol";
 
 contract Client is IClient {
-    using Util for Util.Task;
-    using Util for Util.ExecutionInfo;
+    using Util for *;
 
     /// @notice Emitted when we recieve callback for our result of the computation
     event ComputedResult(uint256 indexed taskId, bytes result);
