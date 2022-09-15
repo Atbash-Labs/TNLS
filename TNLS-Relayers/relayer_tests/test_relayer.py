@@ -501,7 +501,8 @@ def test_web_app(fake_interface_factory):
             "'3': 'Failed to route', '4': 'Failed to route'}" \
             == response.text
         response = client.get('/keys')
-        assert response.status_code == str(app.config['KEYS'])
+        assert response.status_code == 200
+        assert response.text == str(app.config['KEYS'])
         response = client.get('/tasks_to_routes')
         assert response.status_code == 200
         assert "{'1': 'Routed to add1', '2': 'Routed to add2', " \
