@@ -74,9 +74,10 @@ jobs:
         env:
           INFURA_ENDPOINT: ${{ secrets.INFURA_ENDPOINT }}
         run: |
-          touch infura_api_endpoint.txt
-          echo "$INFURA_ENDPOINT" > infura_api_endpoint.txt
           echo "Unimplemented"
       - name: Deploy webserver to heroku
-        run:
-          echo "Unimplemented"
+        uses: akhileshns/heroku-deploy@v3.12.12
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: "atbash-demo-server"
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
