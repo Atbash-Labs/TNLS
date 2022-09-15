@@ -28,18 +28,12 @@ jobs:
           override: true
       - name: Generate lockfile
         working-directory: ./TNLS-Gateways/secret/
-        uses: actions-rs/cargo@v1
-        with:
-          command: generate-lockfile
-          args: --verbose
+        run: cargo generate-lockfile --verbose
       - name: Compile WASM contract
         working-directory: ./TNLS-Gateways/secret/
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --target wasm32-unknown-unknown --locked
         env:
           RUSTFLAGS: "-C link-arg=-s"
+        run: cargo build --release --target wasm32-unknown-unknown --locked
       - name: Build Secret Gateway Contract
         run: cd TNLS-Gateways/secret/ && make build-mainnet-reproducible 
         # run: cd tests/example-private-contract && make build-mainnet-reproducible
