@@ -13,11 +13,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
+      # - name: Set up Python 3.8
+      #   uses: actions/setup-python@v4
+      #   with:
+      #     python-version: 3.8
       - name: Build Secret Contracts
+        run: cd TNLS-Gateways/secret/ && make build-mainnet-reproducible
+        run: cd TNLS-Gateways/secret/tests/example-private-contract && make build-mainnet-reproducible
         run:
           echo "Unimplemented"
       - name: Deploy Secret Contracts
@@ -38,19 +40,19 @@ jobs:
       - name: Deploy sample eth contracts
         run:
           echo "Unimplemented"
-      - name: Install python dependencies
-        working-directory: ./TNLS-Relayers
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Write webserver Config Files
-        working-directory: ./TNLS-Relayers
-        env:
-          INFURA_ENDPOINT: ${{ secrets.INFURA_ENDPOINT }}
-        run: |
-          touch infura_api_endpoint.txt
-          echo "$INFURA_ENDPOINT" > infura_api_endpoint.txt
-          echo "Unimplemented"
+      # - name: Install python dependencies
+      #   working-directory: ./TNLS-Relayers
+      #   run: |
+      #     python -m pip install --upgrade pip
+      #     pip install -r requirements.txt
+      # - name: Write webserver Config Files
+      #   working-directory: ./TNLS-Relayers
+      #   env:
+      #     INFURA_ENDPOINT: ${{ secrets.INFURA_ENDPOINT }}
+      #   run: |
+      #     touch infura_api_endpoint.txt
+      #     echo "$INFURA_ENDPOINT" > infura_api_endpoint.txt
+      #     echo "Unimplemented"
       - name: Deploy webserver to heroku
         run:
           echo "Unimplemented"
