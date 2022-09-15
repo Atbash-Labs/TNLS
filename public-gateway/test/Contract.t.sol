@@ -548,7 +548,7 @@ contract ContractTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
-                      Stubbed Value Case Setup
+                            Client Test
     //////////////////////////////////////////////////////////////*/
 
     function test_ClientSendToPreExecution() public {
