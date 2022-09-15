@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, CanonicalAddr};
+use cosmwasm_std::{Binary, CanonicalAddr, HumanAddr};
 use secret_toolkit::storage::{Item, Keymap};
 
 use schemars::JsonSchema;
@@ -31,12 +31,14 @@ pub struct State {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
 pub struct TaskInfo {
-    /// Encryption of (data, routing info, and user address/verifying key).
+    /// The original, encrypted payload.
     pub payload: Binary,
-    /// sha256(decrypted input_values + task_id)
+    /// A unique hash for the task.
     pub input_hash: [u8; 32],
-    /// Source network (where to go once pulled into the next gateway).
+    /// The name of the network that message came from.
     pub source_network: String,
+    /// Public address of the user that sent the message.
+    pub user_address: HumanAddr,
 }
 /// A key pair using the [Binary] type
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]

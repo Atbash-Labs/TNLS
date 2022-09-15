@@ -223,6 +223,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
         payload: msg.payload, // storing the ENCRYPTED payload
         input_hash,           // storing the DECRYPTED input_values hashed together with task ID
         source_network: msg.source_network,
+        user_address: payload.user_address.clone(),
     };
 
     // map task ID to task info
@@ -254,6 +255,7 @@ fn pre_execution<S: Storage, A: Api, Q: Querier>(
         message: PrivContractHandleMsg {
             input_values,
             handle: msg.handle,
+            user_address: payload.user_address,
             task_id: msg.task_id,
             input_hash: Binary(input_hash.to_vec()),
             signature: Binary(signature),
