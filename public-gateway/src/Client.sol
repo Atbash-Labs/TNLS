@@ -10,7 +10,7 @@ contract Client is IClient {
     using Util for Util.ExecutionInfo;
 
     /// @notice Emitted when we recieve callback for our result of the computation
-    event ComputedResult(uint256 indexed taskId, bytes indexed result);
+    event ComputedResult(uint256 indexed taskId, bytes result);
 
     /*//////////////////////////////////////////////////////////////
                              Constructor
@@ -22,9 +22,9 @@ contract Client is IClient {
         GatewayAddress = _gatewayAddress;
     }
 
-    modifier onlyGateway(){
-      require(msg.sender==GatewayAddress,"Only Gateway contract can call this method");
-      _;
+    modifier onlyGateway() {
+        require(msg.sender == GatewayAddress, "Only Gateway contract can call this method");
+        _;
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -17,7 +17,7 @@ contract DeployScript is Script {
 
         gatewayAddress = new Gateway();
         clientAddress = new Client(address(gatewayAddress));
-        
+
         console2.logAddress(address(gatewayAddress));
         console2.logAddress(address(clientAddress));
 
