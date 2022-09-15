@@ -106,7 +106,7 @@ def task_json():
     Returns: The status of the relayer
 
     """
-    return current_app.config['RELAYER'].task_ids_to_statuses
+    return str(current_app.config['RELAYER'].task_ids_to_statuses)
 
 
 @route_blueprint.route('/keys')
@@ -116,7 +116,7 @@ def keys():
     Returns: the current encryption and verification keys
 
     """
-    return current_app.config['KEYS']
+    return str(current_app.config['KEYS'])
 
 
 def app_factory(config_filename, config_file_converter=generate_full_config, num_loops=None):
