@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Sources
+      - name: Checkout sources
         uses: actions/checkout@v3
       # - name: Set up Python 3.8
       #   uses: actions/setup-python@v4
@@ -26,17 +26,18 @@ jobs:
           toolchain: 1.63.0
           target: wasm32-unknown-unknown
           override: true
-      - name: Generate lockfile
+      - name: Generate lockfiles
         working-directory: ./TNLS-Gateways/secret/
-        run: cargo generate-lockfile --verbose
-      - name: Compile WASM contract
-        working-directory: ./TNLS-Gateways/secret/
-        env:
-          RUSTFLAGS: "-C link-arg=-s"
-        run: cargo build --release --target wasm32-unknown-unknown --locked
-      - name: Build Secret Gateway Contract
+        run: cargo generate-lockfile --verbose && cd tests/example-private-contract && cargo generate-lockfile --verbose
+      # - name: Compile WASM contract
+      #   working-directory: ./TNLS-Gateways/secret/
+      #   env:
+      #     RUSTFLAGS: "-C link-arg=-s"
+        # run: cargo build --release --target wasm32-unknown-unknown --locked
+      - name: Build secret gateway contract
         run: cd TNLS-Gateways/secret/ && make build-mainnet-reproducible 
-        # run: cd tests/example-private-contract && make build-mainnet-reproducible
+      - name: Build secret sample contract
+        run: cd TNLS-Gateways/secret/tests/example-private-contract && make build-mainnet-reproducible
       - name: Deploy Secret Contracts
         run:
           echo "Unimplemented"
