@@ -115,3 +115,8 @@ def app_factory(config_filename, config_file_converter=generate_full_config, num
     app.config['RELAYER'] = relayer
     app.register_blueprint(route_blueprint)
     return app
+
+
+if __name__ == '__main__':
+    app = app_factory(f'{Path(__file__).parent.absolute()}/../config.yml')
+    app.run()
