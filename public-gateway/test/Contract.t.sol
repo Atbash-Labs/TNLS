@@ -419,7 +419,6 @@ contract ContractTest is Test {
         // bytes32 string encoding of "add a bunch of stuff"
         bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
         bytes32 payloadHash = hex"ea57f8cfce0dca7528ff349328b9a524dbbd49fe724026da575aed40cd3ac2c4";
-        // payloadHash = Util.getEthSignedMessageHash(payloadHash);
         bytes memory payloadSignature =
             hex"293fb5fe48d81aadd26574aca54509804f628a851d7df4e3356b0e191ef5b11c33f07e7eeb0494384df6f3f636e2fc0fcf64ee3fb0d5e3d6f3302a81325bd06f1c";
 
