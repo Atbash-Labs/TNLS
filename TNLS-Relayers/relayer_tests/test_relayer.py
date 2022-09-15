@@ -483,13 +483,14 @@ def test_web_app(fake_interface_factory):
                                    'add2': (chain_2, contract_interface_2, '', '')}
 
     def get_dict_of_names_to_interfaces(_):
-        return dict_of_names_to_interfaces
+        return dict_of_names_to_interfaces, {'secret': {'verification': 'test_verification_key',
+                                                        'encryption': 'test_encryption_key'}}
 
     app = app_factory("", config_file_converter=get_dict_of_names_to_interfaces, num_loops=1)
     relayer = app.config['RELAYER']
-    assert app.config['KEYS'] == {'secret': {'encryption': "INSERT_SECRET_CONTRACT_ENCRYPTION_KEY_HERE",
-                                             'verification': "INSERT_SECRET_CONTRACT_VERIFICATION_KEY_HERE"}}
-    time.sleep(3)
+    assert app.config['KEYS'] == {'secret': {'encryption': "test_verification_key",
+                                             'verification': "test_encryption_key"}}
+    time.sleep(1)
     while len(relayer.task_threads) > 0 and relayer.task_threads[0].is_alive():
         time.sleep(0.1)
     with app.test_client() as client:

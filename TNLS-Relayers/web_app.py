@@ -133,11 +133,11 @@ def app_factory(config_filename, config_file_converter=generate_full_config, num
     app = Flask(__name__)
     config, keys_dict = config_file_converter(config_filename)
     relayer = Relayer(config, num_loops=num_loops)
-    thread = Thread(target=relayer.run)
-    thread.start()
     app.config['RELAYER'] = relayer
     app.config['KEYS'] = keys_dict
     app.register_blueprint(route_blueprint)
+    thread = Thread(target=relayer.run)
+    thread.start()
     return app
 
 
