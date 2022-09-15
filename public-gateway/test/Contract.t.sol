@@ -5,17 +5,18 @@ import "forge-std/Test.sol";
 import "forge-std/Vm.sol";
 import "forge-std/console2.sol";
 import {Gateway} from "../src/Gateway.sol";
+import {Client} from "../src/Client.sol";
 import {Util} from "../src/Util.sol";
 
-contract client {}
+
 
 contract ContractTest is Test {
     /*//////////////////////////////////////////////////////////////
                                 SETUP
     //////////////////////////////////////////////////////////////*/
 
-    client internal userClient;
     Gateway internal gateway;
+    Client internal client;
     address deployer;
     address notOwner;
 
@@ -36,11 +37,11 @@ contract ContractTest is Test {
     event logCompletedTask(uint256 indexed task_id, bytes32 payload_hash, bytes32 result_hash);
 
     function setUp() public {
-        userClient = new client();
         deployer = vm.addr(3);
         notOwner = vm.addr(4);
         vm.prank(deployer);
         gateway = new Gateway();
+        client = new Client(address(gateway));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -545,5 +546,67 @@ contract ContractTest is Test {
 
         (,,,,,, bool tempCompleted) = gateway.tasks(1);
         assertEq(tempCompleted, true);
+    }
+
+    function test_ClientSendToPreExecution() public {
+
+        string memory sourceNetwork = "ethereum";
+        address userAddress = 0x49F7552065228e5abF44e144cc750aEA4F711Dc3;
+
+        string memory routingInfo = "secret";
+        bytes memory userPublicKey = "0x736f6d65207075626c6963206b65790000000000000000000000000000000000";
+
+        bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
+        bytes32 payloadHash = hex"ea57f8cfce0dca7528ff349328b9a524dbbd49fe724026da575aed40cd3ac2c4";
+         bytes memory payloadSignature =
+            hex"293fb5fe48d81aadd26574aca54509804f628a851d7df4e3356b0e191ef5b11c33f07e7eeb0494384df6f3f636e2fc0fcf64ee3fb0d5e3d6f3302a81325bd06f1c";
+
+        Util.ExecutionInfo memory assembledInfo = Util.ExecutionInfo({
+            user_key: userPublicKey,
+            routing_code_hash: "some RoutingCodeHash",
+            handle: "some kinda handle",
+            nonce: "ssssssssssss",
+            payload: payload,
+            payload_signature: payloadSignature
+        });
+
+        vm.expectEmit(true, true, true, true);
+        emit logNewTask(
+            1,
+            sourceNetwork,
+            userAddress,
+            routingInfo,
+            "some RoutingCodeHash",
+            payload,
+            payloadHash,
+            payloadSignature,
+            userPublicKey,
+            "some kinda handle",
+            "ssssssssssss"
+            );
+
+        client.send(userAddress, sourceNetwork, routingInfo, payloadHash, assembledInfo);
+        
+        (address tempCallbackAddress,,,,,,) = gateway.tasks(1);
+        assertEq(tempCallbackAddress, address(client));
+
+        (, bytes4 tempCallbackSelector,,,,,) = gateway.tasks(1);
+        assertEq(tempCallbackSelector, client.callback.selector);
+        
+        (,, address tempUserAddress,,,,) = gateway.tasks(1);
+        assertEq(tempUserAddress, userAddress);
+
+        (,,, string memory tempSourceNetwork,,,) = gateway.tasks(1);
+        assertEq(tempSourceNetwork, sourceNetwork);
+
+        (,,,, string memory tempRoutingInfo,,) = gateway.tasks(1);
+        assertEq(tempRoutingInfo, routingInfo);
+
+        (,,,,, bytes32 tempPayloadHash,) = gateway.tasks(1);
+        assertEq(tempPayloadHash, payloadHash);
+
+        (,,,,,, bool tempCompleted) = gateway.tasks(1);
+        assertEq(tempCompleted, false);
+
     }
 }
