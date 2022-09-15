@@ -2,11 +2,11 @@ import axios from "axios";
 import { Wallet, SecretNetworkClient, fromUtf8, fromHex } from "secretjs";
 import fs from "fs";
 import assert from "assert";
-import { PreExecutionMsg, PostExecutionMsg, Payload, Contract, Sender, Binary, BroadcastMsg } from "./GatewayContract";
+import { PreExecutionMsg, Payload, Binary } from "./GatewayContract";
 import { ecdsaSign } from "secp256k1";
 import { Wallet as EthWallet } from "ethers";
-import { arrayify, SigningKey, computeAddress, recoverAddress, recoverPublicKey } from "ethers/lib/utils";
-import { ecrecover, toBuffer, bufferToHex, bufferToBigInt, isValidPublic, stripHexPrefix} from '@ethereumjs/util'
+import { arrayify, SigningKey, computeAddress, recoverAddress, recoverPublicKey, keccak256 } from "ethers/lib/utils";
+import sha3 from "js-sha3";
 import { createHash, randomBytes } from 'crypto';
 import { encrypt_payload } from './encrypt-payload/pkg'
 import 'dotenv/config'
@@ -379,7 +379,7 @@ async function gatewayTx(
   gatewayAddress: string,
   contractHash: string,
   contractAddress: string,
-  gatewayPublicKey: string, // base64
+  gatewayPublicKey: string, // base64, encryption key
 ) {
   const wallet = EthWallet.createRandom(); 
   const userPublicAddress: string = wallet.address;
@@ -390,14 +390,13 @@ async function gatewayTx(
   const userPublicKeyBytes = arrayify(userPublicKey)
   const gatewayPublicKeyBuffer = Buffer.from(gatewayPublicKey, 'base64')
   const gatewayPublicKeyBytes = arrayify(gatewayPublicKeyBuffer)
-
+  
+  const inputs = JSON.stringify({"my_value": 1});
   const routing_info = contractAddress;
   const routing_code_hash = contractHash;
-  
   const user_address = userPublicAddress;
   const user_key = Buffer.from(userPublicKeyBytes).toString('base64');
 
-  const inputs = JSON.stringify({"my_value": 1});
   const payload: Payload = {
     data: inputs,
     routing_info: routing_info,
@@ -416,12 +415,9 @@ async function gatewayTx(
     .toString('base64');
 
   const payloadHash = createHash('sha256').update(ciphertext,'base64').digest();
-  const payloadHash64 = payloadHash.toString('base64');
-  console.log(`\nPayload Hash is ${payloadHash.byteLength} bytes`);
-
+  // const payloadHash64 = payloadHash.toString('base64');
   const payloadSignature = ecdsaSign(payloadHash, userPrivateKeyBytes).signature;
-  const payloadSignature64 = Buffer.from(payloadSignature).toString('base64');
-  console.log(`Payload Signature is ${payloadSignature.byteLength} bytes\n`);
+  // const payloadSignature64 = Buffer.from(payloadSignature).toString('base64');
 
   const handle_msg: PreExecutionMsg = {
     task_id: 1,
@@ -432,8 +428,8 @@ async function gatewayTx(
     user_key: user_key,
     payload: ciphertext,
     nonce: Buffer.from(nonce).toString('base64'),
-    payload_hash: payloadHash64,
-    payload_signature: payloadSignature64,
+    payload_hash: payloadHash.toString('base64'),
+    payload_signature: Buffer.from(payloadSignature).toString('base64'),
     source_network: "ethereum",
   };
   console.log("handle_msg:");
@@ -445,15 +441,14 @@ async function gatewayTx(
       contractAddress: gatewayAddress,
       codeHash: gatewayHash,
       msg: {
-        input: { inputs: handle_msg }, // TODO eliminate nesting if reasonable
+        input: { inputs: handle_msg }, // TODO eliminate nesting if possible
       },
       sentFunds: [],
     },
     {
-      gasLimit: 5000000,
+      gasLimit: 500000,
     }
   );
-  // console.log(tx);
 
   if (tx.code !== 0) {
     throw new Error(
@@ -462,7 +457,6 @@ async function gatewayTx(
   };
 
   // Parsing the logs from the 'Output' handle
-
   let logs: {[index: string]:string} = {};
   const logKeys = [
     "source_network",
@@ -484,9 +478,13 @@ async function gatewayTx(
   console.log("\nOutput Logs:");
   console.log(logs);
 
-  console.log(recoverAddress(logs["payload_hash"], logs["payload_signature"]));
-  console.log(recoverAddress(logs["result_hash"], logs["result_signature"]));
-  console.log(recoverAddress(logs["packet_hash"], logs["packet_signature"]));
+  console.log('\nTesting recoverAddress on each signature:')
+  const test1 = recoverAddress(logs["payload_hash"], logs["payload_signature"]);
+  const test2 = recoverAddress(logs["result_hash"], logs["result_signature"]);
+  const test3 = recoverAddress(logs["packet_hash"], logs["packet_signature"]);
+  [test1, test2, test3].forEach(element => {
+    console.log(element)
+  });
 
   assert(logs["source_network"] == "secret");
   assert(logs["task_destination_network"] == "ethereum");
@@ -521,19 +519,6 @@ async function queryPubKey(
   console.log(`\x1b[34;1mEth Address: ${computeAddress(response.verification_key)}\x1b[0m`);
 
   return response
-}
-
-function try_ecrecover(msg: string, sgn: string) {
-  // const r = toBuffer(sgn.slice(0,66))
-  // const s = toBuffer('0x' + sgn.slice(66,130))
-  // const v = bufferToBigInt(toBuffer('0x' + sgn.slice(130,132)))
-
-  // const pubKey = ecrecover(toBuffer(msg), v, r, s)
-  // console.log(bufferToHex(pubKey))
-  // console.log(isValidPublic(pubKey))
-  
-  console.log(recoverAddress(msg, sgn))
-  console.log(recoverPublicKey(msg, sgn))
 }
 
 async function test_gateway_tx(
