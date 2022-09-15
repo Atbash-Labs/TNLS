@@ -19,7 +19,8 @@ jobs:
       #   with:
       #     python-version: 3.8
       - name: Build Secret Contracts
-        run: cd TNLS-Gateways/secret/ && make build-mainnet-reproducible && cd tests/example-private-contract && make build-mainnet-reproducible
+        run: cd TNLS-Gateways/secret/ && make build-mainnet-reproducible 
+        # run: cd tests/example-private-contract && make build-mainnet-reproducible
       - name: Deploy Secret Contracts
         run:
           echo "Unimplemented"
