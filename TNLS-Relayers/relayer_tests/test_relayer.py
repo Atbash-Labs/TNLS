@@ -209,8 +209,9 @@ def rewrite_yaml(address_and_abi_of_contract, provider_privkey_address_eth, prov
 
 def test_gen_full_config(rewrite_yaml, request, provider_privkey_address_scrt, provider_privkey_address_eth):
     # Tests that config correctly populates from config file
-    config = generate_full_config(f'{request.path.parent}/sample_config_full.yml',
-                                  provider_pair=(provider_privkey_address_eth[0], provider_privkey_address_scrt[0]))
+    config, keys_dict = generate_full_config(f'{request.path.parent}/sample_config_full.yml',
+                                             provider_pair=(
+                                             provider_privkey_address_eth[0], provider_privkey_address_scrt[0]))
     eth_config = config['ethereum']
     scrt_config = config['secret']
     interface, contract_interface, evt_name, function_name = scrt_config
@@ -222,6 +223,8 @@ def test_gen_full_config(rewrite_yaml, request, provider_privkey_address_scrt, p
     assert evt_name == 'logNewTask'
     assert function_name == 'postExecution'
     assert contract_interface.interface == interface
+    assert keys_dict['secret'] == {'contract_signing_key': "INSERT_SECRET_CONTRACT_ENCRYPTION_KEY_HERE",
+                                   'contract_verification_key': "INSERT_SECRET_CONTRACT_VERIFICATION_KEY_HERE"}
 
 
 class FakeChainInterface(BaseChainInterface):
