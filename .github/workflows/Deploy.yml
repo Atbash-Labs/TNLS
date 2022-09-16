@@ -19,33 +19,33 @@ jobs:
       #   uses: actions/setup-python@v4
       #   with:
       #     python-version: 3.8
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: 1.63.0
-          target: wasm32-unknown-unknown
-          override: true
-      - name: Install wasm-opt
-        run: sudo apt update && sudo apt install -y binaryen clang # && sudo rm -rf /var/lib/apt/lists/*
-      - name: Build secret gateway contract
-        run: cd TNLS-Gateways/secret/ && make build-mainnet
-      - name: Build secret sample contract
-        run: cd TNLS-Gateways/secret/tests/example-private-contract && make build-mainnet
-      - name: Install dependencies
-        run: npm --prefix secret-deploy/ install
-      - name: Create .env file for Node
-        env:
-          MNEMONIC: ${{ secrets.SECRET_WALLET_MNEMONIC }}
-        run: |
-          touch secret-deploy/.env
-          echo MNEMONIC="$MNEMONIC" >> secret-deploy/.env
-          echo GRPC_WEB_URL='"https://grpc.testnet.secretsaturn.net"' >> secret-deploy/.env
-          echo CHAIN_ID='"pulsar-2"' >> secret-deploy/.env
-          cat secret-deploy/.env
-      - name: Deploy Secret Contracts
-        working-directory: ./secret-deploy
-        run: npx ts-node deploy.ts
+      # - name: Install stable toolchain
+      #   uses: actions-rs/toolchain@v1
+      #   with:
+      #     profile: minimal
+      #     toolchain: 1.63.0
+      #     target: wasm32-unknown-unknown
+      #     override: true
+      # - name: Install wasm-opt
+      #   run: sudo apt update && sudo apt install -y binaryen clang # && sudo rm -rf /var/lib/apt/lists/*
+      # - name: Build secret gateway contract
+      #   run: cd TNLS-Gateways/secret/ && make build-mainnet
+      # - name: Build secret sample contract
+      #   run: cd TNLS-Gateways/secret/tests/example-private-contract && make build-mainnet
+      # - name: Install dependencies
+      #   run: npm --prefix secret-deploy/ install
+      # - name: Create .env file for Node
+      #   env:
+      #     MNEMONIC: ${{ secrets.SECRET_WALLET_MNEMONIC }}
+      #   run: |
+      #     touch secret-deploy/.env
+      #     echo MNEMONIC="$MNEMONIC" >> secret-deploy/.env
+      #     echo GRPC_WEB_URL='"https://grpc.testnet.secretsaturn.net"' >> secret-deploy/.env
+      #     echo CHAIN_ID='"pulsar-2"' >> secret-deploy/.env
+      #     cat secret-deploy/.env
+      # - name: Deploy Secret Contracts
+      #   working-directory: ./secret-deploy
+      #   run: npx ts-node deploy.ts
       - name: Get secret contract details
         run: |
           echo "SECRET_GATEWAY_CODE_HASH=$(sed -n '2{p;q}' secret-deploy/secret_gateway.log)" >> $GITHUB_ENV
@@ -56,9 +56,9 @@ jobs:
           echo "SECRET_SAMPLE_ADDRESS=$(sed -n '3{p;q}' secret-deploy/secret_sample.log)" >> $GITHUB_ENV
       - name: Update config.yml with secret info\
         run: |
-          sed -i "s/INSERT_SECRET_CONTRACT_ADDRESS_HERE/${{ env.SECRET_GATEWAY_ADDRESS }}/g" config.yml
-          sed -i "s/INSERT_SECRET_CONTRACT_ENCRYPTION_KEY_HERE/${{ env.SECRET_GATEWAY_ENCRYPTION_KEY }}/g" config.yml
-          sed -i "s/INSERT_SECRET_CONTRACT_ETH_ADDRESS_HERE/${{ env.SECRET_GATEWAY_ETH_ADDRESS }}/g" config.yml
+          sed -i 's/INSERT_SECRET_CONTRACT_ADDRESS_HERE/${{ env.SECRET_GATEWAY_ADDRESS }}/g' config.yml
+          sed -i 's/INSERT_SECRET_CONTRACT_ENCRYPTION_KEY_HERE/${{ env.SECRET_GATEWAY_ENCRYPTION_KEY }}/g' config.yml
+          sed -i 's/INSERT_SECRET_CONTRACT_ETH_ADDRESS_HERE/${{ env.SECRET_GATEWAY_ETH_ADDRESS }}/g' config.yml
           cat config.yml
       - name: Build public contract
         run:
