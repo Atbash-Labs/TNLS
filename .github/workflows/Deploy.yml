@@ -32,7 +32,9 @@ jobs:
       #   run: cd TNLS-Gateways/secret/ && make build-mainnet
       # - name: Build secret sample contract
       #   run: cd TNLS-Gateways/secret/tests/example-private-contract && make build-mainnet
-      - name: Deploy Secret Contracts
+      - name: Install dependencies
+        run: npm --prefix TNLS-Gateways/secret/tests/ install
+      - name: Create .env file for Node
         env:
           MNEMONIC: ${{ secrets.SECRET_WALLET_MNEMONIC }}
         run: |
@@ -41,6 +43,8 @@ jobs:
           echo GRPC_WEB_URL='"https://grpc.testnet.secretsaturn.net"' >> .env
           echo CHAIN_ID='"pulsar-2"' >> .env
           cat .env
+      - name: Deploy Secret Contracts
+        run: npx ts-node secret-deploy/deploy.ts
       - name: Get secret contract verification key
         run:
           echo "Unimplemented"
