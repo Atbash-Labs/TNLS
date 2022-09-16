@@ -45,17 +45,22 @@ jobs:
           cat secret-deploy/.env
       - name: Deploy Secret Contracts
         working-directory: ./secret-deploy
-        run: npx ts-node deploy.ts
-      - name: Get secret contract verification key
-        run:
+        run: |
+          npx ts-node deploy.ts
+          echo "SECRET_GATEWAY_CODE_HASH=$(sed -n '2{p;q}' secret-deploy/secret_gateway.log)" >> $GITHUB_ENV
+          echo "SECRET_GATEWAY_ADDRESS=$(sed -n '3{p;q}' secret-deploy/secret_gateway.log)" >> $GITHUB_ENV
+          echo "SECRET_GATEWAY_ENCRYPTION_KEY"=$(sed -n '4{p;q}' secret-deploy/secret_gateway.log)" >> $GITHUB_ENV
+          echo "SECRET_GATEWAY_ETH_ADDRESS"=$(sed -n '5{p;q}' secret-deploy/secret_gateway.log)" >> $GITHUB_ENV
+          echo "SECRET_SAMPLE_CODE_HASH=$(sed -n '2{p;q}' secret-deploy/secret_sample.log)" >> $GITHUB_ENV
+          echo "SECRET_SAMPLE_ADDRESS=$(sed -n '3{p;q}' secret-deploy/secret_sample.log)" >> $GITHUB_ENV
+          echo $GITHUB_ENV
+      - name: Get secret contract details
+        env:
           echo "Unimplemented"
       - name: Build public contract
         run:
           echo "Unimplemented"
       - name: Deploy public contract
-        run:
-          echo "Unimplemented"
-      - name: Deploy sample scrt contracts
         run:
           echo "Unimplemented"
       - name: Deploy sample eth contracts

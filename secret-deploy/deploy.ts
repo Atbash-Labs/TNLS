@@ -95,7 +95,7 @@ const initializeGateway = async (
   )!.value;
 
   fs.writeFileSync("secret_gateway.log",
-  `CODE_ID=${codeId}\nCODE_HASH="${contractCodeHash}"\nCONTRACT_ADDRESS="${contractAddress}"\n`);
+    `${codeId}\n${contractCodeHash}\n${contractAddress}\n`);
   
   console.log(`Contract address: ${contractAddress}\n`);
   console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas\n`);
@@ -174,8 +174,8 @@ const initializeContract = async (
     (log) => log.type === "message" && log.key === "contract_address"
   )!.value;
 
-  fs.writeFileSync("secret_gateway.log",
-  `CODE_ID=${codeId}\nCODE_HASH${contractCodeHash}\nCONTRACT_ADDRESS=${contractAddress}\n`);
+  fs.writeFileSync("secret_sample.log",
+    `${codeId}\n${contractCodeHash}\n${contractAddress}\n`);
 
   console.log(`Contract address: ${contractAddress}\n`);
   console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas`);
@@ -275,6 +275,9 @@ async function queryPubKeys(
   console.log(`\x1b[32mEncryption key: ${response.encryption_key}\x1b[0m`);
   console.log(`\x1b[32mPublic key: ${response.verification_key}\x1b[0m`);
   console.log(`\x1b[34;1mEth Address: ${computeAddress(response.verification_key)}\x1b[0m`);
+  fs.appendFileSync("secret_gateway.log",
+    `${response.encryption_key}\n${computeAddress(response.verification_key)}\n`);
+
   return response
 }
 
