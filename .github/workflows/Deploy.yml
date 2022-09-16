@@ -1,11 +1,9 @@
 name: Deployment
 
-# on:
-#   push:
-#     branches:
-#       - main
-
-on: [push] # TODO delete this before PR
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   Deploy-to-main:
@@ -27,7 +25,7 @@ jobs:
           target: wasm32-unknown-unknown
           override: true
       - name: Install wasm-opt
-        run: sudo apt update && sudo apt install -y binaryen clang # && sudo rm -rf /var/lib/apt/lists/*
+        run: sudo apt update && sudo apt install -y binaryen clang
       - name: Build secret gateway contract
         run: cd TNLS-Gateways/secret/ && make build-mainnet
       - name: Build secret sample contract
