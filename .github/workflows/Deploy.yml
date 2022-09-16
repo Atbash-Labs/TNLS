@@ -27,7 +27,7 @@ jobs:
           target: wasm32-unknown-unknown
           override: true
       - name: Install wasm-opt
-        run: apt update && apt install -y binaryen clang && rm -rf /var/lib/apt/lists/*
+        run: sudo apt update && sudo apt install -y binaryen clang && rm -rf /var/lib/apt/lists/*
       # - name: Generate lockfiles
       #   working-directory: ./TNLS-Gateways/secret/
       #   run: cargo generate-lockfile --verbose && cd tests/example-private-contract && cargo generate-lockfile --verbose
