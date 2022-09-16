@@ -1,10 +1,6 @@
-import axios from "axios";
-import { Wallet, SecretNetworkClient, fromUtf8, fromHex } from "secretjs";
 import fs from "fs";
-import assert from "assert";
-import { Wallet as EthWallet } from "ethers";
-import { arrayify, SigningKey, computeAddress, recoverAddress, keccak256 } from "ethers/lib/utils";
-import { createHash, randomBytes } from 'crypto';
+import { Wallet, SecretNetworkClient } from "secretjs";
+import { computeAddress } from "ethers/lib/utils";
 import 'dotenv/config'
 
 var mnemonic = process.env.MNEMONIC!;
@@ -99,7 +95,7 @@ const initializeGateway = async (
   )!.value;
 
   fs.writeFileSync("secret_gateway.log",
-  `CODE_ID=${codeId}\nCODE_HASH${contractCodeHash}\nCONTRACT_ADDRESS=${contractAddress}\n`);
+  `CODE_ID=${codeId}\nCODE_HASH="${contractCodeHash}"\nCONTRACT_ADDRESS="${contractAddress}"\n`);
   
   console.log(`Contract address: ${contractAddress}\n`);
   console.log(`Init used \x1b[33m${contract.gasUsed}\x1b[0m gas\n`);
@@ -205,7 +201,7 @@ async function initializeAndUploadContract() {
   const scrtRngAddress = "secret14yqa7fux3308kknsmdft8azmkje5krzwz570q9";
   const [gatewayHash, gatewayAddress] = await initializeGateway(
     client,
-    "./TNLS-Gateways/secret/contract.wasm.gz",
+    "../TNLS-Gateways/secret/contract.wasm.gz",
     scrtRngHash,
     scrtRngAddress,
   );
@@ -216,7 +212,7 @@ async function initializeAndUploadContract() {
   const gatewayPublicKey = Buffer.from(gatewayKeys.verification_key.substring(2), 'hex').toString('base64');
   const [contractHash, contractAddress] = await initializeContract(
     client,
-    "./TNLS-Gateways/secret/tests/example-private-contract/contract.wasm.gz",
+    "../TNLS-Gateways/secret/tests/example-private-contract/contract.wasm.gz",
     gatewayHash,
     gatewayAddress,
     gatewayPublicKey,

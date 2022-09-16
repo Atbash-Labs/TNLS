@@ -38,13 +38,14 @@ jobs:
         env:
           MNEMONIC: ${{ secrets.SECRET_WALLET_MNEMONIC }}
         run: |
-          touch .env
-          echo MNEMONIC="$MNEMONIC" >> .env
-          echo GRPC_WEB_URL='"https://grpc.testnet.secretsaturn.net"' >> .env
-          echo CHAIN_ID='"pulsar-2"' >> .env
-          cat .env
+          touch secret-deploy/.env
+          echo MNEMONIC="$MNEMONIC" >> secret-deploy/.env
+          echo GRPC_WEB_URL='"https://grpc.testnet.secretsaturn.net"' >> secret-deploy/.env
+          echo CHAIN_ID='"pulsar-2"' >> secret-deploy/.env
+          cat secret-deploy/.env
       - name: Deploy Secret Contracts
-        run: npx ts-node secret-deploy/deploy.ts
+        working-directory: ./secret-deploy
+        run: npx deploy.ts
       - name: Get secret contract verification key
         run:
           echo "Unimplemented"
