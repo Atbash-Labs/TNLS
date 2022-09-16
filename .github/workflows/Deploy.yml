@@ -26,9 +26,9 @@ jobs:
           override: true
       - name: Install wasm-opt
         run: sudo apt update && sudo apt install -y binaryen clang
-      - name: Build secret gateway contract
+      - name: Build Secret gateway contract
         run: cd TNLS-Gateways/secret/ && make build-mainnet
-      - name: Build secret sample contract
+      - name: Build Secret sample contract
         run: cd TNLS-Gateways/secret/tests/example-private-contract && make build-mainnet
       - name: Install dependencies
         run: npm --prefix secret-deploy/ install
@@ -41,10 +41,10 @@ jobs:
           echo GRPC_WEB_URL='"https://grpc.testnet.secretsaturn.net"' >> secret-deploy/.env
           echo CHAIN_ID='"pulsar-2"' >> secret-deploy/.env
           cat secret-deploy/.env
-      - name: Deploy Secret Contracts
+      - name: Deploy Secret contracts
         working-directory: ./secret-deploy
         run: npx ts-node deploy.ts
-      - name: Get secret contract details
+      - name: Get Secret contract details
         run: |
           echo "SECRET_GATEWAY_CODE_HASH=$(sed -n '2{p;q}' secret-deploy/secret_gateway.log)" >> $GITHUB_ENV
           echo "SECRET_GATEWAY_ADDRESS=$(sed -n '3{p;q}' secret-deploy/secret_gateway.log)" >> $GITHUB_ENV
@@ -52,7 +52,7 @@ jobs:
           echo "SECRET_GATEWAY_ETH_ADDRESS=$(sed -n '5{p;q}' secret-deploy/secret_gateway.log)" >> $GITHUB_ENV
           echo "SECRET_SAMPLE_CODE_HASH=$(sed -n '2{p;q}' secret-deploy/secret_sample.log)" >> $GITHUB_ENV
           echo "SECRET_SAMPLE_ADDRESS=$(sed -n '3{p;q}' secret-deploy/secret_sample.log)" >> $GITHUB_ENV
-      - name: Update config.yml with secret info\
+      - name: Update config.yml with Secret info
         run: |
           sed -i 's/INSERT_SECRET_CONTRACT_ADDRESS_HERE/${{ env.SECRET_GATEWAY_ADDRESS }}/g' config.yml
           sed -i 's/INSERT_SECRET_CONTRACT_ENCRYPTION_KEY_HERE/${{ env.SECRET_GATEWAY_ENCRYPTION_KEY }}/g' config.yml
