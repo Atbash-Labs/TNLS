@@ -33,7 +33,7 @@ jobs:
       # - name: Build secret sample contract
       #   run: cd TNLS-Gateways/secret/tests/example-private-contract && make build-mainnet
       - name: Install dependencies
-        run: npm --prefix TNLS-Gateways/secret/tests/ install
+        run: npm --prefix secret-deploy/ install
       - name: Create .env file for Node
         env:
           MNEMONIC: ${{ secrets.SECRET_WALLET_MNEMONIC }}
