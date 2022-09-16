@@ -45,7 +45,7 @@ jobs:
           cat secret-deploy/.env
       - name: Deploy Secret Contracts
         working-directory: ./secret-deploy
-        run: npx deploy.ts
+        run: npx ts-node deploy.ts
       - name: Get secret contract verification key
         run:
           echo "Unimplemented"
