@@ -162,7 +162,7 @@ mod tests {
     }
 
     #[test]
-    fn store_input() {
+    fn request_score() {
         let mut deps = mock_dependencies(20, &[]);
         let env = mock_env("creator", &coins(1000, "earth"));
         let init_msg = InitMsg {
@@ -173,8 +173,8 @@ mod tests {
         init(&mut deps, env.clone(), init_msg).unwrap();
 
         let message = PrivContractHandleMsg {
-            input_values: "{\"address\":\"0x249C8753A9CB2a47d97A11D94b2179023B7aBCca\",\"name\":\"bob\",\"worth\":2000,\"match_addr\":\"0xb607FE9eF481950D47AEdf71ccB904Ff97806cF7\"}".to_string(),
-            handle: "submit_player".to_string(),
+            input_values: "{\"address\":\"0x249C8753A9CB2a47d97A11D94b2179023B7aBCca\",\"name\":\"bob\",\"offchain_assets\":100,\"onchain_assets\":100,\"liabilities\":100,\"missed_payments\":100,\"income\":100}".to_string(),
+            handle: "request_score".to_string(),
             user_address: HumanAddr("0x1".to_string()),
             task_id: 1,
             input_hash: to_binary(&"".to_string()).unwrap(),
