@@ -1,5 +1,5 @@
 use cosmwasm_std::{Binary, HumanAddr};
-use secret_toolkit::storage::{Item, Keymap};
+use secret_toolkit::storage::Item;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -19,9 +19,10 @@ pub struct Input {
     pub address: String,
     // user name
     pub name: Option<String>,
-    pub detail_1: u32,
-    pub detail_2: u32,
-    pub detail_3: u32,
-    pub detail_4: u32,
-    pub detail_5: u32,
+    // financial information (all values in $USD)
+    pub offchain_assets: u32,
+    pub onchain_assets: u32,
+    pub liabilities: u32,
+    pub missed_payments: u32,
+    pub income: u32,
 }

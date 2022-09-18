@@ -1,8 +1,6 @@
-use std::cmp::max;
-
 use cosmwasm_std::{
-    log, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult, InitResponse,
-    InitResult, Querier, QueryResult, StdError, Storage,
+    log, to_binary, Api, Binary, Decimal, Env, Extern, HandleResponse, HandleResult, InitResponse,
+    InitResult, Querier, QueryResult, StdError, Storage, Uint128,
 };
 use secret_toolkit::utils::{pad_handle_result, pad_query_result, HandleCallback};
 
@@ -10,7 +8,7 @@ use crate::{
     msg::{GatewayMsg, HandleMsg, InitMsg, QueryMsg, QueryResponse, ScoreResponse},
     state::{Input, State, CONFIG},
 };
-use tnls::msg::{InputResponse, PostExecutionMsg, PrivContractHandleMsg, ResponseStatus::Success};
+use tnls::msg::{PostExecutionMsg, PrivContractHandleMsg};
 
 /// pad handle responses and log attributes to blocks of 256 bytes to prevent leaking info based on
 /// response size
@@ -108,8 +106,25 @@ fn try_request_score<S: Storage, A: Api, Q: Querier>(
 }
 
 pub fn try_calculate_score(input: Input) -> Result<String, StdError> {
+    let assets = Uint128((input.onchain_assets + input.offchain_assets).into());
+    let liabilities = Uint128(input.liabilities.into());
+    let missed_payments = Uint128(input.missed_payments.into());
+    let income = Uint128(input.income.into());
 
-    let resp = ScoreResponse { result: "1000".to_string() };
+    let assets_multiplier: Decimal = Decimal::percent(30);
+    let liabilities_multiplier: Decimal = Decimal::percent(30);
+    let missed_payments_multiplier: Decimal = Decimal::percent(20);
+    let income_multiplier: Decimal = Decimal::percent(20);
+
+    let score = (assets * assets_multiplier)
+        + (liabilities * liabilities_multiplier)
+        + (missed_payments * missed_payments_multiplier)
+        + (income * income_multiplier);
+
+    let resp = ScoreResponse {
+        name: input.name,
+        result: score.to_string(),
+    };
 
     Ok(serde_json_wasm::to_string(&resp).unwrap())
 }

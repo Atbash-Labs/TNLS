@@ -31,6 +31,7 @@ pub struct QueryResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ScoreResponse {
+    pub name: Option<String>,
     pub result: String,
 }
 
