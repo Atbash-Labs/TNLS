@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.10;
 
-import "openzeppelin-contracts/contracts/utils/Counters.sol";
 import {Util} from "../src/Util.sol";
 import "../src/interfaces/IGateway.sol";
 
 contract Gateway is IGateway {
-    using Counters for Counters.Counter;
     using Util for *;
 
     /// @notice thrown when the signature is invalid
@@ -91,7 +89,7 @@ contract Gateway is IGateway {
                              Pre Execution
     //////////////////////////////////////////////////////////////*/
 
-    Counters.Counter private taskIds;
+    uint256 internal taskId = 1;
 
     /// @dev Task ID ====> Task
     mapping(uint256 => Util.Task) public tasks;
@@ -110,9 +108,7 @@ contract Gateway is IGateway {
             revert InvalidSignature();
         }
 
-        // Incrementing the ID and persisting the task
-        taskIds.increment();
-        uint256 taskId = taskIds.current();
+        // persisting the task
         tasks[taskId] = _task;
 
         emit logNewTask(
@@ -128,6 +124,8 @@ contract Gateway is IGateway {
             _info.handle,
             _info.nonce
             );
+
+        taskId++;
     }
 
     /*//////////////////////////////////////////////////////////////
