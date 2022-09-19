@@ -89,7 +89,7 @@ contract Gateway is IGateway {
                              Pre Execution
     //////////////////////////////////////////////////////////////*/
 
-    uint256 internal taskId = 1;
+    uint256 public taskId = 1;
 
     /// @dev Task ID ====> Task
     mapping(uint256 => Util.Task) public tasks;
