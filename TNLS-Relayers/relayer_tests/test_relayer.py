@@ -90,44 +90,74 @@ def address_and_abi_of_contract(provider_privkey_address_eth):
     Creates a contract with the below code, deploys it, and returns it, it's address, and ABI.
     """
 
-    #
-    # pragma solidity^0.5.3;
-    #
-    # contract Foo {
-    #
-    #     string public bar;
-    #     event barred(string _bar);
-    #
-    #     constructor() public {
-    #         bar = "hello world";
-    #     }
-    #
-    #     function setBar(string memory _bar) public {
-    #         bar = _bar;
-    #         emit barred(_bar);
-    #     }
-    #
-    # }
+    """
+    
+    pragma solidity^0.5.3;
+
+    
+    contract Foo {
+
+    
+    string public bar;
+
+    event barred(string _bar);
+
+    
+    constructor() public {
+
+    bar = "hello world";
+
+    }
+
+    
+    function setBar(string memory _bar) public {
+
+    bar = _bar;
+
+    emit barred(_bar);
+
+    }
+
+    
+    }
+
+    """
     provider_privkey_address = provider_privkey_address_eth
     deploy_address = Web3.EthereumTesterProvider().ethereum_tester.get_accounts()[0]
 
     abi = """[{"anonymous":false,"inputs":[{"indexed":false,"name":"_bar","type":"string"}],"name":"barred","type":"event"},{"constant":false,"inputs":[{"name":"_bar","type":"string"}],"name":"setBar","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"constant":true,"inputs":[],"name":"bar","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"}]"""  # noqa: E501
-    # This bytecode is the output of compiling with
-    # solc version:0.5.3+commit.10d17f24.Emscripten.clang
+    """
+    This bytecode is the output of compiling with
+
+    solc version:0.5.3+commit.10d17f24.Emscripten.clang
+
+    """
     bytecode = """608060405234801561001057600080fd5b506040805190810160405280600b81526020017f68656c6c6f20776f726c640000000000000000000000000000000000000000008152506000908051906020019061005c929190610062565b50610107565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f106100a357805160ff19168380011785556100d1565b828001600101855582156100d1579182015b828111156100d05782518255916020019190600101906100b5565b5b5090506100de91906100e2565b5090565b61010491905b808211156101005760008160009055506001016100e8565b5090565b90565b6103bb806101166000396000f3fe608060405234801561001057600080fd5b5060043610610053576000357c01000000000000000000000000000000000000000000000000000000009004806397bc14aa14610058578063febb0f7e14610113575b600080fd5b6101116004803603602081101561006e57600080fd5b810190808035906020019064010000000081111561008b57600080fd5b82018360208201111561009d57600080fd5b803590602001918460018302840111640100000000831117156100bf57600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600081840152601f19601f820116905080830192505050505050509192919290505050610196565b005b61011b61024c565b6040518080602001828103825283818151815260200191508051906020019080838360005b8381101561015b578082015181840152602081019050610140565b50505050905090810190601f1680156101885780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b80600090805190602001906101ac9291906102ea565b507f5f71ad82e16f082de5ff496b140e2fbc8621eeb37b36d59b185c3f1364bbd529816040518080602001828103825283818151815260200191508051906020019080838360005b8381101561020f5780820151818401526020810190506101f4565b50505050905090810190601f16801561023c5780820380516001836020036101000a031916815260200191505b509250505060405180910390a150565b60008054600181600116156101000203166002900480601f0160208091040260200160405190810160405280929190818152602001828054600181600116156101000203166002900480156102e25780601f106102b7576101008083540402835291602001916102e2565b820191906000526020600020905b8154815290600101906020018083116102c557829003601f168201915b505050505081565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061032b57805160ff1916838001178555610359565b82800160010185558215610359579182015b8281111561035857825182559160200191906001019061033d565b5b509050610366919061036a565b5090565b61038c91905b80821115610388576000816000905550600101610370565b5090565b9056fea165627a7a72305820ae6ca683d45ee8a71bba45caee29e4815147cd308f772c853a20dfe08214dbb50029"""  # noqa: E501
 
-    # Create our contract class.
+    """
+    Create our contract class.
+
+    """
     foo_contract = provider_privkey_address[0].eth.contract(abi=abi, bytecode=bytecode)
-    # issue a transaction to deploy the contract.
+    """
+    issue a transaction to deploy the contract.
+
+    """
     tx_hash = foo_contract.constructor().transact(
         {
             "from": deploy_address,
             'gas': 1000000,
         }
     )
-    # wait for the transaction to be mined
+    """
+    wait for the transaction to be mined
+
+    """
     tx_receipt = provider_privkey_address[0].eth.wait_for_transaction_receipt(tx_hash, 180)
-    # instantiate and return an instance of our contract.
+    """
+    instantiate and return an instance of our contract.
+
+    """
     return tx_receipt.contractAddress, abi, foo_contract(tx_receipt.contractAddress)
 
 
@@ -175,7 +205,10 @@ def test_eth_config(set_os_env_vars, provider_privkey_address_eth, address_and_a
     assert contract_interface.interface == chain_interface
     transaction = {'data': '0x123', 'from': provider_privkey_address_eth[2], 'nonce': 1, 'gas': 200000,
                    'to': provider_privkey_address_eth[2], 'gasPrice': 1000000000000}
-    # string is saved tx_hash
+    """
+    string is saved tx_hash
+
+    """
     assert str(Web3.toInt(chain_interface.sign_and_send_transaction(
         transaction))) == '18798041108694988948920655944567079244253059705561626119739063556193487749726'
 
@@ -290,7 +323,10 @@ def fake_interface_factory():
 
 
 def test_basic_relayer_poll_height_none(fake_interface_factory):
-    # Tests that a freshly initialized relayer polls the chain for the latest height and loops up to it
+    """
+    Tests that a freshly initialized relayer polls the chain for the latest height and loops up to it
+
+    """
     task_dict_list = [{'task_id': '1', 'args': '1', 'task_destination_network': 'fake'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
     num_to_add = 3
@@ -308,7 +344,10 @@ def test_basic_relayer_poll_height_none(fake_interface_factory):
 
 
 def test_basic_relayer_poll_height_greater(fake_interface_factory):
-    # Tests that a relayer with a fixed height properly catches up to the chain
+    """
+    Tests that a relayer with a fixed height properly catches up to the chain
+
+    """
     task_dict_list = [{'task_id': '1', 'args': '1', 'task_destination_network': 'fake'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
     num_to_add = 3
@@ -326,7 +365,10 @@ def test_basic_relayer_poll_height_greater(fake_interface_factory):
 
 
 def test_basic_relayer_poll_height_equal(fake_interface_factory):
-    # Tests that relayer polling with equal heights is a no-op
+    """
+    Tests that relayer polling with equal heights is a no-op
+
+    """
     task_dict_list = [{'task_id': '1', 'args': '1', 'task_destination_network': 'fake'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
     num_to_add = 3
@@ -342,8 +384,12 @@ def test_basic_relayer_poll_height_equal(fake_interface_factory):
 
 
 def test_basic_relayer_poll(fake_interface_factory):
-    # Tests that relayer poll properly calls the interface poll_for_transactions method
-    # and assembles the results into tasks
+    """
+    Tests that relayer poll properly calls the interface poll_for_transactions method
+
+    and assembles the results into tasks
+
+    """
     task_dict_list = [{'task_id': '1', 'args': '1', 'task_destination_network': 'fake'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
     num_to_add = 3
@@ -357,8 +403,11 @@ def test_basic_relayer_poll(fake_interface_factory):
 
 
 def test_basic_relayer_route(fake_interface_factory):
-    # Tests that relayer route properly routes tasks to the correct interface
-    # and that the interface correctly calls the desired function
+    """
+    Tests that relayer route properly routes tasks to the correct interface
+    and that the interface correctly calls the desired function
+
+    """
     task_dict_list = [{'task_id': '1', 'args': '1', 'task_destination_network': 'fake'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
     num_to_add = 3
@@ -372,7 +421,10 @@ def test_basic_relayer_route(fake_interface_factory):
 
 
 def test_basic_relayer_route_no_dest(fake_interface_factory, caplog):
-    # Tests that the relayer warns on a task with no destination
+    """
+    Tests that the relayer warns on a task with no destination
+
+    """
     task_dict_list = [{'task_id': '1', 'args': '1'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
     num_to_add = 3
@@ -388,7 +440,10 @@ def test_basic_relayer_route_no_dest(fake_interface_factory, caplog):
 
 
 def test_basic_relayer_route_bad_dest(fake_interface_factory, caplog):
-    # Tests that the relayer warns on a task with a bad/missing destination
+    """
+    Tests that the relayer warns on a task with a bad/missing destination
+
+    """
     task_dict_list = [{'task_id': '1', 'args': '1', 'task_destination_network': 'fake2'},
                       {'task_id': '2', 'args': '2', 'task_destination_network': 'fake'}]
     num_to_add = 3
@@ -404,7 +459,10 @@ def test_basic_relayer_route_bad_dest(fake_interface_factory, caplog):
 
 
 def test_basic_relayer_route_multiple_dest(fake_interface_factory):
-    # Tests that the relayer routes tasks to the correct interface when there are multiple
+    """
+    Tests that the relayer routes tasks to the correct interface when there are multiple
+
+    """
     task_dict_list_1 = [{'task_id': '1', 'args': '1', 'task_destination_network': 'add1'},
                         {'task_id': '2', 'args': '2', 'task_destination_network': 'add2'}]
     num_to_add_1 = 1
@@ -423,7 +481,10 @@ def test_basic_relayer_route_multiple_dest(fake_interface_factory):
 
 
 def test_run(fake_interface_factory):
-    # Tests that the full relayer loop runs properly
+    """
+    Tests that the full relayer loop runs properly
+
+    """
     task_dict_list_1 = [{'task_id': '1', 'args': '1', 'task_destination_network': 'add1'},
                         {'task_id': '2', 'args': '2', 'task_destination_network': 'add2'}]
     num_to_add_1 = 1
@@ -443,7 +504,10 @@ def test_run(fake_interface_factory):
 
 
 def test_full_run(fake_interface_factory, caplog):
-    # Tests that the full relayer loop runs properly with bad and good tasks
+    """
+    Tests that the full relayer loop runs properly with bad and good tasks
+
+    """
     task_dict_list_1 = [{'task_id': '1', 'args': '1', 'task_destination_network': 'add1'},
                         {'task_id': '2', 'args': '2', 'task_destination_network': 'add2'},
                         {'task_id': '3', 'args': '1'},
@@ -470,7 +534,10 @@ def test_full_run(fake_interface_factory, caplog):
 
 
 def test_web_app(fake_interface_factory):
-    # Tests that the web app runs properly with a complex relayer
+    """
+    Tests that the web app runs properly with a complex relayer
+
+    """
     task_dict_list_1 = [{'task_id': '1', 'args': '1', 'task_destination_network': 'add1'},
                         {'task_id': '2', 'args': '2', 'task_destination_network': 'add2'},
                         {'task_id': '3', 'args': '1'},

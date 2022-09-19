@@ -109,7 +109,10 @@ def no_transaction_check_provider(fake_provider, monkeypatch):
 
 
 def test_transaction_builder_and_logs_getter_good(provider_privkey_address):
-    # Tests that transaction signing and sending works as expected
+    """
+    Tests that transaction signing and sending works as expected
+
+    """
     local_provider, private_key, address = provider_privkey_address
     interface = SCRTInterface(address=address, provider=local_provider, private_key=private_key)
     fee = interface.wallet.lcd.custom_fees["send"]
@@ -134,7 +137,10 @@ def test_transaction_builder_and_logs_getter_good(provider_privkey_address):
 
 
 def test_basic_txn_processing_with_evt_parsing(provider_privkey_address):
-    # Confirms that basic transaction processing works with event parsing
+    """
+    Confirms that basic transaction processing works with event parsing
+
+    """
     local_provider, private_key, address = provider_privkey_address
     interface = SCRTInterface(address=address, provider=local_provider, private_key=private_key)
     fee = interface.wallet.lcd.custom_fees["send"]
@@ -153,35 +159,50 @@ def test_basic_txn_processing_with_evt_parsing(provider_privkey_address):
 
 
 def test_interface_initialization_good(fake_provider):
-    # Confirms that interface initialization works
+    """
+    Confirms that interface initialization works
+
+    """
     SCRTInterface(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag', provider=fake_provider)
     pass
 
 
 def test_interface_initialization_bad_address_from(fake_provider):
-    # Confirms that when the interface is created with a bad address, it raises an error
+    """
+    Confirms that when the interface is created with a bad address, it raises an error
+
+    """
     with pytest.raises(AssertionError) as e:
         SCRTInterface(address='', provider=fake_provider)
     assert 'mismatch' in str(e.value)
 
 
 def test_interface_initialization_bad_private_key(fake_provider):
-    # Confirms that when an interface is created with a bad private key, it raises an error on interface creation
+    """
+    Confirms that when an interface is created with a bad private key, it raises an error on interface creation
+
+    """
     with pytest.raises(Exception):
         SCRTInterface(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag', provider=fake_provider,
                       private_key='')
 
 
 def test_interface_initialization_mismatched_private_key(fake_provider):
-    # Confirms that when an interface is created with the wrong private key for an address
-    # it raises an error on interface creation
+    """
+    Confirms that when an interface is created with the wrong private key for an address
+    it raises an error on interface creation
+
+    """
     with pytest.raises(AssertionError) as e:
         SCRTInterface(address='secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcah', provider=fake_provider)
     assert 'mismatch' in str(e.value)
 
 
 def test_correct_txn_filtering_one_in(no_transaction_check_provider, filter_out_hashes):
-    # Tests that get_transactions correctly finds a single matching transaction
+    """
+    Tests that get_transactions correctly finds a single matching transaction
+
+    """
     no_transaction_check_provider.transaction_retrieved = [
         {'from': 'secret14zx6uqa96mrnwx59cycg94l2qu8se864f6kcag', 'to': '0x1', 'hash': '0x2'},
     ]
@@ -192,7 +213,10 @@ def test_correct_txn_filtering_one_in(no_transaction_check_provider, filter_out_
 
 
 def test_correct_txn_filtering_one_out(no_transaction_check_provider, filter_out_hashes):
-    # Tests that get_transactions correctly ignores a single mismatching transaction
+    """
+    Tests that get_transactions correctly ignores a single mismatching transaction
+
+    """
     no_transaction_check_provider.transaction_retrieved = [
         {'from': '0x1', 'to': '0x1', 'hash': '0x2'},
     ]
@@ -202,7 +226,10 @@ def test_correct_txn_filtering_one_out(no_transaction_check_provider, filter_out
 
 
 def test_correct_txn_filtering_many(no_transaction_check_provider, filter_out_hashes):
-    # Tests that get_transactions correctly finds multiple matching transactions among mismatched ones
+    """
+    Tests that get_transactions correctly finds multiple matching transactions among mismatched ones
+
+    """
     no_transaction_check_provider.transaction_retrieved = [
         {'from': '0x1', 'to': '0x1', 'hash': '0x2'},
         {'from': '0x1', 'to': '0x1', 'hash': '0x3'},
@@ -230,7 +257,10 @@ def address_and_abi_of_contract(provider_privkey_address, request):
 
 
 def test_basic_contract_init(provider_privkey_address, address_and_abi_of_contract):
-    # Confirms that the contract initialization works
+    """
+    Confirms that the contract initialization works
+
+    """
     provider, privkey, address = provider_privkey_address
     contract_addr, abi = address_and_abi_of_contract
     interface = SCRTInterface(address=address, provider=provider, private_key=privkey)
@@ -241,7 +271,10 @@ def test_basic_contract_init(provider_privkey_address, address_and_abi_of_contra
 
 
 def test_function_call_and_event_getter(provider_privkey_address, address_and_abi_of_contract):
-    # Confirms that calling functions on chain and parsing events works
+    """
+    Confirms that calling functions on chain and parsing events works
+
+    """
     provider, privkey, address = provider_privkey_address
     contract_addr, abi = address_and_abi_of_contract
     interface = SCRTInterface(address=address, provider=provider, private_key=privkey)
@@ -257,7 +290,10 @@ def test_function_call_and_event_getter(provider_privkey_address, address_and_ab
 
 
 def test_function_call_bad_addr(provider_privkey_address, address_and_abi_of_contract):
-    # Confirms that the scrtContract interface correctly fails when the contract address is bad
+    """
+    Confirms that the scrtContract interface correctly fails when the contract address is bad
+
+    """
     provider, privkey, address = provider_privkey_address
     contract_addr, abi = address_and_abi_of_contract
     interface = SCRTInterface(address=address, provider=provider, private_key=privkey)
@@ -280,7 +316,11 @@ def contract_schema_for_construction(request):
 
 @pytest.fixture
 def fake_interface_provider():
-    # Fixture providing a fake interface for testing txn construction
+    """
+    Fixture providing a fake interface for testing txn construction
+
+    """
+
     class FakeWasm:
         def __init__(self):
             self.contract_execute_msg = dict
@@ -316,7 +356,10 @@ def fake_interface_provider():
 
 
 def test_basic_txn_construction(fake_interface_provider, contract_schema_for_construction):
-    # Confirms that the list-based transaction construction works
+    """
+    Confirms that the list-based transaction construction works
+
+    """
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     assert fake_contract.call_function("function_1", [1, 2]) == {'contract_address': '0x1',
@@ -325,7 +368,10 @@ def test_basic_txn_construction(fake_interface_provider, contract_schema_for_con
 
 
 def test_dict_txn_construction(fake_interface_provider, contract_schema_for_construction):
-    # Confirms that the dict-based transaction construction works
+    """
+    Confirms that the dict-based transaction construction works
+
+    """
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     assert fake_contract.call_function("function_1", {'b': 2, 'a': 1}) == {'contract_address': '0x1',
@@ -335,7 +381,10 @@ def test_dict_txn_construction(fake_interface_provider, contract_schema_for_cons
 
 
 def test_too_many_args(fake_interface_provider, contract_schema_for_construction, caplog):
-    # Confirms that the list-based transaction construction correctly processes too many args
+    """
+    Confirms that the list-based transaction construction correctly processes too many args
+
+    """
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     with caplog.at_level(WARNING):
@@ -346,7 +395,10 @@ def test_too_many_args(fake_interface_provider, contract_schema_for_construction
 
 
 def test_too_few_args(fake_interface_provider, contract_schema_for_construction, caplog):
-    # Confirms that the list-based transaction construction correctly processes too few args
+    """
+    Confirms that the list-based transaction construction correctly processes too few args
+
+    """
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     with caplog.at_level(WARNING):
@@ -358,7 +410,10 @@ def test_too_few_args(fake_interface_provider, contract_schema_for_construction,
 
 
 def test_dict_args_too_many(fake_interface_provider, contract_schema_for_construction, caplog):
-    # Confirms that the dict-based transaction construction correctly processes too many args
+    """
+    Confirms that the dict-based transaction construction correctly processes too many args
+
+    """
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     with caplog.at_level(WARNING):
@@ -371,7 +426,10 @@ def test_dict_args_too_many(fake_interface_provider, contract_schema_for_constru
 
 
 def test_dict_args_too_few(fake_interface_provider, contract_schema_for_construction, caplog):
-    # Confirms that the dict-based transaction construction correctly processes too few args
+    """
+    Confirms that the dict-based transaction construction correctly processes too few args
+
+    """
     fake_contract = SCRTContract(address="0x1", abi=contract_schema_for_construction,
                                  interface=fake_interface_provider())
     with caplog.at_level(WARNING):
