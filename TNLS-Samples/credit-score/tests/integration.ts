@@ -311,7 +311,6 @@ async function fillUpFromFaucet(
 
 // Initialization procedure
 async function initializeAndUploadContract() {
-
   const client = await initializeClient(endpoint, chainId);
 
   if (chainId == "secretdev-1") {await fillUpFromFaucet(client, 100_000_000)};
