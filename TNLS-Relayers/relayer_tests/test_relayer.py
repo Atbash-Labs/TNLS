@@ -224,7 +224,7 @@ def test_gen_full_config(rewrite_yaml, request, provider_privkey_address_scrt, p
     assert function_name == 'postExecution'
     assert contract_interface.interface == interface
     assert keys_dict['secret'] == {'encryption': "INSERT_SECRET_CONTRACT_ENCRYPTION_KEY_HERE",
-                                   'verification': "INSERT_SECRET_CONTRACT_VERIFICATION_KEY_HERE"}
+                                   'verification': "INSERT_SECRET_CONTRACT_ETH_ADDRESS_HERE"}
 
 
 class FakeChainInterface(BaseChainInterface):
