@@ -483,12 +483,12 @@ def test_web_app(fake_interface_factory):
                                    'add2': (chain_2, contract_interface_2, '', '')}
 
     def get_dict_of_names_to_interfaces(_):
-        return dict_of_names_to_interfaces, {'secret': {'verification': 'test_verification_key',
+        return dict_of_names_to_interfaces, {'secret': {'verification': 'test_eth_address',
                                                         'encryption': 'test_encryption_key'}}
 
     app = app_factory("", config_file_converter=get_dict_of_names_to_interfaces, num_loops=1)
     relayer = app.config['RELAYER']
-    assert app.config['KEYS'] == {'secret': {'verification': "test_verification_key",
+    assert app.config['KEYS'] == {'secret': {'verification': "test_eth_address",
                                              'encryption': "test_encryption_key"}}
     time.sleep(1)
     while len(relayer.task_threads) > 0 and relayer.task_threads[0].is_alive():

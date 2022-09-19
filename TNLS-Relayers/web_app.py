@@ -81,7 +81,7 @@ def generate_full_config(config_file, provider_pair=None):
         provider_eth, provider_scrt = provider_pair
     eth_config = generate_eth_config(config_dict['ethereum'], provider=provider_eth)
     scrt_config = generate_scrt_config(config_dict['secret'], provider=provider_scrt)
-    keys_dict = {'secret': {'verification': config_dict['secret']['contract_verification_key'],
+    keys_dict = {'secret': {'verification': config_dict['secret']['contract_eth_address'],
                             'encryption': config_dict['secret']['contract_encryption_key']}}
     return {'ethereum': eth_config, 'secret': scrt_config}, keys_dict
 
