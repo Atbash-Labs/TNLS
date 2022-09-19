@@ -557,8 +557,9 @@ async function test_gateway_tx(
   const gatewayPublicKeys = await queryPubKey(client, gatewayHash, gatewayAddress);
   
   const result = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKeys.encryption_key);
-  console.log(`\x1b[34;1mResult: ${Buffer.from(fromHex(result.substring(2))).toString('utf-8')}\x1b[0m\n`)
-  assert(result == "{\"name\":\"Alice\",\"score\":\"350\"}");
+  const decodedResult = Buffer.from(fromHex(result.substring(2))).toString('utf-8');
+  console.log(`\x1b[34;1mResult: ${decodedResult}\x1b[0m\n`)
+  assert(decodedResult == "{\"name\":\"Alice\",\"result\":\"350\"}");
 }
 
 async function runTestFunction(
