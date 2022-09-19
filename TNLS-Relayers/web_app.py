@@ -17,6 +17,7 @@ def generate_eth_config(config_dict, provider=None):
     """
     Converts a config dict into a tuple of (chain_interface, contract_interface, event_name, function_name)
     for ethereum
+
     Args:
         config_dict: a dict containing contract address, contract schema, and wallet address
         provider: an optional API client
@@ -41,6 +42,7 @@ def generate_scrt_config(config_dict, provider=None):
     """
         Converts a config dict into a tuple of (chain_interface, contract_interface, event_name, function_name)
         for secret
+
         Args:
             config_dict: a dict containing contract address, contract schema, and wallet address
             provider: an optional API client
@@ -65,6 +67,7 @@ def generate_scrt_config(config_dict, provider=None):
 def generate_full_config(config_file, provider_pair=None):
     """
     Takes in a yaml filepath and generates a config dict for eth and scrt relays
+
     Args:
         config_file: the path to the relevant config file
         provider_pair: a pair of scrt and eth providers, optional
@@ -122,6 +125,7 @@ def keys():
 def app_factory(config_filename, config_file_converter=generate_full_config, num_loops=None):
     """
     Creates a Flask app with a relayer running on the backend
+
     Args:
         config_filename: Which filepath to pull config from
         config_file_converter: How to convert that config file into relayer config

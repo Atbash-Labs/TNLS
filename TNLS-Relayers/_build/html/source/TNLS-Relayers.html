@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 <html lang="en">
@@ -144,8 +145,13 @@
                                             class="headerlink"
                                             href="#base_interface.BaseChainInterface.sign_and_send_transaction"
                                             title="Permalink to this definition">¶</a></dt>
-                                    <dd><p>Given a raw transaction, signs it and sends it to the chain
-                                        :param tx: the raw transaction to be sent to the chain</p>
+                                    <dd><p>Given a raw transaction, signs it and sends it to the chain</p>
+                                        <dl class="field-list simple">
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd"><p><strong>tx</strong> – the raw transaction to be
+                                                sent to the chain</p>
+                                            </dd>
+                                        </dl>
                                     </dd>
                                 </dl>
 
@@ -191,9 +197,18 @@
                                             href="#base_interface.BaseContractInterface.call_function"
                                             title="Permalink to this definition">¶</a></dt>
                                     <dd><p>Given a function in a contract, and the arguments to that function,
-                                        calls it on chain
-                                        :param function_name: the name of the contract function to call
-                                        :param *args: the (potentially many) arguments to pass to that function</p>
+                                        calls it on chain</p>
+                                        <dl class="field-list simple">
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd">
+                                                <ul class="simple">
+                                                    <li><p><strong>function_name</strong> – the name of the contract
+                                                        function to call</p></li>
+                                                    <li><p><strong>*args</strong> – the (potentially many) arguments to
+                                                        pass to that function</p></li>
+                                                </ul>
+                                            </dd>
+                                        </dl>
                                     </dd>
                                 </dl>
 
@@ -217,9 +232,16 @@
                                             href="#base_interface.BaseContractInterface.parse_event_from_txn"
                                             title="Permalink to this definition">¶</a></dt>
                                     <dd><p>Given a transaction, outputs all the events of a particular name
-                                        that were emitted in that transaction
-                                        :param event_name: the event to look for
-                                        :param txn: the transaction to parse</p>
+                                        that were emitted in that transaction</p>
+                                        <dl class="field-list simple">
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd">
+                                                <ul class="simple">
+                                                    <li><p><strong>event_name</strong> – the event to look for</p></li>
+                                                    <li><p><strong>txn</strong> – the transaction to parse</p></li>
+                                                </ul>
+                                            </dd>
+                                        </dl>
                                         <p>Returns: a list of Tasks corresponding to the events</p>
                                     </dd>
                                 </dl>
@@ -252,8 +274,12 @@
                                     class="sig-paren">)</span><a class="headerlink" href="#base_interface.to_dict"
                                                                  title="Permalink to this definition">¶</a></dt>
                             <dd><p>deeply converts an attribute dictionary to a json serializable dict
-                                sourced from SO on attribute dictionaries:
-                                :param dict_to_parse: the dict to parse</p>
+                                sourced from SO on attribute dictionaries:</p>
+                                <dl class="field-list simple">
+                                    <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                    <dd class="field-odd"><p><strong>dict_to_parse</strong> – the dict to parse</p>
+                                    </dd>
+                                </dl>
                                 <p>Returns: a serializable dict</p>
                             </dd>
                         </dl>
@@ -269,9 +295,18 @@
                                     class="sig-paren">)</span><a class="headerlink"
                                                                  href="#base_interface.translate_dict"
                                                                  title="Permalink to this definition">¶</a></dt>
-                            <dd><p>Translates a dictionary from one format to another (for interchain translation)
-                                :param dict_to_translate: the dictionary to translate
-                                :param translation_mechanism: the mechanism to use for translation</p>
+                            <dd><p>Translates a dictionary from one format to another (for interchain translation)</p>
+                                <dl class="field-list simple">
+                                    <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                    <dd class="field-odd">
+                                        <ul class="simple">
+                                            <li><p><strong>dict_to_translate</strong> – the dictionary to translate</p>
+                                            </li>
+                                            <li><p><strong>translation_mechanism</strong> – the mechanism to use for
+                                                translation</p></li>
+                                        </ul>
+                                    </dd>
+                                </dl>
                                 <p>Returns: the translated dictionary</p>
                             </dd>
                         </dl>
@@ -321,8 +356,13 @@
                                             class="pre">function_name</span></span></em><span class="sig-paren">)</span><a
                                             class="headerlink" href="#eth_interface.EthContract.get_function"
                                             title="Permalink to this definition">¶</a></dt>
-                                    <dd><p>Gets a particular function from the contract.
-                                        :param function_name: The name of the function to get.</p>
+                                    <dd><p>Gets a particular function from the contract.</p>
+                                        <dl class="field-list simple">
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd"><p><strong>function_name</strong> – The name of the
+                                                function to get.</p>
+                                            </dd>
+                                        </dl>
                                     </dd>
                                 </dl>
 
@@ -413,9 +453,17 @@
                                                 class="pre">None</span></span></em><span class="sig-paren">)</span><a
                                             class="headerlink" href="#eth_interface.EthInterface.get_last_txs"
                                             title="Permalink to this definition">¶</a></dt>
-                                    <dd><p>Gets the transactions from a particular block for a particular address.
-                                        :param block_number: Which block to get
-                                        :param address: Which address to get transactions for</p>
+                                    <dd><p>Gets the transactions from a particular block for a particular address.</p>
+                                        <dl class="field-list simple">
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd">
+                                                <ul class="simple">
+                                                    <li><p><strong>block_number</strong> – Which block to get</p></li>
+                                                    <li><p><strong>address</strong> – Which address to get transactions
+                                                        for</p></li>
+                                                </ul>
+                                            </dd>
+                                        </dl>
                                         <p>Returns: a list of transaction receipts</p>
                                     </dd>
                                 </dl>
@@ -521,8 +569,11 @@
                                             class="pre">Task</span></a></span></em><span class="sig-paren">)</span><a
                                             class="headerlink" href="#relayer.Relayer.route_transaction"
                                             title="Permalink to this definition">¶</a></dt>
-                                    <dd><p>Given a Task, routes it where it’s supposed to go
-                                        :param task: the Task to be routed</p>
+                                    <dd><p>Given a Task, routes it where it’s supposed to go</p>
+                                        <blockquote>
+                                            <div><p>task: the Task to be routed</p>
+                                            </div>
+                                        </blockquote>
                                     </dd>
                                 </dl>
 
@@ -584,9 +635,17 @@
                                             class="pre">args</span></span></em><span class="sig-paren">)</span><a
                                             class="headerlink" href="#scrt_interface.SCRTContract.call_function"
                                             title="Permalink to this definition">¶</a></dt>
-                                    <dd><p>Calls the given function with the given args
-                                        :param function_name: which function to call
-                                        :param *args: the args to pass</p>
+                                    <dd><p>Calls the given function with the given args</p>
+                                        <dl class="field-list simple">
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd">
+                                                <ul class="simple">
+                                                    <li><p><strong>function_name</strong> – which function to call</p>
+                                                    </li>
+                                                    <li><p><strong>*args</strong> – the args to pass</p></li>
+                                                </ul>
+                                            </dd>
+                                        </dl>
                                         <p>Returns: the result of the function call</p>
                                     </dd>
                                 </dl>
@@ -603,11 +662,20 @@
                                             class="headerlink" href="#scrt_interface.SCRTContract.construct_txn"
                                             title="Permalink to this definition">¶</a></dt>
                                     <dd><p>Constructs a transaction for the given function_schema, function name and
-                                        args
-                                        :param function_schema: Dict[str, List[str]], the schema for the function
-                                        :param function_name: str, the name of the function to be called
-                                        :param args: Union[List[str], Dict[str, str]], the args to be passed to the
-                                        function</p>
+                                        args</p>
+                                        <dl class="field-list simple">
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd">
+                                                <ul class="simple">
+                                                    <li><p><strong>function_schema</strong> – Dict[str, List[str]], the
+                                                        schema for the function</p></li>
+                                                    <li><p><strong>function_name</strong> – str, the name of the
+                                                        function to be called</p></li>
+                                                    <li><p><strong>args</strong> – Union[List[str], Dict[str, str]], the
+                                                        args to be passed to the function</p></li>
+                                                </ul>
+                                            </dd>
+                                        </dl>
                                         <p>Examples shown in relayer_tests/interface_tests/test_scrt_interface.py,
                                             under the test_basic_txn_construction and test_dict_txn_construction
                                             tests</p>
@@ -628,11 +696,14 @@
                                             class="pre">function_name</span></span></em><span class="sig-paren">)</span><a
                                             class="headerlink" href="#scrt_interface.SCRTContract.get_function"
                                             title="Permalink to this definition">¶</a></dt>
-                                    <dd><p>Returns the function schema for the given function name
-                                        :param function_name: which function to get a list of args for</p>
+                                    <dd><p>Returns the function schema for the given function name</p>
                                         <dl class="field-list simple">
-                                            <dt class="field-odd">Returns<span class="colon">:</span></dt>
-                                            <dd class="field-odd"><p>the schema for the specific function</p>
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd"><p><strong>function_name</strong> – which function to
+                                                get a list of args for</p>
+                                            </dd>
+                                            <dt class="field-even">Returns<span class="colon">:</span></dt>
+                                            <dd class="field-even"><p>the schema for the specific function</p>
                                             </dd>
                                         </dl>
                                     </dd>
@@ -654,9 +725,16 @@
                                             class="sig-paren">)</span><a class="headerlink"
                                                                          href="#scrt_interface.SCRTContract.parse_event_from_txn"
                                                                          title="Permalink to this definition">¶</a></dt>
-                                    <dd><p>Parses the given event from the given logs
-                                        :param event_name: which event to parse
-                                        :param logs: the logs to parse from</p>
+                                    <dd><p>Parses the given event from the given logs</p>
+                                        <dl class="field-list simple">
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd">
+                                                <ul class="simple">
+                                                    <li><p><strong>event_name</strong> – which event to parse</p></li>
+                                                    <li><p><strong>logs</strong> – the logs to parse from</p></li>
+                                                </ul>
+                                            </dd>
+                                        </dl>
                                         <p>Returns: a list of tasks corresponding to parsed events</p>
                                     </dd>
                                 </dl>
@@ -716,13 +794,20 @@
                                             class="sig-paren">)</span><a class="headerlink"
                                                                          href="#scrt_interface.SCRTInterface.get_transactions"
                                                                          title="Permalink to this definition">¶</a></dt>
-                                    <dd><p>Returns all txn logs from the given height for the given address
-                                        :param address: the address to get the txn logs for
-                                        :param height: which height to get the txn logs from, if None, get all txn logs
-                                        from the current height</p>
+                                    <dd><p>Returns all txn logs from the given height for the given address</p>
                                         <dl class="field-list simple">
-                                            <dt class="field-odd">Returns<span class="colon">:</span></dt>
-                                            <dd class="field-odd"><p>a list of txn logs for the given address/height</p>
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd">
+                                                <ul class="simple">
+                                                    <li><p><strong>address</strong> – the address to get the txn logs
+                                                        for</p></li>
+                                                    <li><p><strong>height</strong> – which height to get the txn logs
+                                                        from, if None, get all txn logs from the current height</p></li>
+                                                </ul>
+                                            </dd>
+                                            <dt class="field-even">Returns<span class="colon">:</span></dt>
+                                            <dd class="field-even"><p>a list of txn logs for the given
+                                                address/height</p>
                                             </dd>
                                         </dl>
                                     </dd>
@@ -739,11 +824,14 @@
                                             href="#scrt_interface.SCRTInterface.sign_and_send_transaction"
                                             title="Permalink to this definition">¶</a></dt>
                                     <dd><p>Signs and broadcasts a transaction to the network, returns the broadcast
-                                        receipt
-                                        :param tx[StdTx]: transaction to be signed and sent</p>
+                                        receipt</p>
                                         <dl class="field-list simple">
-                                            <dt class="field-odd">Returns<span class="colon">:</span></dt>
-                                            <dd class="field-odd"><p>the receipt of the broadcast transaction</p>
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd"><p><strong>tx[StdTx]</strong> – transaction to be
+                                                signed and sent</p>
+                                            </dd>
+                                            <dt class="field-even">Returns<span class="colon">:</span></dt>
+                                            <dd class="field-even"><p>the receipt of the broadcast transaction</p>
                                             </dd>
                                         </dl>
                                     </dd>
@@ -768,11 +856,20 @@
                                     class="pre">num_loops=None</span></span></em><span class="sig-paren">)</span><a
                                     class="headerlink" href="#web_app.app_factory" title="Permalink to this definition">¶</a>
                             </dt>
-                            <dd><p>Creates a Flask app with a relayer running on the backend
-                                :param config_filename: Which filepath to pull config from
-                                :param config_file_converter: How to convert that config file into relayer config
-                                :param num_loops: How many times the relayer should run before shutting down,
-                                None=Infinity</p>
+                            <dd><p>Creates a Flask app with a relayer running on the backend</p>
+                                <dl class="field-list simple">
+                                    <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                    <dd class="field-odd">
+                                        <ul class="simple">
+                                            <li><p><strong>config_filename</strong> – Which filepath to pull config from
+                                            </p></li>
+                                            <li><p><strong>config_file_converter</strong> – How to convert that config
+                                                file into relayer config</p></li>
+                                            <li><p><strong>num_loops</strong> – How many times the relayer should run
+                                                before shutting down, None=Infinity</p></li>
+                                        </ul>
+                                    </dd>
+                                </dl>
                                 <p>Returns: a flask app</p>
                             </dd>
                         </dl>
@@ -789,10 +886,17 @@
                                     title="Permalink to this definition">¶</a></dt>
                             <dd><p>Converts a config dict into a tuple of (chain_interface, contract_interface,
                                 event_name, function_name)
-                                for ethereum
-                                :param config_dict: a dict containing contract address, contract schema, and wallet
-                                address
-                                :param provider: an optional API client</p>
+                                for ethereum</p>
+                                <dl class="field-list simple">
+                                    <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                    <dd class="field-odd">
+                                        <ul class="simple">
+                                            <li><p><strong>config_dict</strong> – a dict containing contract address,
+                                                contract schema, and wallet address</p></li>
+                                            <li><p><strong>provider</strong> – an optional API client</p></li>
+                                        </ul>
+                                    </dd>
+                                </dl>
                                 <p>Returns: the relevant tuple of chain, contract, event, and function</p>
                             </dd>
                         </dl>
@@ -807,12 +911,20 @@
                                         class="pre">None</span></span></em><span class="sig-paren">)</span><a
                                     class="headerlink" href="#web_app.generate_full_config"
                                     title="Permalink to this definition">¶</a></dt>
-                            <dd><p>Takes in a yaml filepath and generates a config dict for eth and scrt relays
-                                :param config_file: the path to the relevant config file
-                                :param provider_pair: a pair of scrt and eth providers, optional</p>
+                            <dd><p>Takes in a yaml filepath and generates a config dict for eth and scrt relays</p>
                                 <dl class="field-list simple">
-                                    <dt class="field-odd">Returns<span class="colon">:</span></dt>
-                                    <dd class="field-odd"><p>a dict mapping scrt and eth to their respective configs</p>
+                                    <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                    <dd class="field-odd">
+                                        <ul class="simple">
+                                            <li><p><strong>config_file</strong> – the path to the relevant config file
+                                            </p></li>
+                                            <li><p><strong>provider_pair</strong> – a pair of scrt and eth providers,
+                                                optional</p></li>
+                                        </ul>
+                                    </dd>
+                                    <dt class="field-even">Returns<span class="colon">:</span></dt>
+                                    <dd class="field-even"><p>a dict mapping scrt and eth to their respective
+                                        configs</p>
                                     </dd>
                                 </dl>
                             </dd>
@@ -830,10 +942,17 @@
                                     title="Permalink to this definition">¶</a></dt>
                             <dd><p>Converts a config dict into a tuple of (chain_interface, contract_interface,
                                 event_name, function_name)
-                                for secret
-                                :param config_dict: a dict containing contract address, contract schema, and wallet
-                                address
-                                :param provider: an optional API client</p>
+                                for secret</p>
+                                <dl class="field-list simple">
+                                    <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                    <dd class="field-odd">
+                                        <ul class="simple">
+                                            <li><p><strong>config_dict</strong> – a dict containing contract address,
+                                                contract schema, and wallet address</p></li>
+                                            <li><p><strong>provider</strong> – an optional API client</p></li>
+                                        </ul>
+                                    </dd>
+                                </dl>
                                 <p>Returns: the relevant tuple of chain, contract, event, and function</p>
                             </dd>
                         </dl>

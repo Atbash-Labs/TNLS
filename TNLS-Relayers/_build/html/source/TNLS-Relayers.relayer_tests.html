@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 <html lang="en">
@@ -141,8 +142,13 @@
                                             class="headerlink"
                                             href="#relayer_tests.test_relayer.FakeChainInterface.sign_and_send_transaction"
                                             title="Permalink to this definition">¶</a></dt>
-                                    <dd><p>Given a raw transaction, signs it and sends it to the chain
-                                        :param tx: the raw transaction to be sent to the chain</p>
+                                    <dd><p>Given a raw transaction, signs it and sends it to the chain</p>
+                                        <dl class="field-list simple">
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd"><p><strong>tx</strong> – the raw transaction to be
+                                                sent to the chain</p>
+                                            </dd>
+                                        </dl>
                                     </dd>
                                 </dl>
 
@@ -179,9 +185,18 @@
                                             href="#relayer_tests.test_relayer.FakeContractInterface.call_function"
                                             title="Permalink to this definition">¶</a></dt>
                                     <dd><p>Given a function in a contract, and the arguments to that function,
-                                        calls it on chain
-                                        :param function_name: the name of the contract function to call
-                                        :param *args: the (potentially many) arguments to pass to that function</p>
+                                        calls it on chain</p>
+                                        <dl class="field-list simple">
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd">
+                                                <ul class="simple">
+                                                    <li><p><strong>function_name</strong> – the name of the contract
+                                                        function to call</p></li>
+                                                    <li><p><strong>*args</strong> – the (potentially many) arguments to
+                                                        pass to that function</p></li>
+                                                </ul>
+                                            </dd>
+                                        </dl>
                                     </dd>
                                 </dl>
 
@@ -204,9 +219,16 @@
                                             href="#relayer_tests.test_relayer.FakeContractInterface.parse_event_from_txn"
                                             title="Permalink to this definition">¶</a></dt>
                                     <dd><p>Given a transaction, outputs all the events of a particular name
-                                        that were emitted in that transaction
-                                        :param event_name: the event to look for
-                                        :param txn: the transaction to parse</p>
+                                        that were emitted in that transaction</p>
+                                        <dl class="field-list simple">
+                                            <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                            <dd class="field-odd">
+                                                <ul class="simple">
+                                                    <li><p><strong>event_name</strong> – the event to look for</p></li>
+                                                    <li><p><strong>txn</strong> – the transaction to parse</p></li>
+                                                </ul>
+                                            </dd>
+                                        </dl>
                                         <p>Returns: a list of Tasks corresponding to the events</p>
                                     </dd>
                                 </dl>
@@ -447,7 +469,8 @@
                                     class="sig-paren">)</span><a class="headerlink"
                                                                  href="#relayer_tests.test_relayer.test_eth_config"
                                                                  title="Permalink to this definition">¶</a></dt>
-                            <dd></dd>
+                            <dd><p>Tests that eth config generates properly from config dict</p>
+                            </dd>
                         </dl>
 
                         <dl class="py function">
@@ -476,7 +499,8 @@
                                     class="sig-paren">)</span><a class="headerlink"
                                                                  href="#relayer_tests.test_relayer.test_gen_full_config"
                                                                  title="Permalink to this definition">¶</a></dt>
-                            <dd></dd>
+                            <dd><p>Tests that config correctly populates from config file</p>
+                            </dd>
                         </dl>
 
                         <dl class="py function">
@@ -502,7 +526,8 @@
                                     class="sig-paren">)</span><a class="headerlink"
                                                                  href="#relayer_tests.test_relayer.test_scrt_config"
                                                                  title="Permalink to this definition">¶</a></dt>
-                            <dd></dd>
+                            <dd><p>Tests that scrt config generates properly from config dict</p>
+                            </dd>
                         </dl>
 
                         <dl class="py function">

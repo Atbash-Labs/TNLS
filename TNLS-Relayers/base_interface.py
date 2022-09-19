@@ -7,6 +7,7 @@ def to_dict(dict_to_parse):
     """
     deeply converts an attribute dictionary to a json serializable dict
     sourced from SO on attribute dictionaries:
+
     Args:
         dict_to_parse: the dict to parse
 
@@ -44,6 +45,7 @@ task_keys_in_order = {'ethereum': ['_taskId', '_sourceNetwork', '_info']}
 def translate_dict(dict_to_translate, translation_mechanism):
     """
     Translates a dictionary from one format to another (for interchain translation)
+
     Args:
         dict_to_translate: the dictionary to translate
         translation_mechanism: the mechanism to use for translation
@@ -107,6 +109,7 @@ class BaseChainInterface(abc.ABC):
     def sign_and_send_transaction(self, tx):
         """
         Given a raw transaction, signs it and sends it to the chain
+
         Args:
             tx: the raw transaction to be sent to the chain
         """
@@ -139,6 +142,7 @@ class BaseContractInterface(abc.ABC):
         """
         Given a function in a contract, and the arguments to that function,
         calls it on chain
+
         Args:
             function_name: the name of the contract function to call
             *args: the (potentially many) arguments to pass to that function
@@ -150,6 +154,7 @@ class BaseContractInterface(abc.ABC):
         """
         Given a transaction, outputs all the events of a particular name
         that were emitted in that transaction
+
         Args:
             event_name: the event to look for
             txn: the transaction to parse

@@ -35,6 +35,7 @@ class SCRTInterface(BaseChainInterface):
     def sign_and_send_transaction(self, tx):
         """
         Signs and broadcasts a transaction to the network, returns the broadcast receipt
+
         Args:
             tx[StdTx]: transaction to be signed and sent
 
@@ -57,6 +58,7 @@ class SCRTInterface(BaseChainInterface):
     def get_transactions(self, address, height=None):
         """
         Returns all txn logs from the given height for the given address
+
         Args:
             address: the address to get the txn logs for
             height: which height to get the txn logs from, if None, get all txn logs from the current height
@@ -94,6 +96,7 @@ class SCRTContract(BaseContractInterface):
     def get_function(self, function_name):
         """
         Returns the function schema for the given function name
+
         Args:
             function_name: which function to get a list of args for
 
@@ -107,6 +110,7 @@ class SCRTContract(BaseContractInterface):
     def construct_txn(self, function_schema, function_name, args):
         """
         Constructs a transaction for the given function_schema, function name and args
+
         Args:
             function_schema: Dict[str, List[str]], the schema for the function
             function_name: str, the name of the function to be called
@@ -155,6 +159,7 @@ class SCRTContract(BaseContractInterface):
     def call_function(self, function_name, *args):
         """
         Calls the given function with the given args
+
         Args:
             function_name: which function to call
             *args: the args to pass
@@ -174,6 +179,7 @@ class SCRTContract(BaseContractInterface):
     def parse_event_from_txn(self, event_name: str, logs: List[TxLog]):
         """
         Parses the given event from the given logs
+
         Args:
             event_name: which event to parse
             logs: the logs to parse from

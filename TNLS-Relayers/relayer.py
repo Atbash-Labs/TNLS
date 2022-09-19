@@ -31,7 +31,8 @@ class Relayer:
                  num_loops=None):
         """
 
-        Args:
+
+
             dict_of_names_to_interfaces: Dict mapping interface names to
             (chain_interface, contract_interface, evt_name, function_name) tuples
         """
@@ -73,7 +74,8 @@ class Relayer:
     def route_transaction(self, task: Task):
         """
         Given a Task, routes it where it's supposed to go
-        Args:
+
+
             task: the Task to be routed
         """
         self.logger.info('Routing task {}'.format(task))

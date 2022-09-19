@@ -93,6 +93,7 @@ class EthInterface(BaseChainInterface):
     def get_last_txs(self, block_number=None, address=None):
         """
         Gets the transactions from a particular block for a particular address.
+
         Args:
             block_number:  Which block to get
             address: Which address to get transactions for
@@ -135,6 +136,7 @@ class EthContract(BaseContractInterface):
     def get_function(self, function_name):
         """
         Gets a particular function from the contract.
+
         Args:
             function_name: The name of the function to get.
         """
