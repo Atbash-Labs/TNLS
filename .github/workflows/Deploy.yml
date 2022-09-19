@@ -97,8 +97,7 @@ jobs:
           echo "ETH_CLIENT_ADDRESS=$(jq -r '.transactions[2].contractAddress' /home/runner/work/TNLS/TNLS/public-gateway/broadcast/DeployScript.s.sol/5/run-latest.json)" >> $GITHUB_ENV
       - name: Update config.yml with Ethereum Contract info
         run: |
-          sed -i 's;INSERT_ETHEREUM_CONTRACT_ADDRESS_HERE;${{ env.ETHEREUM_GATEWAY_ADDRESS }};g' config.yml
-          sed -i 's;INSERT_ETHEREUM_CONTRACT_SCHEMA_HERE;${{ env.ETHEREUM_CONTRACT_ABI }};g' config.yml
+          sed -i 's;INSERT_ETHEREUM_CONTRACT_ADDRESS_HERE;${{ env.ETH_GATEWAY_ADDRESS }};g' config.yml
           cat config.yml
           git config --global user.email "leor@atbash.co"
           git config --global user.name "Leor Fishman"
