@@ -498,7 +498,6 @@ async function gatewayTx(
     "packet_signature",
   ];
 
-
   logKeys.forEach((key) => logs[key] = tx.arrayLog!.find(
     (log) => log.type === "wasm" && log.key === key
   )!.value);
@@ -516,7 +515,6 @@ async function gatewayTx(
   assert(fromHex(logs["packet_hash"].substring(2)).byteLength == 32);
   assert(fromHex(logs["packet_signature"].substring(2)).byteLength == 65);
 
-
   gasTotal += tx.gasUsed;
   console.log(`gatewayTx used \x1b[33m${tx.gasUsed}\x1b[0m gas\n`);
 
@@ -532,13 +530,11 @@ async function queryPubKey(
 ): Promise<PublicKeyResponse> {
   const query_msg = { get_public_keys: {} };
   // console.log(`Query:\n${JSON.stringify(query_msg, undefined ,2)}\n`);
-
   const response = (await client.query.compute.queryContract({
     contractAddress: gatewayAddress,
     codeHash: gatewayHash,
     query: query_msg,
   })) as PublicKeyResponse;
-
   // console.log(`Response:\n${JSON.stringify(response, undefined ,2)}\n`);
   console.log(`\x1b[32mEncryption key: ${response.encryption_key}\x1b[0m`);
   console.log(`\x1b[32mPublic key: ${response.verification_key}\x1b[0m`);
