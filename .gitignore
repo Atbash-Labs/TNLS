@@ -19,3 +19,4 @@ out/
 .vscode
 target/
 /TNLS-Relayers/_build/html/venv/*
+/TNLS-Relayers/_build/html/venv/Lib/
