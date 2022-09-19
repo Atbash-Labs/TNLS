@@ -15,7 +15,7 @@ contract DeployScript is Script {
     Gateway gatewayAddress;
     Client clientAddress;
 
-    uint256 privKey = vm.envUint("PRIVATE_KEY");
+    uint256 privKey = vm.envUint("ETH_PRIVATE_KEY");
     address deployer = vm.rememberKey(privKey);
 
 
