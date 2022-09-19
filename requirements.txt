@@ -61,7 +61,7 @@ requests==2.27.1
 secret-sdk==1.0
 six==1.16.0
 sniffio==1.2.0
-Sphinx=5.1.1
+Sphinx==5.1.1
 tomli==2.0.1
 toolz==0.11.2
 types-cachetools==4.2.10
