@@ -91,6 +91,12 @@ jobs:
           SECRET_GATEWAY_ETH_ADDRESS: ${{env.SECRET_GATEWAY_ETH_ADDRESS}}
         run: | 
           forge script script/DeployScript.s.sol:DeployScript --rpc-url "$INFURA_API_URL" --private-key "$ETH_PRIVATE_KEY" --etherscan-api-key "$ETHERSCAN_KEY" --broadcast --verify -vvvv
+      - name: Install jq
+        run: sudo apt update && sudo apt install -y jq
+      - name: Extract contracts addresses from eth deploy
+        run: |
+          echo "ETH_GATEWAY_ADDRESS=$(jq -r '.transactions[1].contractAddress' /home/runner/work/TNLS/TNLS/public-gateway/broadcast/DeployScript.s.sol/5/run-latest.json)" >> $GITHUB_ENV
+          echo "ETH_CLIENT_ADDRESS=$(jq -r '.transactions[2].contractAddress' /home/runner/work/TNLS/TNLS/public-gateway/broadcast/DeployScript.s.sol/5/run-latest.json)" >> $GITHUB_ENV
       - name: Install python dependencies
         run: |
           python -m pip install --upgrade pip
