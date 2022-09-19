@@ -410,12 +410,12 @@ async function gatewayTx(
   const inputs = JSON.stringify(
     {
       address: userPublicAddress,
-      name: "Kent",
-      offchain_assets: 1000,
-      onchain_assets: 1000,
-      liabilities: 2000,
-      missed_payments: 500,
-      income: 100000,
+      name: "Alice",
+      offchain_assets: 0,
+      onchain_assets: 2000,
+      liabilities: 4000,
+      missed_payments: 0,
+      income: 5000,
     }
   );
   const routing_info = contractAddress;
@@ -556,9 +556,9 @@ async function test_gateway_tx(
 ) {
   const gatewayPublicKeys = await queryPubKey(client, gatewayHash, gatewayAddress);
   
-  const result1 = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKeys.encryption_key);
-  console.log(`\x1b[34;1mResult: ${Buffer.from(fromHex(result1.substring(2))).toString('utf-8')}\x1b[0m\n`)
-  // assert(result1 == "{\"status\":\"success\"}");
+  const result = await gatewayTx(client, gatewayHash, gatewayAddress, contractHash, contractAddress, gatewayPublicKeys.encryption_key);
+  console.log(`\x1b[34;1mResult: ${Buffer.from(fromHex(result.substring(2))).toString('utf-8')}\x1b[0m\n`)
+  assert(result == "{\"name\":\"Alice\",\"score\":\"350\"}");
 }
 
 async function runTestFunction(
@@ -587,7 +587,7 @@ async function runTestFunction(
 (async () => {
   const [client, gatewayHash, gatewayAddress, contractHash, contractAddress, scrtRngHash, scrtRngAddress] =
     await initializeAndUploadContract();
-    console.log(`TOTAL GAS USED FOR UPLOAD AND INIT: \x1b[33;1m${gasTotal}\x1b[0m gas\n`)
+    // console.log(`TOTAL GAS USED FOR UPLOAD AND INIT: \x1b[33;1m${gasTotal}\x1b[0m gas\n`)
     
   await runTestFunction(
     test_gateway_tx,
