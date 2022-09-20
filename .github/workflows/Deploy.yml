@@ -13,6 +13,12 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
+      - name: Foundry PreSetup
+        uses: actions/checkout@v3
+        env:
+          FOUNDRY_PROFILE: ci
+        with:
+          submodules: recursive
       - name: Set up Python 3.8
         uses: actions/setup-python@v4
         with:
@@ -63,12 +69,6 @@ jobs:
           git commit -am "Update config.yml with Secret info"
       - name: Install jq
         run: sudo apt update && sudo apt install -y jq
-      - name: Foundry PreSetup
-        uses: actions/checkout@v3
-        env:
-          FOUNDRY_PROFILE: ci
-        with:
-          submodules: recursive
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
