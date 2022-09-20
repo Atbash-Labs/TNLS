@@ -1,14 +1,13 @@
 import './style.css'
 import { setupConnect } from './connect'
 import { setupSignMessage } from './sign'
-import { ethers } from 'ethers'
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>
     <h1>TNLS Demo</h1>
     <div id="form">
-      <form id="data">
-      <label>$USD value of offchain assets:  </label>
+      <form name="inputForm">
+      <label id="field1">$USD value of offchain assets:  </label>
       <input type="text" placeholder="$" />
       <br>
       <label>$USD value of onchain assets:  </label>
@@ -30,10 +29,19 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <button id="sign" type="button"></button>
       <div id="account"></div>
     </div>
-
+  <div id="test">
+  </div>
   </div>
 `
 
 setupConnect(document.querySelector<HTMLButtonElement>('#connect')!)
 setupSignMessage(document.querySelector<HTMLButtonElement>('#sign')!)
 
+document.querySelector<HTMLButtonElement>('#submit')!
+  .addEventListener("click", function(event: Event){
+    event.preventDefault()
+    let field1 = document.forms[0].value;
+    document.querySelector<HTMLDivElement>('#test')!.innerHTML = `
+      <p>${field1}</p>
+    `
+});
