@@ -45,7 +45,7 @@ contract Client is IClient {
         return Util.Task(_callbackAddress, _callbackSelector, _userAddress, _sourceNetwork, _routingInfo, _payloadHash, false);
     }
 
-    /// @param _userAddress  Task Id of the computation
+    /// @param _userAddress  User address
     /// @param _sourceNetwork Source network of msg
     /// @param _routingInfo Routing info for computation
     /// @param _payloadHash Payload hash 
