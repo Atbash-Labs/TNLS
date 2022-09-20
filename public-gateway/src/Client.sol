@@ -48,7 +48,7 @@ contract Client is IClient {
     /// @param _userAddress  User address
     /// @param _sourceNetwork Source network of msg
     /// @param _routingInfo Routing info for computation
-    /// @param _payloadHash Payload hash 
+    /// @param _payloadHash Payload hash
     /// @param _info ExecutionInfo struct
     function send(
         address _userAddress,

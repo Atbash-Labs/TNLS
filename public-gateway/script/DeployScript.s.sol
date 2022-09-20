@@ -18,7 +18,6 @@ contract DeployScript is Script {
     uint256 privKey = vm.envUint("ETH_PRIVATE_KEY");
     address deployer = vm.rememberKey(privKey);
 
-
     function run() public {
         vm.startBroadcast();
 
@@ -31,7 +30,6 @@ contract DeployScript is Script {
 
         // Initialize master verification Address
         gatewayAddress.initialize(deployer);
-
 
         /// ------ Update Routes Param Setup ------- ///
 
