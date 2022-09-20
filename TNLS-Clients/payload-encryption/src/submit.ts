@@ -22,7 +22,8 @@ export async function setupSubmit(element: HTMLButtonElement) {
         missed_payments: Number(missed_payments),
         income: Number(income)
         })
-
+        console.log(data)
+        
         document.querySelector<HTMLDivElement>('#preview')!.innerHTML = `
         <p >
         ${data}

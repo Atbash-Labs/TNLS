@@ -90,6 +90,11 @@ button {
   margin-top: 0.6em;
   width:100%;
 }
+#encrypt {
+  margin-top: 0.6em;
+  width:100%;
+}
+
 button:hover {
   border-color: #646cff;
 }

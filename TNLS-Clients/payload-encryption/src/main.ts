@@ -1,8 +1,8 @@
 import './style.css'
 import { setupConnect } from './connect'
 import { setupSubmit } from './submit'
+import { setupEncrypt } from './encrypt'
 import { setupSignMessage } from './sign'
-import { ethers } from 'ethers'
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>
@@ -25,6 +25,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <input type="text" placeholder="$" id="input5" name="input5" />
         <br>
       <button id="submit">Submit</button>
+      <button id="encrypt" type="button"></button>
       <div id="preview" style="word-wrap: break-word;">
       </div>
     </div>
@@ -36,5 +37,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   </div>
 `
 setupSubmit(document.querySelector<HTMLButtonElement>('#submit')!)
+setupEncrypt(document.querySelector<HTMLButtonElement>('#encrypt')!)
 setupConnect(document.querySelector<HTMLButtonElement>('#connect')!)
 setupSignMessage(document.querySelector<HTMLButtonElement>('#sign')!)
