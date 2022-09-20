@@ -1,3 +1,6 @@
+## TNLS Architecture
+![TNLS Architecture](assets/tnls_architecture.png)
+
 ## Ethereum Contracts
 
 You will need a copy of [Foundry](https://github.com/foundry-rs/foundry) installed before proceeding. See the [installation guide](https://github.com/foundry-rs/foundry#installation) for details.
