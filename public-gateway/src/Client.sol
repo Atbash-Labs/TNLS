@@ -46,9 +46,9 @@ contract Client is IClient {
     }
 
     /// @param _userAddress  Task Id of the computation
-    /// @param _sourceNetwork computed result
-    /// @param _routingInfo The second stored number input
-    /// @param _payloadHash The second stored number input
+    /// @param _sourceNetwork Source network of msg
+    /// @param _routingInfo Routing info for computation
+    /// @param _payloadHash Payload hash 
     /// @param _info ExecutionInfo struct
     function send(
         address _userAddress,
