@@ -42,6 +42,11 @@ h1 {
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  animation: fadeIn 2s;
+  -webkit-animation: fadeIn 2s;
+  -moz-animation: fadeIn 2s;
+  -o-animation: fadeIn 2s;
+  -ms-animation: fadeIn 2s;
 }
 
 .logo {
@@ -65,6 +70,10 @@ form {
   align-items: center;
   text-align: left;
   max-width: 400px;
+}
+
+#preview {
+  max-width: 800px;
 }
 
 .read-the-docs {
@@ -94,6 +103,10 @@ button {
   margin-top: 0.6em;
   width:100%;
 }
+#hash {
+  margin-top: 0.6em;
+  width:100%;
+}
 
 button:hover {
   border-color: #646cff;
@@ -114,4 +127,29 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@-moz-keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@-webkit-keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@-o-keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@-ms-keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
