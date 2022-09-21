@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from logging import getLogger, basicConfig, DEBUG, StreamHandler
 from typing import List
 
@@ -157,6 +158,9 @@ class SCRTContract(BaseContractInterface):
             self.logger.warning(f"Arguments must be a list or dict, got {type(args)}")
             arg_dict = json.loads(args)
         function_schema = {function_name: arg_dict}
+        if function_name != 'input':
+            nschema = {'input': deepcopy(function_schema)}
+            function_schema = nschema
         self.logger.info(
             f"Using arguments {function_schema} to call function {function_name} at address {self.address}")
         txn_msgs = self.interface.provider.wasm.contract_execute_msg(
