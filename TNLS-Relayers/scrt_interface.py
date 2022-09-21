@@ -148,7 +148,8 @@ class SCRTContract(BaseContractInterface):
                             arg_dict[key] = ""
                 arg_dict = {key: arg_dict[key] for key in arg_keys}
         else:
-            self.logger
+            self.logger.warning(f"Arguments must be a list or dict, got {type(args)}")
+            arg_dict = json.loads(args)
         function_schema = {function_name: arg_dict}
         self.logger.info(
             f"Using arguments {function_schema} to call function {function_name} at address {self.address}")
