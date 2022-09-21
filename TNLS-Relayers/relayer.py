@@ -37,9 +37,13 @@ class Relayer:
         """
         self.task_list = []
         self.task_ids_to_statuses = {}
+        self.task_ids_to_info = {}
         self.task_threads = []
         self.dict_of_names_to_interfaces = dict_of_names_to_interfaces
         self.dict_of_names_to_blocks = {name: None for name in self.dict_of_names_to_interfaces}
+        self.dict_of_names_to_addresses = {name: contract_interface.address for
+                                           name, (chain_interface, contract_interface, evt_name, function_name) in
+                                           self.dict_of_names_to_interfaces.items()}
         basicConfig(
             level=DEBUG,
             format="%(asctime)s [relayer: %(levelname)8.8s] %(message)s",
@@ -90,6 +94,7 @@ class Relayer:
         function_name = self.dict_of_names_to_interfaces[task.task_destination_network][3]
         contract_for_txn.call_function(function_name, str(task))
         self.task_ids_to_statuses[task.task_data['task_id']] = 'Routed to {}'.format(task.task_destination_network)
+        self.task_ids_to_info[task.task_data['task_id']] = task.task_data
         self.logger.info('Routed {} to {}'.format(task, task.task_destination_network))
         pass
 

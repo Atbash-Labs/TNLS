@@ -119,6 +119,26 @@ def net_to_block():
     return str(current_app.config['RELAYER'].dict_of_names_to_blocks)
 
 
+@route_blueprint.route('/ids_to_jsons')
+def id_to_json():
+    """
+
+    Returns: The status of the relayer
+
+    """
+    return str(current_app.config['RELAYER'].dict_of_names_to_blocks)
+
+
+@route_blueprint.route('/networks_to_addresses')
+def net_to_address():
+    """
+
+        Returns: The map of names to contract addresses
+
+        """
+    return str(current_app.config['RELAYER'].dict_of_names_to_addresses)
+
+
 @route_blueprint.route('/keys')
 def keys():
     """
