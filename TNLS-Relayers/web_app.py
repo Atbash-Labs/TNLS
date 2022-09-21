@@ -126,7 +126,7 @@ def id_to_json():
     Returns: The status of the relayer
 
     """
-    return str(current_app.config['RELAYER'].dict_of_names_to_blocks)
+    return str(current_app.config['RELAYER'].task_ids_to_info)
 
 
 @route_blueprint.route('/networks_to_addresses')
