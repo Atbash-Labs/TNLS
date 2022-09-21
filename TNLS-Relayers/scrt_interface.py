@@ -165,7 +165,7 @@ class SCRTContract(BaseContractInterface):
             handle_msg=function_schema,
 
         )
-        txn = self.interface.wallet.create_tx(msgs=[txn_msgs], gas=500000, gas_prices='1000uscrt', gas_adjustment=1)
+        txn = self.interface.wallet.create_tx(msgs=[txn_msgs], gas=500000, gas_prices='10uscrt', gas_adjustment=1)
         return txn
 
     def call_function(self, function_name, *args):
