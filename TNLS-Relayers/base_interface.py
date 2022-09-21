@@ -36,12 +36,15 @@ def to_dict(dict_to_parse, key_type=""):
             parsed_dict[key] = to_dict(val)
         # convert 'HexBytes' type to 'str'
         elif 'HexBytes' in str(type(val)):
-            parsed_dict[key] = val.hex()
+            if key_type in task_keys_in_order:
+                parsed_dict[key] = val.hex()
+            else:
+                parsed_dict[key] = base64.b64encode(val).decode('ascii')
         elif isinstance(val, bytes):
             if key_type in task_keys_in_order:
                 parsed_dict[key] = val.hex()
             else:
-                parsed_dict[key] = base64.b64encode(val).decode('utf-8')
+                parsed_dict[key] = base64.b64encode(val).decode('ascii')
 
     return parsed_dict
 
