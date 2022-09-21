@@ -147,7 +147,7 @@ export async function setupSubmit(element: HTMLButtonElement) {
             },
           ];
 
-        const [tx] = await provider.send("eth_sendTransaction", tx_params);
+        // const [tx] = await provider.send("eth_sendTransaction", tx_params);
 
         document.querySelector<HTMLDivElement>('#preview')!.innerHTML = `
         <h2>Raw Payload</h2>

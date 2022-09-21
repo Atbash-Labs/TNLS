@@ -4,8 +4,28 @@ import { setupSubmit } from './submit'
 import { setupSignMessage } from './sign'
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
+<header>
+  <h1>Fortress Labs</h1>
+  <div id="links">
+    <a href="">
+    <div class="card">
+      Whitepaper
+    </div>
+    </a>
+    <a href="">
+    <div class="card">
+      GitHub
+    </div>
+    </a>
+    <a href="">
+    <div class="card">
+      Docs
+    </div>
+    </a>
+  </div>
+</header>
   <div>
-    <h1>TNLS Demo</h1>
+    <h2>Sample Application: Privacy-Preserving On-chain Credit Scoring</h2>
     <div id="form">
       <form name="inputForm">
       <label for="input1">$USD value of offchain assets:  </label>
