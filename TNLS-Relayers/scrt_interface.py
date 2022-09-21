@@ -127,6 +127,8 @@ class SCRTContract(BaseContractInterface):
         arg_keys = function_schema['args']
         if isinstance(args, tuple) and len(args) == 1:
             args = args[0]
+        if isinstance(args, str):
+            args = json.loads(args)
         if isinstance(args, list):
             arg_values = [arg for arg in args]
             if len(arg_keys) != len(arg_values):
