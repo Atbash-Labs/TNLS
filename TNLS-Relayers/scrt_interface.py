@@ -125,7 +125,6 @@ class SCRTContract(BaseContractInterface):
 
         """
         arg_keys = function_schema['args']
-        self.logger.info(args)
         if isinstance(args, tuple) and len(args) == 1:
             args = args[0]
         if isinstance(args, list):
@@ -153,6 +152,7 @@ class SCRTContract(BaseContractInterface):
         else:
             self.logger.warning(f"Arguments must be a list or dict, got {type(args)}")
             arg_dict = json.loads(args)
+            arg_dict.pop('task_destination_network')
         function_schema = {function_name: arg_dict}
         self.logger.info(
             f"Using arguments {function_schema} to call function {function_name} at address {self.address}")
