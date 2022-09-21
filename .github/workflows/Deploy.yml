@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - leorf/fix-web-and-eth-error
 
 jobs:
   Deploy-to-main:
