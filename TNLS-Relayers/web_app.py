@@ -57,8 +57,13 @@ def generate_scrt_config(config_dict, provider=None):
     event_name = 'wasm'
     function_name = list(json.loads(contract_schema).keys())[0]
     initialized_chain = SCRTInterface(private_key=priv_key, address=address, provider=provider)
-    initialized_contract = SCRTContract(interface=initialized_chain, address=contract_address,
-                                        abi=contract_schema)
+    specialized_initialized_chain = SCRTInterface(private_key=priv_key, address=address, provider=provider)
+    if provider is None:
+        initialized_contract = SCRTContract(interface=specialized_initialized_chain, address=contract_address,
+                                            abi=contract_schema)
+    else:
+        initialized_contract = SCRTContract(interface=initialized_chain, address=contract_address,
+                                            abi=contract_schema)
     scrt_tuple = (initialized_chain, initialized_contract, event_name, function_name)
     return scrt_tuple
 
