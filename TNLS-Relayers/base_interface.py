@@ -82,6 +82,9 @@ class Task:
             self.task_destination_network = task_dict['routing_info'].split(':')[0]
             task_dict['routing_info'] = task_dict['routing_info'].split(':')[1]
             task_dict['task_destination_network'] = self.task_destination_network
+        elif 'routing_info' in task_dict and 'secret' in task_dict['routing_info']:
+            self.task_destination_network = 'secret'
+            task_dict['task_destination_network'] = self.task_destination_network
         elif 'routing_info' in task_dict:
             self.task_destination_network = task_dict['routing_info']
             task_dict['task_destination_network'] = self.task_destination_network
