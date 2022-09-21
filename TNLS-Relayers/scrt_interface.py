@@ -125,6 +125,7 @@ class SCRTContract(BaseContractInterface):
 
         """
         arg_keys = function_schema['args']
+        self.logger.info(args)
         if isinstance(args, tuple) and len(args) == 1:
             args = args[0]
         if isinstance(args, list):
