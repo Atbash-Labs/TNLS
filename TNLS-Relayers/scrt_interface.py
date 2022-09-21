@@ -125,8 +125,6 @@ class SCRTContract(BaseContractInterface):
 
         """
         arg_keys = function_schema['args']
-
-        arg_dict = dict()
         if isinstance(args, list):
             arg_values = [arg for arg in args]
             if len(arg_keys) != len(arg_values):
@@ -149,6 +147,8 @@ class SCRTContract(BaseContractInterface):
                         if key not in args.keys():
                             arg_dict[key] = ""
                 arg_dict = {key: arg_dict[key] for key in arg_keys}
+        else:
+            self.logger
         function_schema = {function_name: arg_dict}
         self.logger.info(
             f"Using arguments {function_schema} to call function {function_name} at address {self.address}")
@@ -172,11 +172,10 @@ class SCRTContract(BaseContractInterface):
 
         """
         function_schema = self.get_function(function_name)
+        if len(args) == 1 and isinstance(args, list):
+            args = args[0]
         if isinstance(args, str):
             args = json.loads(args)
-        if len(args) == 1:
-            args = args[0]
-        args = json.loads(json.dumps(args))
         txn = self.construct_txn(function_schema, function_name, args)
         return self.interface.sign_and_send_transaction(txn)
 
