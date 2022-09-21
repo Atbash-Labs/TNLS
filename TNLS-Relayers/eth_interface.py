@@ -111,8 +111,13 @@ class EthInterface(BaseChainInterface):
         except Exception as e:
             self.logger.warning(e)
             return []
-        correct_transactions = list(
-            map(lambda tx: self.provider.eth.get_transaction_receipt(tx['hash']), transactions))
+        correct_transactions = []
+        for transaction in transactions:
+            try:
+                correct_transactions.append(self.provider.eth.get_transaction_receipt(transaction['hash']))
+            except Exception as e:
+                self.logger.warning(e)
+                continue
 
         return correct_transactions
 
