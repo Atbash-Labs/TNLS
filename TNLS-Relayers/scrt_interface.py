@@ -184,7 +184,9 @@ class SCRTContract(BaseContractInterface):
         if isinstance(args, str):
             args = json.loads(args)
         txn = self.construct_txn(function_schema, function_name, args)
-        return self.interface.sign_and_send_transaction(txn)
+        transaction_result = self.interface.sign_and_send_transaction(txn)
+        self.logger.info(f"Transaction result: {transaction_result}")
+        return transaction_result
 
     def parse_event_from_txn(self, event_name: str, logs: List[TxLog]):
         """
