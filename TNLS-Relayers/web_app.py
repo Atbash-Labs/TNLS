@@ -110,7 +110,7 @@ def task_json():
 
 
 @route_blueprint.route('/networks_to_blocks')
-def task_json():
+def net_to_block():
     """
 
     Returns: The status of the relayer
