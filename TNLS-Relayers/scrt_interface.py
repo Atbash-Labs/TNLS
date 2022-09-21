@@ -140,6 +140,8 @@ class SCRTContract(BaseContractInterface):
                     arg_values = arg_values[:len(arg_keys)]
             arg_dict = dict(zip(arg_keys, arg_values))
         elif isinstance(args, dict):
+            if 'task_destination_network' in args:
+                args.pop('task_destination_network')
             arg_dict = args
             if set(arg_keys) != set(args.keys()):
                 self.logger.info(f"Arguments do not match schema."
@@ -154,7 +156,6 @@ class SCRTContract(BaseContractInterface):
         else:
             self.logger.warning(f"Arguments must be a list or dict, got {type(args)}")
             arg_dict = json.loads(args)
-            arg_dict.pop('task_destination_network')
         function_schema = {function_name: arg_dict}
         self.logger.info(
             f"Using arguments {function_schema} to call function {function_name} at address {self.address}")
