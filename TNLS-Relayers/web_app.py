@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from pathlib import Path
 from threading import Thread
 
@@ -171,6 +172,20 @@ def app_factory(config_filename=f'{Path(__file__).parent.absolute()}/../config.y
     app.register_blueprint(route_blueprint)
     thread = Thread(target=relayer.run)
     thread.start()
+
+    def _thread_restarter():
+        thread_target = thread
+        while True:
+            if not thread_target.is_alive():
+                relayer = Relayer(config, num_loops=num_loops)
+                thread_2 = Thread(target=relayer.run)
+                thread_2.start()
+                thread_target = thread_2
+                app.config['RELAYER'] = relayer
+            time.sleep(5)
+
+    thread_restarter = Thread(target=_thread_restarter)
+    thread_restarter.start()
     return app
 
 
