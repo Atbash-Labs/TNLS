@@ -125,6 +125,8 @@ class SCRTContract(BaseContractInterface):
 
         """
         arg_keys = function_schema['args']
+        self.logger.info(
+            f"Using arguments {args} to call function {function_name} at address {self.address}")
         arg_dict = dict()
         if isinstance(args, list):
             arg_values = [arg for arg in args]
@@ -146,8 +148,6 @@ class SCRTContract(BaseContractInterface):
                         if key not in args.keys():
                             arg_dict[key] = ""
                 arg_dict = {key: arg_dict[key] for key in arg_keys}
-                self.logger.info(
-                    f"Using arguments {arg_dict} to call function {function_name} at address {self.address}")
         function_schema = {function_name: arg_dict}
         txn_msgs = self.interface.provider.wasm.contract_execute_msg(
             sender_address=self.interface.address,
