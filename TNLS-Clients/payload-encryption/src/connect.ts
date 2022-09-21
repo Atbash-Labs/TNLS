@@ -9,7 +9,7 @@ export function setupConnect(element: HTMLButtonElement) {
     [myAddress] = await provider.send("eth_requestAccounts", []);
     element.innerHTML = `Connected`
     document.querySelector<HTMLDivElement>('#account')!.innerHTML = `
-      <p><b>Connected account: ${myAddress}</b></p>
+      <p>Connected account: ${myAddress}</p>
     `
   }
   element.addEventListener('click', () => connect())

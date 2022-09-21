@@ -110,12 +110,15 @@ form {
 }
 #wallet {
   position: absolute;
-  top: 10%;
-  right: 10%;
+  top: 6%;
+  right: 5%;
 }
 #account {
-  margin-top: 2em;
-  bottom: 5%;
+  display: inline-block;
+  position: absolute;
+  text-shadow: 2px 2px 5px #242424;
+  top: 0;
+  right: 5%;
 }
 
 .read-the-docs {
