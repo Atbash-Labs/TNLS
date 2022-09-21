@@ -1,7 +1,6 @@
 import './style.css'
 import { setupConnect } from './connect'
 import { setupSubmit } from './submit'
-import { setupSignMessage } from './sign'
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 <header>
@@ -49,12 +48,8 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div id="preview" style="word-wrap: break-word;">
     </div>
     <div class="card">
-      <button id="connect" type="button"></button>
-      <button id="sign" type="button"></button>
-      <div id="account"></div>
     </div>
   </div>
 `
 setupSubmit(document.querySelector<HTMLButtonElement>('#submit')!)
 setupConnect(document.querySelector<HTMLButtonElement>('#connect')!)
-setupSignMessage(document.querySelector<HTMLButtonElement>('#sign')!)

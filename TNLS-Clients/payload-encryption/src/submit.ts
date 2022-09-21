@@ -1,6 +1,7 @@
 import { encrypt_payload } from "./wasm";
 import { ethers } from "ethers";
-import { arrayify, SigningKey } from "ethers/lib/utils";
+import { arrayify, hexlify, SigningKey, keccak256 } from "ethers/lib/utils";
+import sha3 from "js-sha3";
 import { Buffer } from "buffer/";
 import secureRandom from "secure-random";
 
@@ -37,26 +38,24 @@ export async function setupSubmit(element: HTMLButtonElement) {
         missed_payments: Number(missed_payments),
         income: Number(income)
         })
-        console.log(data)
 
         const routing_info = "secret10pyejy66429refv3g35g2t7am0was7ya6hvrzf"
         const routing_code_hash = "5daf336102c875f790dfeabb23a4d985bf71a9856b6cb52be00fd7e9de41ce32"
         const user_address = myAddress
         const user_key = Buffer.from(userPublicKeyBytes)
 
-        const handle = "request_score"
-    
+        
         const thePayload = JSON.stringify({
-          data: data,
-          routing_info: routing_info,
-          routing_code_hash: routing_code_hash,
-          user_address: user_address,
-          user_key: user_key.toString('base64'),
+            data: data,
+            routing_info: routing_info,
+            routing_code_hash: routing_code_hash,
+            user_address: user_address,
+            user_key: user_key.toString('base64'),
         })
-        console.log(thePayload)
         
         const plaintext = Buffer.from(JSON.stringify(thePayload));
         const nonce = secureRandom(12, { type: "Uint8Array" });
+        const handle = "request_score"
 
         const ciphertext = Buffer.from(
         encrypt_payload(
@@ -65,64 +64,108 @@ export async function setupSubmit(element: HTMLButtonElement) {
             plaintext,
             nonce
         ));
-        console.log(`Encrypted Payload: ${ciphertext.toString('base64')}`)
     
-        // get Metamask to sign the payloadHash
-        const payloadHash = ethers.utils.keccak256(arrayify(ciphertext))
-        console.log(`Message hash: ${payloadHash}`)
+        // const ciphertextHash = keccak256(ciphertext)
+        // const payloadHash = '0x' + sha3.keccak256("\x19Ethereum Signed Message:\n" + 32 + ciphertextHash.substring(2))
+        const payloadHash = keccak256(ciphertext)
+        console.log(`Payload Hash: ${payloadHash}`)
 
-        const msgParams = JSON.stringify({
-            domain: {
-                chainId: 5,
-                name: 'TNLS Client Demo',
-                verifyingContract: '0x32B3Ae25D548140094259eF164a52da7929CbbB9',
-                version: '1',
-            },
+        document.querySelector<HTMLDivElement>('#preview')!.innerHTML = `
+        <h2>Raw Payload</h2>
+        <p>${thePayload}</p>
+
+        <h2>Encrypted Payload</h2>
+        <p>${ciphertext.toString('base64')}</p>
+
+        <h2>Payload Hash</h2>
+        <p>${payloadHash}<p>
+        `
         
-            // Defining the message signing data content.
-            message: {
-                payloadHash: payloadHash
-            },
-            // Refers to the keys of the *types* object below.
-            primaryType: 'Payload',
-            types: {
-              EIP712Domain: [
-                { name: 'name', type: 'string' },
-                { name: 'version', type: 'string' },
-                { name: 'chainId', type: 'uint256' },
-                { name: 'verifyingContract', type: 'address' },
-              ],  
-              // Refer to PrimaryType
-              Payload: [
-                { name: 'payloadHash', type: 'string' },
-              ],
-            },
-          })
-        
+        // eth_sign
+        const msgParams = payloadHash
+
+        // eth_signTypedData_v4 (not working yet)
+        //
+        // const msgParams = JSON.stringify({
+        //     domain: {
+        //         chainId: 5,
+        //         name: 'Credit Score Demo',
+        //         verifyingContract: '0x2C1d60e34727a773799F9820C06b6fda2FEfcA7B',
+        //         version: '1',
+        //     },
+        //     // Defining the message signing data content.
+        //     message: {
+        //         payloadHash: payloadHash
+        //     },
+        //     // Refers to the keys of the *types* object below.
+        //     primaryType: 'Message',
+        //     types: {
+        //       EIP712Domain: [
+        //         { name: 'name', type: 'string' },
+        //         { name: 'version', type: 'string' },
+        //         { name: 'chainId', type: 'uint256' },
+        //         { name: 'verifyingContract', type: 'address' },
+        //       ],  
+        //       // Refer to PrimaryType
+        //       Message: [
+        //         { name: 'payloadHash', type: 'string' },
+        //       ],
+        //     },
+        // })
+        // const from = myAddress;
+        // const params = [from, msgParams];
+        // const method = 'eth_signTypedData_v4';
+        // const payload_signature = await provider.send(method, params)
+
+        // get Metamask to sign the payloadHash
         const from = myAddress;
         const params = [from, msgParams];
-        const method = 'eth_signTypedData_v4';
+        const method = 'eth_sign';
 
-        const payload_signature = await provider.send(method, params)
-        console.log(`Signature: ${payload_signature}`)
-        //
+        const payloadSignature = await provider.send(method, params)
+        console.log(`Payload Signature: ${payloadSignature}`)
 
+        document.querySelector<HTMLDivElement>('#preview')!.innerHTML = `
+        <h2>Raw Payload</h2>
+        <p>${thePayload}</p>
+
+        <h2>Encrypted Payload</h2>
+        <p>${ciphertext.toString('base64')}</p>
+
+        <h2>Payload Hash</h2>
+        <p>${payloadHash}<p>
+
+        <h2>Payload Signature</h2>
+        <p>${payloadSignature}<p>
+        `
+
+        // function data to be abi encoded
         const _userAddress = myAddress
         const _sourceNetwork = "ethereum"
         const _routingInfo = routing_info
         const _payloadHash = payloadHash
         const _info = {
-            user_key: ethers.utils.hexlify(user_key),
+            user_key: hexlify(user_key),
             routing_code_hash: routing_code_hash,
             handle: handle,
-            nonce: ethers.utils.hexlify(nonce),
-            payload: ethers.utils.hexlify(ciphertext),
-            payload_signature: payload_signature
+            nonce: hexlify(nonce),
+            payload: hexlify(ciphertext),
+            payload_signature: payloadSignature
         }
+
+        console.log(`_userAddress: ${_userAddress}
+            _sourceNetwork: ${_sourceNetwork} 
+            _routingInfo: ${_routingInfo} 
+            _payloadHash: ${_payloadHash} 
+            _info: ${JSON.stringify(_info)}`)
                 
-        const abiEncodedMsg = ethers.utils.defaultAbiCoder.encode(
-            [ "address _userAddress", "string _sourceNetwork", "string _routingInfo", "bytes32 _payloadHash", 
-              "tuple(bytes user_key, string routing_code_hash, string handle, bytes12 nonce, bytes payload, bytes payload_signature) _info" ],
+        // create the abi interface and encode the function data
+        const publicClientAddress = '0x32B3Ae25D548140094259eF164a52da7929CbbB9'
+        const abi = [{"inputs":[{"internalType":"address","name":"_gatewayAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"taskId","type":"uint256"},{"indexed":false,"internalType":"bytes","name":"result","type":"bytes"}],"name":"ComputedResult","type":"event"},{"inputs":[],"name":"GatewayAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_taskId","type":"uint256"},{"internalType":"bytes","name":"_result","type":"bytes"}],"name":"callback","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_userAddress","type":"address"},{"internalType":"string","name":"_sourceNetwork","type":"string"},{"internalType":"string","name":"_routingInfo","type":"string"},{"internalType":"bytes32","name":"_payloadHash","type":"bytes32"},{"components":[{"internalType":"bytes","name":"user_key","type":"bytes"},{"internalType":"string","name":"routing_code_hash","type":"string"},{"internalType":"string","name":"handle","type":"string"},{"internalType":"bytes12","name":"nonce","type":"bytes12"},{"internalType":"bytes","name":"payload","type":"bytes"},{"internalType":"bytes","name":"payload_signature","type":"bytes"}],"internalType":"struct Util.ExecutionInfo","name":"_info","type":"tuple"}],"name":"send","outputs":[],"stateMutability":"nonpayable","type":"function"}]
+        const iface= new ethers.utils.Interface( abi )
+        const FormatTypes = ethers.utils.FormatTypes;
+        console.log(iface.format(FormatTypes.full))
+        const functionData = iface.encodeFunctionData("send",
             [
                 _userAddress,
                 _sourceNetwork,
@@ -132,44 +175,47 @@ export async function setupSubmit(element: HTMLButtonElement) {
             ]
         )
 
-        // gives a nasty warning in metamask... I think this step is supposed to be done client-side instead
-        // const eth_sign_params = [myAddress, payloadHash]
-        // const [signedTx] = await provider.send("eth_sign", eth_sign_params);
-
         const tx_params = [
             {
-              from: myAddress,
-              to: '0x32B3Ae25D548140094259eF164a52da7929CbbB9',
-              gas: '0x0493E0', // 300000
-              gasPrice: '0x03E8', // 1000
-              value: '0x03E8', // 1000
-              data: "0x000000000000000000", // TODO figure out what this data is meant to be
+                nonce: '0x00', // ignored by MetaMask
+                gasPrice: '0x3B9B1820', // 1000020000
+                gas: '0x0493E0', // 300000
+                to: publicClientAddress,
+                from: myAddress,
+                value: '0x00', // 0
+                data: functionData, // TODO figure out what this data is meant to be
+                chainId: "0x5"  // ignored by MetaMask
             },
           ];
 
-        // const [tx] = await provider.send("eth_sendTransaction", tx_params);
+        const txHash = await provider.send("eth_sendTransaction", tx_params);
+        console.log(txHash)
 
         document.querySelector<HTMLDivElement>('#preview')!.innerHTML = `
         <h2>Raw Payload</h2>
         <p>${thePayload}</p>
+
         <h2>Encrypted Payload</h2>
         <p>${ciphertext.toString('base64')}</p>
+
+        <h2>Payload Hash</h2>
+        <p>${payloadHash}<p>
+
+        <h2>Payload Signature</h2>
+        <p>${payloadSignature}<p>
+
         <h2>Other Info</h2>
         <p>
-        Encryption method: ChaCha20Poly1305 <br>
-        Public key used during encryption: ${userPublicKey} <br>
-        Nonce used during encryption: ${nonce} <br>
-        Payload Hash: ${payloadHash} <br>
-        Payload Signature: ${payload_signature} <br>
 
-        _userAddress: ${_userAddress} <br>
-        _sourceNetwork: ${_sourceNetwork} <br>
-        _routingInfo: ${_routingInfo} <br>
-        _payloadHash: ${_payloadHash} <br>
-        _info: ${JSON.stringify(_info)} <br>
+        <b>Encryption method:</b> ChaCha20Poly1305 <br>
+        <b>Public key used during encryption:</b> ${userPublicKey} <br>
+        <b>Nonce used during encryption:</b> ${nonce} <br>
 
-        abiEncodedMsg: ${abiEncodedMsg} <br>
         </p>
+
+        <h2>Transaction Parameters</h2>
+        <p><b>Tx Hash: </b><a href="https://goerli.etherscan.io/tx/${txHash}" target="_blank">${txHash}</a></p>
+        <p>${JSON.stringify(tx_params)}</p>
         `
     })
 }

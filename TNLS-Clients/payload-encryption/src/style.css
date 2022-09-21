@@ -106,6 +106,16 @@ form {
 
 #preview {
   max-width: 800px;
+  text-align: left;
+}
+#wallet {
+  position: absolute;
+  top: 10%;
+  right: 10%;
+}
+#account {
+  margin-top: 2em;
+  bottom: 5%;
 }
 
 .read-the-docs {
@@ -128,14 +138,6 @@ button {
   transition: border-color 0.25s;
 }
 #submit {
-  margin-top: 0.6em;
-  width:100%;
-}
-#encrypt {
-  margin-top: 0.6em;
-  width:100%;
-}
-#hash {
   margin-top: 0.6em;
   width:100%;
 }
