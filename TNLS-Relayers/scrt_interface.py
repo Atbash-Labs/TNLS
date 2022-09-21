@@ -92,6 +92,7 @@ class SCRTContract(BaseContractInterface):
             handlers=[StreamHandler()],
         )
         self.logger = getLogger()
+        self.logger.info(f"Initialized SCRT interface for contract {self.address}")
         pass
 
     def get_function(self, function_name):

@@ -138,6 +138,7 @@ class EthContract(BaseContractInterface):
             handlers=[StreamHandler()],
         )
         self.logger = getLogger()
+        self.logger.info("Initialized contract with address: %s", self.address)
         pass
 
     def get_function(self, function_name):
