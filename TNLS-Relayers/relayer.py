@@ -94,7 +94,7 @@ class Relayer:
         function_name = self.dict_of_names_to_interfaces[task.task_destination_network][3]
         contract_for_txn.call_function(function_name, str(task))
         self.task_ids_to_statuses[task.task_data['task_id']] = 'Routed to {}'.format(task.task_destination_network)
-        self.task_ids_to_info[task.task_data['task_id']] = task.task_data
+        self.task_ids_to_info[task.task_data['task_id']] = str(task)
         self.logger.info('Routed {} to {}'.format(task, task.task_destination_network))
         pass
 
