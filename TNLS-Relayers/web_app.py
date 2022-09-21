@@ -141,6 +141,8 @@ def app_factory(config_filename=f'{Path(__file__).parent.absolute()}/../config.y
     Returns: a flask app
 
     """
+    import warnings
+    warnings.simplefilter("ignore", UserWarning)
     app = Flask(__name__)
     config, keys_dict = config_file_converter(config_filename)
     relayer = Relayer(config, num_loops=num_loops)
