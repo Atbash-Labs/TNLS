@@ -1,4 +1,5 @@
 import abc
+import base64
 import json
 from typing import List
 
@@ -22,6 +23,9 @@ def to_dict(dict_to_parse):
         # convert 'HexBytes' type to 'str'
         elif 'HexBytes' in str(type(val)):
             parsed_dict[key] = val.hex()
+        elif isinstance(val, bytes):
+            parsed_dict[key] = base64.b64encode(val).decode('utf-8')
+
     return parsed_dict
 
 
