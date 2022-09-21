@@ -142,6 +142,8 @@ class SCRTContract(BaseContractInterface):
             if set(arg_keys) != set(args.keys()):
                 self.logger.info(f"Arguments do not match schema."
                                  f"  Expected {sorted(list(arg_keys))} arguments but got {sorted(list(args.keys()))}")
+                self.logger.warning(f"Arguments do not match schema."
+                                    f"  Expected {sorted(list(arg_keys))} arguments but got {sorted(list(args.keys()))}")
                 if set(arg_keys) > set(args.keys()):
                     for key in arg_keys:
                         if key not in args.keys():
