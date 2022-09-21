@@ -158,7 +158,7 @@ class SCRTContract(BaseContractInterface):
             self.logger.warning(f"Arguments must be a list or dict, got {type(args)}")
             arg_dict = json.loads(args)
         function_schema = {function_name: arg_dict}
-        if function_name != 'input':
+        if function_name == 'inputs':
             nschema = {'input': deepcopy(function_schema)}
             function_schema = nschema
         self.logger.info(
