@@ -109,6 +109,16 @@ def task_json():
     return str(current_app.config['RELAYER'].task_ids_to_statuses)
 
 
+@route_blueprint.route('/networks_to_blocks')
+def task_json():
+    """
+
+    Returns: The status of the relayer
+
+    """
+    return str(current_app.config['RELAYER'].dict_of_names_to_blocks)
+
+
 @route_blueprint.route('/keys')
 def keys():
     """

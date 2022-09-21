@@ -61,6 +61,7 @@ class Relayer:
             if prev_height is None:
                 prev_height = curr_height - 1
             for block_num in range(prev_height + 1, curr_height + 1):
+                self.logger.info(f'Polling block {block_num} on {name}')
                 transactions = chain_interface.get_transactions(contract_interface.address, height=block_num)
                 for transaction in transactions:
                     tasks = contract_interface.parse_event_from_txn(evt_name, transaction)
