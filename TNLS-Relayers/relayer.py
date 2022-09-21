@@ -125,12 +125,12 @@ class Relayer:
 
         """
         self.logger.info('Starting relayer')
-        loops_run = 0
-        while (self.num_loops is not None and loops_run < self.num_loops) or self.num_loops is None:
+        self.loops_run = 0
+        while (self.num_loops is not None and self.loops_run < self.num_loops) or self.num_loops is None:
             self.poll_for_transactions()
             self.logger.info('Polled for transactions, now have {} remaining'.format(len(self.task_list)))
             self.task_list_handle()
-            loops_run += 1
+            self.loops_run += 1
             sleep(5)
         pass
 

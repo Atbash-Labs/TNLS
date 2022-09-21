@@ -156,7 +156,7 @@ def keys():
 
 
 def app_factory(config_filename=f'{Path(__file__).parent.absolute()}/../config.yml',
-                config_file_converter=generate_full_config, num_loops=None):
+                config_file_converter=generate_full_config, num_loops=None, do_restart=True):
     """
     Creates a Flask app with a relayer running on the backend
     Args:
@@ -190,7 +190,8 @@ def app_factory(config_filename=f'{Path(__file__).parent.absolute()}/../config.y
             time.sleep(5)
 
     thread_restarter = Thread(target=_thread_restarter)
-    thread_restarter.start()
+    if do_restart:
+        thread_restarter.start()
     return app
 
 

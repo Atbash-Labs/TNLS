@@ -486,7 +486,7 @@ def test_web_app(fake_interface_factory):
         return dict_of_names_to_interfaces, {'secret': {'verification': 'test_eth_address',
                                                         'encryption': 'test_encryption_key'}}
 
-    app = app_factory("", config_file_converter=get_dict_of_names_to_interfaces, num_loops=1)
+    app = app_factory("", config_file_converter=get_dict_of_names_to_interfaces, num_loops=1, do_restart=False)
     relayer = app.config['RELAYER']
     assert app.config['KEYS'] == {'secret': {'verification': "test_eth_address",
                                              'encryption': "test_encryption_key"}}
