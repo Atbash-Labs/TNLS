@@ -95,7 +95,7 @@ class Relayer:
         contract_for_txn = self.dict_of_names_to_interfaces[task.task_destination_network][1]
         function_name = self.dict_of_names_to_interfaces[task.task_destination_network][3]
         if task.task_destination_network == 'secret':
-            ntasks = contract_for_txn.call_function(function_name, str(task))
+            ntasks, _ = contract_for_txn.call_function(function_name, str(task))
             self.task_list.extend(ntasks)
         else:
             contract_for_txn.call_function(function_name, str(task))

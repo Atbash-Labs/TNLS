@@ -246,7 +246,7 @@ def test_function_call_and_event_getter(provider_privkey_address, address_and_ab
     contract_addr, abi = address_and_abi_of_contract
     interface = SCRTInterface(address=address, provider=provider, private_key=privkey)
     contract = SCRTContract(address=contract_addr, abi=abi, interface=interface)
-    resp = contract.call_function('handle', {'input': 'test_call'})
+    _, resp = contract.call_function('handle', {'input': 'test_call'})
     height = resp.height
     txns = interface.get_transactions(address=address, height=height)
     task_list = contract.parse_event_from_txn('wasm', txns)
