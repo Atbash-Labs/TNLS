@@ -3,7 +3,7 @@ name: Deployment
 on:
   push:
     branches:
-      - leorf/fix-web-and-eth-error
+      - nonexistent_branch
 
 jobs:
   Deploy-to-main:
