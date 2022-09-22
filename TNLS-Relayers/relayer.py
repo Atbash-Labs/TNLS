@@ -60,6 +60,8 @@ class Relayer:
         Updates task list with found events
         """
         for name, (chain_interface, contract_interface, evt_name, _) in self.dict_of_names_to_interfaces.items():
+            if name == 'secret':
+                continue
             prev_height = self.dict_of_names_to_blocks[name]
             curr_height = chain_interface.get_last_block()
             if prev_height is None:
