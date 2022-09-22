@@ -3,7 +3,7 @@ name: Deployment
 on:
   push:
     branches:
-      - leorf/webserver-redeploy-fixes
+      - nonexistent_branch
 
 jobs:
   Deploy-to-main:
