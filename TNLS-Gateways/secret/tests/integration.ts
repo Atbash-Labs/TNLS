@@ -5,7 +5,7 @@ import assert from "assert";
 import { PreExecutionMsg, Payload, Binary } from "./GatewayContract";
 import { ecdsaSign, publicKeyConvert } from "secp256k1";
 import { Wallet as EthWallet } from "ethers";
-import { arrayify, SigningKey, computeAddress, recoverAddress, recoverPublicKey, keccak256 } from "ethers/lib/utils";
+import { arrayify, hexlify, SigningKey, computeAddress, recoverAddress, recoverPublicKey, keccak256 } from "ethers/lib/utils";
 import sha3 from "js-sha3";
 import { createHash, randomBytes } from 'crypto';
 import { encrypt_payload } from './encrypt-payload/pkg'
@@ -419,8 +419,8 @@ async function gatewayTx(
   const payloadSignature = ecdsaSign(payloadHash, userPrivateKeyBytes).signature;
   // const payloadSignature64 = Buffer.from(payloadSignature).toString('base64');
 
-  const user_pubkey = publicKeyConvert(arrayify(recoverPublicKey(arrayify(payloadHash), payloadSignature)),false)
-  console.log(`Recovered user_pubkey: ${user_pubkey}`)
+  const user_pubkey = publicKeyConvert(arrayify(recoverPublicKey(arrayify(payloadHash), payloadSignature)),true)
+  console.log(`Recovered user_pubkey: ${hexlify(user_pubkey)}`)
 
   const handle_msg: PreExecutionMsg = {
     task_id: 1,
