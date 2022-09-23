@@ -27,6 +27,7 @@ contract Gateway is IGateway {
         bytes32 payload_hash,
         bytes payload_signature,
         bytes user_key,
+        bytes user_pubkey,
         string handle,
         bytes12 nonce
     );
@@ -121,6 +122,7 @@ contract Gateway is IGateway {
             _task.payload_hash,
             _info.payload_signature,
             _info.user_key,
+            _info.user_pubkey,
             _info.handle,
             _info.nonce
             );
@@ -141,14 +143,6 @@ contract Gateway is IGateway {
         address recoveredSigner;
 
         address checkerAddress = route[_sourceNetwork];
-
-        // Payload signature verification
-        verifySig = true;
-        recoveredSigner = Util.modifiedRecoverSigner(_info.payload_hash, _info.payload_signature, checkerAddress);
-        verifySig = recoveredSigner == checkerAddress;
-        if (!verifySig) {
-            revert InvalidSignature();
-        }
 
         // Payload hash verification from tasks struct
         bool verifyPayloadHash;

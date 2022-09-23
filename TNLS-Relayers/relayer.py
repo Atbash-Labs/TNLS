@@ -37,9 +37,13 @@ class Relayer:
         """
         self.task_list = []
         self.task_ids_to_statuses = {}
+        self.task_ids_to_info = {}
         self.task_threads = []
         self.dict_of_names_to_interfaces = dict_of_names_to_interfaces
         self.dict_of_names_to_blocks = {name: None for name in self.dict_of_names_to_interfaces}
+        self.dict_of_names_to_addresses = {name: contract_interface.address for
+                                           name, (chain_interface, contract_interface, evt_name, function_name) in
+                                           self.dict_of_names_to_interfaces.items()}
         basicConfig(
             level=DEBUG,
             format="%(asctime)s [relayer: %(levelname)8.8s] %(message)s",
@@ -56,11 +60,14 @@ class Relayer:
         Updates task list with found events
         """
         for name, (chain_interface, contract_interface, evt_name, _) in self.dict_of_names_to_interfaces.items():
+            if name == 'secret':
+                continue
             prev_height = self.dict_of_names_to_blocks[name]
             curr_height = chain_interface.get_last_block()
             if prev_height is None:
                 prev_height = curr_height - 1
             for block_num in range(prev_height + 1, curr_height + 1):
+                self.logger.info(f'Polling block {block_num} on {name}')
                 transactions = chain_interface.get_transactions(contract_interface.address, height=block_num)
                 for transaction in transactions:
                     tasks = contract_interface.parse_event_from_txn(evt_name, transaction)
@@ -87,8 +94,13 @@ class Relayer:
             return
         contract_for_txn = self.dict_of_names_to_interfaces[task.task_destination_network][1]
         function_name = self.dict_of_names_to_interfaces[task.task_destination_network][3]
-        contract_for_txn.call_function(function_name, str(task))
+        if task.task_destination_network == 'secret':
+            ntasks, _ = contract_for_txn.call_function(function_name, str(task))
+            self.task_list.extend(ntasks)
+        else:
+            contract_for_txn.call_function(function_name, str(task))
         self.task_ids_to_statuses[task.task_data['task_id']] = 'Routed to {}'.format(task.task_destination_network)
+        self.task_ids_to_info[task.task_data['task_id']] = str(task)
         self.logger.info('Routed {} to {}'.format(task, task.task_destination_network))
         pass
 
@@ -119,12 +131,12 @@ class Relayer:
 
         """
         self.logger.info('Starting relayer')
-        loops_run = 0
-        while (self.num_loops is not None and loops_run < self.num_loops) or self.num_loops is None:
+        self.loops_run = 0
+        while (self.num_loops is not None and self.loops_run < self.num_loops) or self.num_loops is None:
             self.poll_for_transactions()
             self.logger.info('Polled for transactions, now have {} remaining'.format(len(self.task_list)))
             self.task_list_handle()
-            loops_run += 1
+            self.loops_run += 1
             sleep(5)
         pass
 

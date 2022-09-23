@@ -28,6 +28,7 @@ contract ContractTest is Test {
         bytes32 payload_hash,
         bytes payload_signature,
         bytes user_key,
+        bytes user_pubkey,
         string handle,
         bytes12 nonce
     );
@@ -216,12 +217,13 @@ contract ContractTest is Test {
         string memory routingInfo = "secret";
 
         // bytes32 string encoding of "add a bunch of stuff"
-        bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
+        bytes memory payload = hex"61646420612062756e6368206f66207374756666000000000000000000000000";
         bytes32 payloadHash = getPayloadHash(payload);
         payloadHash = Util.getEthSignedMessageHash(payloadHash);
 
         // encoding bytes of "some public key"
-        bytes memory userPublicKey = "0x736f6d65207075626c6963206b65790000000000000000000000000000000000";
+        bytes memory userKey = hex"736f6d65207075626c6963206b65790000000000000000000000000000000000";
+        bytes memory userPublicKey = hex"040b8d42640a7eded641dd42ad91d7c9ae3644a2412bdff174790012774e5528a30f9f0a630977d53e7a862eb2fb89207fe4fafc824992d281ba0180c6a1fddb4c";
 
         Util.Task memory assembledTask = Util.Task({
             callback_address: vm.addr(7),
@@ -234,7 +236,8 @@ contract ContractTest is Test {
         });
 
         Util.ExecutionInfo memory assembledInfo = Util.ExecutionInfo({
-            user_key: userPublicKey,
+            user_key: userKey,
+            user_pubkey:userPublicKey,
             routing_code_hash: "some RoutingCodeHash",
             handle: "some kinda handle",
             nonce: "ssssssssssss",
@@ -252,6 +255,7 @@ contract ContractTest is Test {
             payload,
             payloadHash,
             getPayloadSignature(payload, 5),
+            userKey,
             userPublicKey,
             "some kinda handle",
             "ssssssssssss"
@@ -290,12 +294,13 @@ contract ContractTest is Test {
         string memory routingInfo = "secret";
 
         // bytes32 string encoding of "add a bunch of stuff"
-        bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
+        bytes memory payload = hex"61646420612062756e6368206f66207374756666000000000000000000000000";
         bytes32 payloadHash = getPayloadHash(payload);
         payloadHash = Util.getEthSignedMessageHash(payloadHash);
 
         // encoding bytes of "some public key"
-        bytes memory userPublicKey = "0x736f6d65207075626c6963206b65790000000000000000000000000000000000";
+        bytes memory userKey = hex"736f6d65207075626c6963206b65790000000000000000000000000000000000";
+        bytes memory userPublicKey = hex"040b8d42640a7eded641dd42ad91d7c9ae3644a2412bdff174790012774e5528a30f9f0a630977d53e7a862eb2fb89207fe4fafc824992d281ba0180c6a1fddb4c";
 
         Util.Task memory assembledTask = Util.Task({
             callback_address: vm.addr(6),
@@ -308,7 +313,8 @@ contract ContractTest is Test {
         });
 
         Util.ExecutionInfo memory assembledInfo = Util.ExecutionInfo({
-            user_key: userPublicKey,
+            user_key: userKey,
+            user_pubkey:userPublicKey,
             routing_code_hash: "some RoutingCodeHash",
             handle: "some kinda handle",
             nonce: "ssssssssssss",
@@ -326,6 +332,7 @@ contract ContractTest is Test {
             payload,
             payloadHash,
             getPayloadSignature(payload, 5),
+            userKey,
             userPublicKey,
             "some kinda handle",
             "ssssssssssss"
@@ -343,18 +350,17 @@ contract ContractTest is Test {
         uint256 taskId = 1;
 
         // bytes32 string encoding of "add a bunch of stuff"
-        bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
+        bytes memory payload = hex"61646420612062756e6368206f66207374756666000000000000000000000000";
         bytes32 payloadHash = getPayloadHash(payload);
         payloadHash = Util.getEthSignedMessageHash(payloadHash);
 
         // bytes32 string encoding of "some result"
-        bytes memory result = "0x736f6d6520726573756c74000000000000000000000000000000000000000000";
+        bytes memory result = hex"736f6d6520726573756c74000000000000000000000000000000000000000000";
         bytes32 resultHash = getResultHash(result);
         resultHash = Util.getEthSignedMessageHash(resultHash);
 
         Util.PostExecutionInfo memory assembledInfo = Util.PostExecutionInfo({
             payload_hash: payloadHash,
-            payload_signature: getPayloadSignature(payload, 6),
             result: result,
             result_hash: resultHash,
             result_signature: getResultSignature(result, 6),
@@ -379,18 +385,17 @@ contract ContractTest is Test {
         uint256 taskId = 1;
 
         // bytes32 string encoding of "add a bunch of stuff"
-        bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
+        bytes memory payload = hex"61646420612062756e6368206f66207374756666000000000000000000000000";
         bytes32 payloadHash = getPayloadHash(payload);
         payloadHash = Util.getEthSignedMessageHash(payloadHash);
 
         // bytes32 string encoding of "some result"
-        bytes memory result = "0x736f6d6520726573756c74000000000000000000000000000000000000000000";
+        bytes memory result = hex"736f6d6520726573756c74000000000000000000000000000000000000000000";
         bytes32 resultHash = getResultHash(result);
         resultHash = Util.getEthSignedMessageHash(resultHash);
 
         Util.PostExecutionInfo memory assembledInfo = Util.PostExecutionInfo({
             payload_hash: payloadHash,
-            payload_signature: getPayloadSignature(payload, 8),
             result: result,
             result_hash: resultHash,
             result_signature: getResultSignature(result, 6),
@@ -417,13 +422,14 @@ contract ContractTest is Test {
         string memory routingInfo = "secret";
 
         // bytes32 string encoding of "add a bunch of stuff"
-        bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
+        bytes memory payload = hex"61646420612062756e6368206f66207374756666000000000000000000000000";
         bytes32 payloadHash = hex"ea57f8cfce0dca7528ff349328b9a524dbbd49fe724026da575aed40cd3ac2c4";
         bytes memory payloadSignature =
             hex"293fb5fe48d81aadd26574aca54509804f628a851d7df4e3356b0e191ef5b11c33f07e7eeb0494384df6f3f636e2fc0fcf64ee3fb0d5e3d6f3302a81325bd06f1c";
 
         // encoding bytes of "some public key"
-        bytes memory userPublicKey = "0x736f6d65207075626c6963206b65790000000000000000000000000000000000";
+        bytes memory userKey = hex"736f6d65207075626c6963206b65790000000000000000000000000000000000";
+        bytes memory userPublicKey = hex"040b8d42640a7eded641dd42ad91d7c9ae3644a2412bdff174790012774e5528a30f9f0a630977d53e7a862eb2fb89207fe4fafc824992d281ba0180c6a1fddb4c";
 
         Util.Task memory assembledTask = Util.Task({
             callback_address: vm.addr(7),
@@ -436,7 +442,8 @@ contract ContractTest is Test {
         });
 
         Util.ExecutionInfo memory assembledInfo = Util.ExecutionInfo({
-            user_key: userPublicKey,
+            user_key: userKey,
+            user_pubkey:userPublicKey,
             routing_code_hash: "some RoutingCodeHash",
             handle: "some kinda handle",
             nonce: "ssssssssssss",
@@ -454,6 +461,7 @@ contract ContractTest is Test {
             payload,
             payloadHash,
             payloadSignature,
+            userKey,
             userPublicKey,
             "some kinda handle",
             "ssssssssssss"
@@ -514,8 +522,6 @@ contract ContractTest is Test {
 
         // payload
         bytes32 payloadHash = hex"ea57f8cfce0dca7528ff349328b9a524dbbd49fe724026da575aed40cd3ac2c4";
-        bytes memory payloadSignature =
-            hex"293fb5fe48d81aadd26574aca54509804f628a851d7df4e3356b0e191ef5b11c33f07e7eeb0494384df6f3f636e2fc0fcf64ee3fb0d5e3d6f3302a81325bd06f1b";
 
         // result
         bytes memory result = hex"7b226d795f76616c7565223a327d";
@@ -530,7 +536,6 @@ contract ContractTest is Test {
 
         Util.PostExecutionInfo memory assembledInfo = Util.PostExecutionInfo({
             payload_hash: payloadHash,
-            payload_signature: payloadSignature,
             result: result,
             result_hash: resultHash,
             result_signature: resultSignature,
@@ -556,15 +561,17 @@ contract ContractTest is Test {
         address userAddress = 0x49F7552065228e5abF44e144cc750aEA4F711Dc3;
 
         string memory routingInfo = "secret";
-        bytes memory userPublicKey = "0x736f6d65207075626c6963206b65790000000000000000000000000000000000";
+        bytes memory userKey = hex"736f6d65207075626c6963206b65790000000000000000000000000000000000";
+        bytes memory userPublicKey = hex"040b8d42640a7eded641dd42ad91d7c9ae3644a2412bdff174790012774e5528a30f9f0a630977d53e7a862eb2fb89207fe4fafc824992d281ba0180c6a1fddb4c";
 
-        bytes memory payload = "0x61646420612062756e6368206f66207374756666000000000000000000000000";
+        bytes memory payload = hex"61646420612062756e6368206f66207374756666000000000000000000000000";
         bytes32 payloadHash = hex"ea57f8cfce0dca7528ff349328b9a524dbbd49fe724026da575aed40cd3ac2c4";
         bytes memory payloadSignature =
             hex"293fb5fe48d81aadd26574aca54509804f628a851d7df4e3356b0e191ef5b11c33f07e7eeb0494384df6f3f636e2fc0fcf64ee3fb0d5e3d6f3302a81325bd06f1c";
 
         Util.ExecutionInfo memory assembledInfo = Util.ExecutionInfo({
-            user_key: userPublicKey,
+            user_key: userKey,
+            user_pubkey:userPublicKey,
             routing_code_hash: "some RoutingCodeHash",
             handle: "some kinda handle",
             nonce: "ssssssssssss",
@@ -582,6 +589,7 @@ contract ContractTest is Test {
             payload,
             payloadHash,
             payloadSignature,
+            userKey,
             userPublicKey,
             "some kinda handle",
             "ssssssssssss"
@@ -619,8 +627,6 @@ contract ContractTest is Test {
 
         // payload
         bytes32 payloadHash = hex"ea57f8cfce0dca7528ff349328b9a524dbbd49fe724026da575aed40cd3ac2c4";
-        bytes memory payloadSignature =
-            hex"293fb5fe48d81aadd26574aca54509804f628a851d7df4e3356b0e191ef5b11c33f07e7eeb0494384df6f3f636e2fc0fcf64ee3fb0d5e3d6f3302a81325bd06f1b";
 
         // result
         bytes memory result = hex"7b226d795f76616c7565223a327d";
@@ -635,7 +641,6 @@ contract ContractTest is Test {
 
         Util.PostExecutionInfo memory assembledInfo = Util.PostExecutionInfo({
             payload_hash: payloadHash,
-            payload_signature: payloadSignature,
             result: result,
             result_hash: resultHash,
             result_signature: resultSignature,

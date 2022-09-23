@@ -3,9 +3,9 @@ import { Wallet, SecretNetworkClient, fromHex } from "secretjs";
 import fs from "fs";
 import assert from "assert";
 import { PreExecutionMsg, Payload, Binary } from "../../../TNLS-Gateways/secret/tests/GatewayContract";
-import { ecdsaSign } from "secp256k1";
+import { ecdsaSign, publicKeyConvert } from "secp256k1";
 import { Wallet as EthWallet } from "ethers";
-import { arrayify, SigningKey, computeAddress, recoverAddress, recoverPublicKey, keccak256 } from "ethers/lib/utils";
+import { arrayify, hexlify, SigningKey, computeAddress, recoverAddress, recoverPublicKey, keccak256 } from "ethers/lib/utils";
 import { createHash, randomBytes } from 'crypto';
 import { encrypt_payload } from '../../../TNLS-Gateways/secret/tests/encrypt-payload/pkg'
 import 'dotenv/config'
@@ -444,6 +444,9 @@ async function gatewayTx(
   const payloadSignature = ecdsaSign(payloadHash, userPrivateKeyBytes).signature;
   // const payloadSignature64 = Buffer.from(payloadSignature).toString('base64');
 
+  const user_pubkey = publicKeyConvert(arrayify(recoverPublicKey(arrayify(payloadHash), payloadSignature)),true)
+  console.log(`\nRecovered user_pubkey: ${hexlify(user_pubkey)}\n`)
+
   const handle_msg: PreExecutionMsg = {
     task_id: 1,
     handle: "request_score",
@@ -451,6 +454,7 @@ async function gatewayTx(
     routing_code_hash: routing_code_hash,
     user_address: user_address,
     user_key: user_key,
+    user_pubkey: Buffer.from(user_pubkey).toString('base64'),
     payload: ciphertext,
     nonce: Buffer.from(nonce).toString('base64'),
     payload_hash: payloadHash.toString('base64'),
@@ -489,7 +493,6 @@ async function gatewayTx(
     "task_destination_network",
     "task_id", 
     "payload_hash",
-    "payload_signature",
     "result",
     "result_hash",
     "result_signature",
@@ -507,7 +510,6 @@ async function gatewayTx(
   assert(logs["task_destination_network"] == "ethereum");
   assert(logs["task_id"] == "1");
   assert(fromHex(logs["payload_hash"].substring(2)).byteLength == 32);
-  assert(fromHex(logs["payload_signature"].substring(2)).byteLength == 65);
   // assert(logs["result"] == "???");
   assert(fromHex(logs["result_hash"].substring(2)).byteLength == 32);
   assert(fromHex(logs["result_signature"].substring(2)).byteLength == 65);

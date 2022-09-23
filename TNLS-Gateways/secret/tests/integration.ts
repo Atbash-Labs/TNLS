@@ -3,9 +3,9 @@ import { Wallet, SecretNetworkClient, fromUtf8, fromHex } from "secretjs";
 import fs from "fs";
 import assert from "assert";
 import { PreExecutionMsg, Payload, Binary } from "./GatewayContract";
-import { ecdsaSign } from "secp256k1";
+import { ecdsaSign, publicKeyConvert } from "secp256k1";
 import { Wallet as EthWallet } from "ethers";
-import { arrayify, SigningKey, computeAddress, recoverAddress, recoverPublicKey, keccak256 } from "ethers/lib/utils";
+import { arrayify, hexlify, SigningKey, computeAddress, recoverAddress, recoverPublicKey, keccak256 } from "ethers/lib/utils";
 import sha3 from "js-sha3";
 import { createHash, randomBytes } from 'crypto';
 import { encrypt_payload } from './encrypt-payload/pkg'
@@ -419,6 +419,9 @@ async function gatewayTx(
   const payloadSignature = ecdsaSign(payloadHash, userPrivateKeyBytes).signature;
   // const payloadSignature64 = Buffer.from(payloadSignature).toString('base64');
 
+  const user_pubkey = publicKeyConvert(arrayify(recoverPublicKey(arrayify(payloadHash), payloadSignature)),true)
+  console.log(`Recovered user_pubkey: ${hexlify(user_pubkey)}`)
+
   const handle_msg: PreExecutionMsg = {
     task_id: 1,
     handle: "add_one",
@@ -426,6 +429,7 @@ async function gatewayTx(
     routing_code_hash: routing_code_hash,
     user_address: user_address,
     user_key: user_key,
+    user_pubkey: Buffer.from(user_pubkey).toString('base64'),
     payload: ciphertext,
     nonce: Buffer.from(nonce).toString('base64'),
     payload_hash: payloadHash.toString('base64'),
@@ -463,7 +467,6 @@ async function gatewayTx(
     "task_destination_network",
     "task_id", 
     "payload_hash",
-    "payload_signature",
     "result",
     "result_hash",
     "result_signature",
@@ -479,10 +482,10 @@ async function gatewayTx(
   console.log(logs);
 
   console.log('\nTesting recoverAddress on each signature:')
-  const test1 = recoverAddress(logs["payload_hash"], logs["payload_signature"]);
+  // const test1 = recoverAddress(logs["payload_hash"], logs["payload_signature"]);
   const test2 = recoverAddress(logs["result_hash"], logs["result_signature"]);
   const test3 = recoverAddress(logs["packet_hash"], logs["packet_signature"]);
-  [test1, test2, test3].forEach(element => {
+  [test2, test3].forEach(element => {
     console.log(element)
   });
 
@@ -490,7 +493,6 @@ async function gatewayTx(
   assert(logs["task_destination_network"] == "ethereum");
   assert(logs["task_id"] == "1");
   assert(fromHex(logs["payload_hash"].substring(2)).byteLength == 32);
-  assert(fromHex(logs["payload_signature"].substring(2)).byteLength == 65);
   assert(logs["result"] == "0x7b226d795f76616c7565223a327d");
   assert(fromHex(logs["result_hash"].substring(2)).byteLength == 32);
   assert(fromHex(logs["result_signature"].substring(2)).byteLength == 65);
