@@ -197,7 +197,6 @@ class SCRTContract(BaseContractInterface):
             logs = transaction_result.logs
         except AttributeError:
             logs = []
-        self.logger.info(f"Got {(logs)} transactions")
         task_list = self.parse_event_from_txn('wasm', logs)
         self.logger.info(f"Transaction result: {task_list}")
         return task_list, transaction_result
