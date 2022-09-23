@@ -1,12 +1,12 @@
-name: Deployment
+name: Deployment-Webserver
 
 on:
   push:
     branches:
-      - nonexistent_branch
+      - leorf/webserver-redeploy
 
 jobs:
-  Deploy-to-main:
+  Deploy-webserver-to-main:
 
     runs-on: ubuntu-latest
 

@@ -196,6 +196,7 @@ class SCRTContract(BaseContractInterface):
             txn = self.construct_txn(function_schema, function_name, args)
             transaction_result = self.interface.sign_and_send_transaction(txn)
         try:
+            self.logger.info(f"Transaction result: {transaction_result}")
             logs = transaction_result.logs
         except AttributeError:
             logs = []
