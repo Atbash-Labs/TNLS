@@ -223,7 +223,7 @@ def test_gen_full_config(rewrite_yaml, request, provider_privkey_address_scrt, p
     assert evt_name == 'logNewTask'
     assert function_name == 'postExecution'
     assert contract_interface.interface == interface
-    assert set(keys_dict['secret'].keys) == {'encryption', 'verification'}
+    assert set(keys_dict['secret'].keys()) == {'encryption', 'verification'}
 
 
 class FakeChainInterface(BaseChainInterface):
